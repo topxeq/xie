@@ -13,7 +13,7 @@ func main() {
 		return
 	}
 
-	tk.Pln(os.Args[1])
+	// tk.Pln(os.Args[1])
 
 	fcT := tk.LoadStringFromFile(os.Args[1])
 
