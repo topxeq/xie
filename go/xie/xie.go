@@ -19,12 +19,7 @@ type XieVM struct {
 
 	StackM []interface{}
 
-	RegsM []interface{}
-
 	VarsM map[string]interface{}
-
-	// LastNameM  string
-	// LastValueM interface{}
 }
 
 func NewXie() *XieVM {
@@ -37,8 +32,23 @@ func NewXie() *XieVM {
 
 func (p *XieVM) InitVM() {
 	p.StackM = make([]interface{}, 0, 10)
-	p.RegsM = make([]interface{}, 0, 10)
 	p.VarsM = make(map[string]interface{}, 10)
+}
+
+func (p *XieVM) SetVar(keyA string, vA interface{}) {
+	if p.VarsM == nil {
+		p.InitVM()
+	}
+
+	p.VarsM[keyA] = vA
+}
+
+func (p *XieVM) GetVar(keyA string) interface{} {
+	if p.VarsM == nil {
+		p.InitVM()
+	}
+
+	return p.VarsM[keyA]
 }
 
 func (p *XieVM) Push(vA interface{}) {
@@ -746,18 +756,21 @@ func (p *XieVM) Run() string {
 
 }
 
-func RunCode(codeA string, optsA ...string) string {
+func RunCode(codeA string, objA interface{}, optsA ...string) string {
 	vmT := NewXie()
 
 	vmT.Load(codeA)
 
-	var argsT []string = tk.JSONToStringArray(tk.GetSwitch(optsA, "-args=", "[]"))
+	vmT.SetVar("argsG", optsA)
+	vmT.SetVar("inputG", objA)
 
-	if argsT != nil {
-		vmT.VarsM["argsG"] = argsT
-	} else {
-		vmT.VarsM["argsG"] = []string{}
-	}
+	// var argsT []string = tk.JSONToStringArray(tk.GetSwitch(optsA, "-args=", "[]"))
+
+	// if argsT != nil {
+	// 	vmT.VarsM["argsG"] = argsT
+	// } else {
+	// 	vmT.VarsM["argsG"] = []string{}
+	// }
 
 	rs := vmT.Run()
 

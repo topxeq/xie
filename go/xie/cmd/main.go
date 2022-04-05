@@ -17,7 +17,7 @@ func main() {
 
 	fcT := tk.LoadStringFromFile(os.Args[1])
 
-	rs := xie.RunCode(fcT, "-args="+tk.ToJSONX(os.Args))
+	rs := xie.RunCode(fcT, nil, os.Args...)
 
 	if rs != "TXERROR:no result" {
 		tk.Pl("%v", rs)
