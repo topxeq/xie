@@ -1,0 +1,10 @@
+assignInt $i 11
+
+>i $i 10
+
+if $pop label2
+pln "else branch"
+exit
+
+:label2
+pln "if branch"

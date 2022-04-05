@@ -1,0 +1,42 @@
+getParam $argsG 2
+
+pop $wordT
+
+strAdd http://dict.cn/ $wordT
+
+pop $urlT
+
+var paramsT list
+
+addItem $paramsT -timeout=30
+// addItem $paramsT -detail
+// addItem $paramsT -verbose
+
+getWeb $urlT $paramsT
+
+// pops $resultT
+
+var paramsT strList
+
+addStrItem $paramsT -type=
+
+htmlToText $pop $paramsT
+
+trim
+
+peek $originalTextT
+
+pln "ORIGIN:" $originalTextT
+
+push ||||©.*?海词词典[\s\S]*||||
+push ||||||||
+
+regReplaceAllStr
+
+pln "RESULT:" $pop
+
+// getRuntimeInfo
+
+// plo
+
+

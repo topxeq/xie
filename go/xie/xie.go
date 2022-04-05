@@ -1,6 +1,7 @@
 package xie
 
 import (
+	"regexp"
 	"strings"
 
 	"github.com/topxeq/tk"
@@ -16,28 +17,92 @@ type XieVM struct {
 
 	CodePointerM int
 
-	StackM []string
+	StackM []interface{}
 
-	RegsM []string
+	RegsM []interface{}
 
-	VarsM map[string]string
+	VarsM map[string]interface{}
 
-	LastNameM  string
-	LastValueM string
+	// LastNameM  string
+	// LastValueM interface{}
 }
 
 func NewXie() *XieVM {
 	vmT := &XieVM{}
 
-	vmT.initVM()
+	vmT.InitVM()
 
 	return vmT
 }
 
-func (p *XieVM) initVM() {
-	p.StackM = make([]string, 0, 10)
-	p.RegsM = make([]string, 0, 10)
-	p.VarsM = make(map[string]string, 10)
+func (p *XieVM) InitVM() {
+	p.StackM = make([]interface{}, 0, 10)
+	p.RegsM = make([]interface{}, 0, 10)
+	p.VarsM = make(map[string]interface{}, 10)
+}
+
+func (p *XieVM) Push(vA interface{}) {
+	if p.StackM == nil {
+		p.InitVM()
+	}
+
+	p.StackM = append(p.StackM, vA)
+}
+
+func (p *XieVM) Pop() interface{} {
+	if p.StackM == nil {
+		p.InitVM()
+
+		return nil
+	}
+
+	lenT := len(p.StackM)
+
+	if lenT < 1 {
+		return nil
+	}
+
+	rs := p.StackM[lenT-1]
+
+	p.StackM = p.StackM[0 : lenT-1]
+
+	return rs
+}
+
+func (p *XieVM) Pops() string {
+	if p.StackM == nil {
+		p.InitVM()
+
+		return tk.ErrStrf("no value")
+	}
+
+	lenT := len(p.StackM)
+
+	if lenT < 1 {
+		return tk.ErrStrf("no value")
+	}
+
+	rs := p.StackM[lenT-1]
+
+	p.StackM = p.StackM[0 : lenT-1]
+
+	return tk.ToStr(rs)
+}
+
+func (p *XieVM) Peek() interface{} {
+	if p.StackM == nil {
+		p.InitVM()
+
+		return nil
+	}
+
+	lenT := len(p.StackM)
+
+	if lenT < 1 {
+		return nil
+	}
+
+	return p.StackM[lenT-1]
 }
 
 func (p *XieVM) Load(codeA string) string {
@@ -60,7 +125,7 @@ func (p *XieVM) Load(codeA string) string {
 		if tk.StartsWith(v, ":") {
 			labelT := tk.Trim(v[1:])
 
-			p.LabelsM[labelT] = i + 1
+			p.LabelsM[labelT] = pointerT
 
 			continue
 		}
@@ -97,33 +162,37 @@ func (p *XieVM) Load(codeA string) string {
 		pointerT++
 	}
 
-	tk.Plv(p.SourceM)
-	tk.Plv(p.CodeListM)
-	tk.Plv(p.CodeSourceMapM)
+	// tk.Plv(p.SourceM)
+	// tk.Plv(p.CodeListM)
+	// tk.Plv(p.CodeSourceMapM)
 
 	return ""
 }
 
 func (p *XieVM) GetName(nameA string) string {
 	if tk.StartsWith(nameA, "$") {
-		p.LastNameM = nameA[1:]
+		return nameA[1:]
 	} else {
-		p.LastNameM = nameA
+		return nameA
 	}
-
-	return p.LastNameM
 }
 
-func (p *XieVM) GetValue(nameA string) string {
+func (p *XieVM) GetValue(nameA string) interface{} {
 	if tk.StartsWith(nameA, "$") {
-		p.LastValueM = p.VarsM[nameA[1:]]
-	} else if tk.StartsWith(nameA, `\`) {
-		p.LastValueM = nameA[1:]
-	} else {
-		p.LastValueM = nameA
-	}
+		nameT := nameA[1:]
 
-	return p.LastValueM
+		if nameT == "pop" {
+			return p.Pop()
+		} else if nameT == "peek" {
+			return p.Peek()
+		}
+
+		return p.VarsM[nameT]
+	} else if tk.StartsWith(nameA, `\`) {
+		return nameA[1:]
+	} else {
+		return nameA
+	}
 }
 
 func (p *XieVM) Get1Param(strA string) (string, error) {
@@ -196,18 +265,48 @@ func (p *XieVM) RunLine(lineA int) string {
 	}
 
 	if cmdT == "pass" {
-		p.LastNameM = ""
-		p.LastValueM = ""
 		return ""
 	} else if cmdT == "var" {
-		p1, errT := p.Get1Param(paramsT)
+		// p1, errT := p.Get1Param(paramsT)
+		// if errT != nil {
+		// 	return tk.ErrStrf("not enough paramters")
+		// }
+
+		// nameT := p.GetName(p1)
+
+		p1, p2, errT := p.Get2Params(paramsT)
 		if errT != nil {
-			return tk.ErrStrf("not enough paramters")
+			if p1 == "" {
+				return tk.ErrStrf("not enough paramters")
+			}
 		}
 
 		nameT := p.GetName(p1)
 
-		p.VarsM[nameT] = ""
+		if p2 == "" {
+			p.VarsM[nameT] = ""
+			return ""
+		}
+
+		valueT := p.GetValue(p2)
+
+		if valueT == "bool" {
+			p.VarsM[nameT] = false
+		} else if valueT == "int" {
+			p.VarsM[nameT] = int(0)
+		} else if valueT == "float" {
+			p.VarsM[nameT] = float64(0.0)
+		} else if valueT == "string" {
+			p.VarsM[nameT] = ""
+		} else if valueT == "list" {
+			p.VarsM[nameT] = []interface{}{}
+		} else if valueT == "strList" {
+			p.VarsM[nameT] = []string{}
+		} else if valueT == "map" {
+			p.VarsM[nameT] = map[string]interface{}{}
+		} else if valueT == "strMap" {
+			p.VarsM[nameT] = map[string]string{}
+		}
 
 		return ""
 	} else if cmdT == "assign" {
@@ -223,7 +322,7 @@ func (p *XieVM) RunLine(lineA int) string {
 		p.VarsM[nameT] = valueT
 
 		return ""
-	} else if cmdT == "strAdd" {
+	} else if cmdT == "assignInt" {
 		p1, p2, errT := p.Get2Params(paramsT)
 		if errT != nil {
 			return tk.ErrStrf("not enough paramters")
@@ -233,7 +332,372 @@ func (p *XieVM) RunLine(lineA int) string {
 
 		valueT := p.GetValue(p2)
 
-		p.VarsM[nameT] = p.VarsM[nameT] + valueT
+		p.VarsM[nameT] = tk.ToInt(valueT)
+
+		return ""
+	} else if cmdT == "<i" {
+		p1, p2, errT := p.Get2Params(paramsT)
+		if errT != nil {
+			return tk.ErrStrf("not enough paramters")
+		}
+
+		s1 := p.GetValue(p1)
+
+		s2 := p.GetValue(p2)
+
+		p.Push(tk.ToInt(s1) < tk.ToInt(s2))
+
+		return ""
+	} else if cmdT == ">i" {
+		p1, p2, errT := p.Get2Params(paramsT)
+		if errT != nil {
+			return tk.ErrStrf("not enough paramters")
+		}
+
+		s1 := p.GetValue(p1)
+
+		s2 := p.GetValue(p2)
+
+		// tk.Pln(tk.ToInt(s1), tk.ToInt(s2))
+
+		p.Push(tk.ToInt(s1) > tk.ToInt(s2))
+
+		return ""
+	} else if cmdT == "if" {
+		p1, p2, errT := p.Get2Params(paramsT)
+		if errT != nil {
+			return tk.ErrStrf("not enough paramters")
+		}
+
+		s1 := p.GetValue(p1)
+
+		s2 := p.GetValue(p2)
+
+		condT := tk.ToBool(s1)
+
+		if condT {
+			labelPointerT, ok := p.LabelsM[tk.ToStr(s2)]
+
+			if ok {
+				return tk.IntToStr(labelPointerT)
+			}
+		}
+
+		return ""
+	} else if cmdT == "exit" {
+		return "exit"
+	} else if cmdT == "strAdd" {
+		p1, p2, errT := p.Get2Params(paramsT)
+		if errT != nil {
+			return tk.ErrStrf("not enough paramters")
+		}
+
+		s1 := p.GetValue(p1)
+
+		s2 := p.GetValue(p2)
+
+		p.Push(tk.ToStr(s1) + tk.ToStr(s2))
+
+		return ""
+	} else if cmdT == "intAdd" {
+		p1, p2, errT := p.Get2Params(paramsT)
+		if errT != nil {
+			return tk.ErrStrf("not enough paramters")
+		}
+
+		s1 := p.GetValue(p1)
+
+		s2 := p.GetValue(p2)
+
+		p.Push(tk.ToInt(s1) + tk.ToInt(s2))
+
+		return ""
+	} else if cmdT == "inc" {
+		p1, errT := p.Get1Param(paramsT)
+		if errT != nil {
+			return tk.ErrStrf("not enough paramters")
+		}
+
+		s1 := p.GetName(p1)
+		v1 := p.GetValue(p1)
+
+		p.VarsM[s1] = tk.ToInt(v1) + 1
+
+		return ""
+	} else if cmdT == "regReplaceAllStr" {
+		p1 := p.Pops()
+		p2 := p.Pops()
+		p3 := p.Pops()
+
+		rs := regexp.MustCompile(p2).ReplaceAllString(p3, p1)
+
+		p.Push(rs)
+
+		return ""
+	} else if cmdT == "trim" {
+		p1, errT := p.Get1Param(paramsT)
+		if errT != nil {
+			p.Push(tk.Trim(tk.ToStr(p.Pop())))
+			return ""
+			// return tk.ErrStrf("not enough paramters")
+		}
+
+		s1 := p.GetValue(p1)
+
+		p.Push(tk.Trim(tk.ToStr(s1)))
+
+		return ""
+	} else if cmdT == "pln" {
+		listT, errT := tk.ParseCommandLine(paramsT)
+		if errT != nil {
+			// tk.Pln()
+			// return ""
+			return tk.ErrStrf("failed to parse paramters")
+		}
+
+		list1T := []interface{}{}
+
+		for _, v := range listT {
+			list1T = append(list1T, p.GetValue(v))
+		}
+
+		tk.Pln(list1T...)
+
+		return ""
+	} else if cmdT == "plo" {
+		p1, errT := p.Get1Param(paramsT)
+		if errT != nil {
+			tk.Pl("%v", p.Pop())
+			return ""
+			// return tk.ErrStrf("not enough paramters")
+		}
+
+		valueT := p.GetValue(p1)
+
+		tk.Pl("%v", valueT)
+
+		return ""
+	} else if cmdT == "plv" {
+		p1, errT := p.Get1Param(paramsT)
+		if errT != nil {
+			tk.Plv(p.Pop())
+			return ""
+			// return tk.ErrStrf("not enough paramters")
+		}
+
+		valueT := p.GetValue(p1)
+
+		tk.Plv(valueT)
+
+		return ""
+	} else if cmdT == "pop" {
+		p1, errT := p.Get1Param(paramsT)
+		if errT != nil {
+			p.VarsM["popG"] = p.Pop()
+			return ""
+			// return tk.ErrStrf("not enough paramters")
+		}
+
+		nameT := p.GetName(p1)
+
+		p.VarsM[nameT] = p.Pop()
+
+		return ""
+	} else if cmdT == "popInt" {
+		p1, errT := p.Get1Param(paramsT)
+		if errT != nil {
+			p.VarsM["popG"] = p.Pop()
+			return ""
+			// return tk.ErrStrf("not enough paramters")
+		}
+
+		nameT := p.GetName(p1)
+
+		p.VarsM[nameT] = tk.ToInt(p.Pop())
+
+		return ""
+	} else if cmdT == "popStr" {
+		p1, errT := p.Get1Param(paramsT)
+		if errT != nil {
+			p.VarsM["popG"] = p.Pop()
+			return ""
+			// return tk.ErrStrf("not enough paramters")
+		}
+
+		nameT := p.GetName(p1)
+
+		p.VarsM[nameT] = tk.ToStr(p.Pop())
+
+		return ""
+	} else if cmdT == "peek" {
+		p1, errT := p.Get1Param(paramsT)
+		if errT != nil {
+			p.VarsM["peekG"] = p.Peek()
+			return ""
+			// return tk.ErrStrf("not enough paramters")
+		}
+
+		nameT := p.GetName(p1)
+
+		p.VarsM[nameT] = p.Peek()
+
+		return ""
+	} else if cmdT == "peekInt" {
+		p1, errT := p.Get1Param(paramsT)
+		if errT != nil {
+			p.VarsM["peekG"] = p.Peek()
+			return ""
+			// return tk.ErrStrf("not enough paramters")
+		}
+
+		nameT := p.GetName(p1)
+
+		p.VarsM[nameT] = tk.ToInt(p.Peek())
+
+		return ""
+	} else if cmdT == "peekStr" {
+		p1, errT := p.Get1Param(paramsT)
+		if errT != nil {
+			p.VarsM["peekG"] = p.Peek()
+			return ""
+			// return tk.ErrStrf("not enough paramters")
+		}
+
+		nameT := p.GetName(p1)
+
+		p.VarsM[nameT] = tk.ToStr(p.Peek())
+
+		return ""
+	} else if cmdT == "push" {
+		p1, errT := p.Get1Param(paramsT)
+		if errT != nil {
+			p.Push(p.Pop())
+			return ""
+			// return tk.ErrStrf("not enough paramters")
+		}
+
+		valueT := p.GetValue(p1)
+
+		p.Push(valueT)
+
+		return ""
+	} else if cmdT == "pushInt" {
+		p1, errT := p.Get1Param(paramsT)
+		if errT != nil {
+			p.Push(tk.ToInt(p.Pop()))
+			return ""
+			// return tk.ErrStrf("not enough paramters")
+		}
+
+		valueT := p.GetValue(p1)
+
+		p.Push(tk.ToInt(valueT))
+
+		return ""
+	} else if cmdT == "pushStr" {
+		p1, errT := p.Get1Param(paramsT)
+		if errT != nil {
+			p.Push(tk.ToStr(p.Pop()))
+			return ""
+			// return tk.ErrStrf("not enough paramters")
+		}
+
+		valueT := p.GetValue(p1)
+
+		p.Push(tk.ToStr(valueT))
+
+		return ""
+	} else if cmdT == "getParam" {
+		p1, p2, errT := p.Get2Params(paramsT)
+		if errT != nil {
+			return tk.ErrStrf("not enough paramters")
+		}
+
+		s1 := p.GetValue(p1)
+
+		s2 := p.GetValue(p2)
+
+		paramT := tk.GetParameter(s1.([]string), tk.ToInt(s2))
+
+		p.Push(paramT)
+
+		return ""
+	} else if cmdT == "addItem" {
+		p1, p2, errT := p.Get2Params(paramsT)
+		if errT != nil {
+			return tk.ErrStrf("not enough paramters")
+		}
+
+		s1 := p.GetName(p1)
+
+		s2 := p.GetValue(p2)
+
+		p.VarsM[s1] = append((p.VarsM[s1]).([]interface{}), s2)
+
+		return ""
+	} else if cmdT == "addStrItem" {
+		p1, p2, errT := p.Get2Params(paramsT)
+		if errT != nil {
+			return tk.ErrStrf("not enough paramters")
+		}
+
+		s1 := p.GetName(p1)
+
+		s2 := p.GetValue(p2)
+
+		p.VarsM[s1] = append((p.VarsM[s1]).([]string), tk.ToStr(s2))
+
+		return ""
+	} else if cmdT == "getWeb" {
+		p1, p2, errT := p.Get2Params(paramsT)
+		if errT != nil {
+			if p1 == "" {
+				return tk.ErrStrf("not enough paramters")
+			}
+		}
+
+		s1 := p.GetValue(p1)
+
+		s2 := p.GetValue(p2)
+
+		var listT []interface{} = s2.([]interface{})
+
+		// listT = tk.FromJSONWithDefault(tk.ToStr(s2), []interface{}{}).([]interface{})
+
+		// if listT == nil {
+		// 	listT = []interface{}{}
+		// }
+
+		rs := tk.DownloadWebPageX(tk.ToStr(s1), listT...)
+
+		p.Push(rs)
+
+		return ""
+	} else if cmdT == "htmlToText" {
+		p1, p2, errT := p.Get2Params(paramsT)
+		if errT != nil {
+			if p1 == "" {
+				return tk.ErrStrf("not enough paramters")
+			}
+		}
+
+		s1 := p.GetValue(p1)
+
+		var s2 []string
+
+		if p2 == "" {
+			s2 = []string{}
+		} else {
+			s2 = (p.GetValue(p2)).([]string)
+		}
+
+		rs := tk.HTMLToText(tk.ToStr(s1), s2...)
+
+		p.Push(rs)
+
+		return ""
+	} else if cmdT == "getRuntimeInfo" {
+		p.Push(tk.ToJSONX(p, "-indent", "-sort"))
 
 		return ""
 	}
@@ -264,20 +728,17 @@ func (p *XieVM) Run() string {
 			p.CodePointerM = tk.StrToInt(rs)
 
 			if p.CodePointerM < 0 || p.CodePointerM >= len(p.CodeListM) {
-				return tk.ErrStrf("command index out of range")
+				tk.Plv(p)
+				return tk.ErrStrf("command index out of range: %v", p.CodePointerM)
 			}
 		}
 	}
 
-	tk.Pl(tk.ToJSONX(p, "-indent", "-sort"))
+	// tk.Pl(tk.ToJSONX(p, "-indent", "-sort"))
 
 	outT, ok := p.VarsM["OutG"]
 
 	if !ok {
-		if p.LastValueM != "" {
-			return p.LastValueM
-		}
-
 		return tk.ErrStrf("no result")
 	}
 
@@ -285,280 +746,18 @@ func (p *XieVM) Run() string {
 
 }
 
-func getParam(strA string) string {
-	strT := tk.Trim(strA)
-
-	if tk.StartsWith(strT, "||||") && tk.EndsWith(strT, "||||") {
-		return strT[4 : len(strT)-4]
-	}
-
-	return strT
-}
-
-func RunLine1(vmA *map[string]interface{}, lineA string, optsA ...string) string {
-	vmT := *vmA
-
-	listT := strings.SplitN(lineA, " ", 3)
-
-	cmdLenT := len(listT)
-
-	if cmdLenT < 1 {
-		return tk.ErrStrf("empty code line")
-	}
-
-	cmdT := tk.Trim(listT[0])
-
-	param1T := ""
-
-	if cmdLenT > 1 {
-		param1T = tk.Trim(listT[1])
-	}
-
-	param2T := ""
-
-	if cmdLenT > 2 {
-		param2T = tk.Trim(listT[2])
-	}
-
-	tk.Pl("run line: %v %v %v", cmdT, param1T, param2T)
-
-	if cmdT == "pass" {
-		vmT["LastP"] = ""
-		vmT["LastV"] = ""
-	} else if cmdT == "var" {
-		if param1T == "" {
-			return tk.ErrStrf("not enough paramters")
-		}
-
-		vmT[param1T] = ""
-
-		vmT["LastP"] = param1T
-	} else if cmdT == "assign" {
-		if cmdLenT < 3 {
-			return tk.ErrStrf("not enough paramters")
-		}
-
-		if tk.StartsWith(param1T, "$") {
-			param1T = param1T[1:]
-		}
-
-		if tk.StartsWith(param2T, "$") {
-			param2T = vmT[param2T[1:]].(string)
-		} else if tk.StartsWith(param2T, "\\") {
-			param2T = param2T[1:]
-		} else {
-			param2T = getParam(param2T)
-		}
-
-		vmT[param1T] = param2T
-
-		vmT["LastP"] = param1T
-		vmT["LastV"] = param2T
-	} else if cmdT == "strAdd" {
-		if cmdLenT < 3 {
-			return tk.ErrStrf("not enough paramters")
-		}
-
-		if tk.StartsWith(param1T, "$") {
-			param1T = param1T[1:]
-		}
-
-		if tk.StartsWith(param2T, "$") {
-			param2T = vmT[param2T[1:]].(string)
-		} else if tk.StartsWith(param2T, "\\") {
-			param2T = param2T[1:]
-		} else {
-			param2T = getParam(param2T)
-		}
-
-		vmT[param1T] = vmT[param1T].(string) + param2T
-
-		vmT["LastP"] = param1T
-		vmT["LastV"] = vmT[param1T]
-	}
-
-	return ""
-}
-
-// func RunCode1(codeA string, optsA ...string) string {
-// 	vmT := make(map[string]interface{})
-
-// 	originalCodeListM := tk.SplitLines(codeA)
-
-// 	codeListM := make([]string, 0, len(originalCodeListM))
-
-// 	codeToOriginMapM := make(map[string]string, len(originalCodeListM))
-
-// 	pointerT := 0
-// 	for i := 0; i < len(originalCodeListM); i++ {
-// 		v := originalCodeListM[i]
-
-// 		if tk.StartsWith(v, "//") {
-// 			continue
-// 		}
-
-// 		iFirstT := i
-// 		if tk.Contains(v, "||||") {
-// 			if strings.Count(v, "||||") != 2 {
-// 				foundT := false
-// 				var j int
-// 				for j = i + 1; j < len(originalCodeListM); j++ {
-// 					if tk.Contains(originalCodeListM[j], "||||") {
-// 						v = tk.JoinLines(originalCodeListM[i : j+1])
-// 						foundT = true
-// 						break
-// 					}
-// 				}
-
-// 				if !foundT {
-// 					return tk.ErrStrf("parse error: |||| not closed(%v)", i)
-// 				}
-
-// 				i = j
-// 			}
-// 		}
-
-// 		v = tk.Trim(v)
-
-// 		if v == "" {
-// 			continue
-// 		}
-
-// 		codeListM = append(codeListM, v)
-// 		codeToOriginMapM[tk.IntToStr(pointerT)] = tk.IntToStr(iFirstT)
-// 		pointerT++
-// 	}
-
-// 	tk.Plv(originalCodeListM)
-// 	tk.Plv(codeListM)
-// 	tk.Plv(codeToOriginMapM)
-
-// 	// vmT["GlobalsG"] = make(map[string]interface{}, 20)
-// 	vmT["OriginalCodeList"] = originalCodeListM
-// 	vmT["CodeList"] = codeListM
-// 	vmT["CodeToOriginMap"] = codeToOriginMapM
-// 	vmT["LinePointer"] = "0"
-// 	vmT["LastP"] = ""
-// 	vmT["LastV"] = ""
-
-// 	vmT["RegA"] = ""
-// 	vmT["RegB"] = ""
-// 	vmT["RegC"] = ""
-
-// 	for i, v := range codeListM {
-// 		vmT["LinePointer"] = tk.IntToStr(i)
-// 		rs := RunLine1(&vmT, v)
-
-// 		if tk.IsErrStr(rs) {
-// 			tk.Pl("error: %v", tk.GetErrStr(rs))
-// 			break
-// 		}
-
-// 		// tk.Plv(vmT["GlobalsG"])
-// 	}
-
-// 	tk.Pl(tk.ToJSONX(vmT, "-indent", "-sort"))
-
-// 	outT, ok := vmT["OutG"]
-
-// 	if !ok {
-// 		return tk.ErrStrf("no result")
-// 	}
-
-// 	return tk.ToStr(outT)
-// }
-
-// func Version() string {
-// 	return versionG
-// }
-
-// func RunCode(codeA string, optsA ...string) string {
-// 	vmT := &XieVM{}
-
-// 	vmT.initVM()
-
-// 	vmT.SourceM = tk.SplitLines(codeA)
-
-// 	vmT.CodeListM = make([]string, 0, len(vmT.SourceM))
-
-// 	vmT.CodeSourceMapM = make(map[int]int, len(vmT.SourceM))
-
-// 	pointerT := 0
-// 	for i := 0; i < len(vmT.SourceM); i++ {
-// 		v := vmT.SourceM[i]
-
-// 		if tk.StartsWith(v, "//") {
-// 			continue
-// 		}
-
-// 		iFirstT := i
-// 		if tk.Contains(v, "||||") {
-// 			if strings.Count(v, "||||") != 2 {
-// 				foundT := false
-// 				var j int
-// 				for j = i + 1; j < len(vmT.SourceM); j++ {
-// 					if tk.Contains(vmT.SourceM[j], "||||") {
-// 						v = tk.JoinLines(vmT.SourceM[i : j+1])
-// 						foundT = true
-// 						break
-// 					}
-// 				}
-
-// 				if !foundT {
-// 					return tk.ErrStrf("parse error: |||| not closed(%v)", i)
-// 				}
-
-// 				i = j
-// 			}
-// 		}
-
-// 		v = tk.Trim(v)
-
-// 		if v == "" {
-// 			continue
-// 		}
-
-// 		vmT.CodeListM = append(vmT.CodeListM, v)
-// 		vmT.CodeSourceMapM[tk.IntToStr(pointerT)] = tk.IntToStr(iFirstT)
-// 		pointerT++
-// 	}
-
-// 	tk.Plv(vmT.SourceM)
-// 	tk.Plv(vmT.CodeListM)
-// 	tk.Plv(vmT.CodeSourceMapM)
-
-// 	// vmT["GlobalsG"] = make(map[string]interface{}, 20)
-// 	// vmT.CodePointerM = 0
-// 	// vmT.LastP = ""
-// 	// vmT.LastV = ""
-
-// 	for i, v := range vmT.CodeListM {
-// 		vmT.CodePointerM = i
-// 		rs := RunLine1(&vmT, v)
-
-// 		if tk.IsErrStr(rs) {
-// 			tk.Pl("error: %v", tk.GetErrStr(rs))
-// 			break
-// 		}
-
-// 		// tk.Plv(vmT["GlobalsG"])
-// 	}
-
-// 	tk.Pl(tk.ToJSONX(vmT, "-indent", "-sort"))
-
-// 	outT, ok := vmT["OutG"]
-
-// 	if !ok {
-// 		return tk.ErrStrf("no result")
-// 	}
-
-// 	return tk.ToStr(outT)
-// }
-
 func RunCode(codeA string, optsA ...string) string {
 	vmT := NewXie()
 
 	vmT.Load(codeA)
+
+	var argsT []string = tk.JSONToStringArray(tk.GetSwitch(optsA, "-args=", "[]"))
+
+	if argsT != nil {
+		vmT.VarsM["argsG"] = argsT
+	} else {
+		vmT.VarsM["argsG"] = []string{}
+	}
 
 	rs := vmT.Run()
 

@@ -7,6 +7,20 @@ strAdd $a ||||sdjkfhdk
 风扇电机开发的时刻
 ||||
 
+pop
+
 strAdd $a ||||^*^*^*||(&@#)||||
+
+pop $b
+
+plv $a
+
+plv $b
+
+pln abc 123 "[code name is 天道]" $a
+
+getRuntimeInfo
+
+plo
+
 pass
-pln $last

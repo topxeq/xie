@@ -1,0 +1,25 @@
+assignInt $i 0
+
+:loop1
+
+intAdd $i 10
+
+pln $i :  $pop
+
+assignInt $j $i
+
+:loop2
+
+pln j: $j
+
+inc $j
+
+<i $j 10
+
+if $pop loop2
+
+inc $i
+
+<i $i 5
+
+if $pop loop1
