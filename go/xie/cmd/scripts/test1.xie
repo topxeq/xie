@@ -1,3 +1,7 @@
+pln inputG: $inputG
+
+pl argsG=%v $argsG
+
 var a
 
 assign $a abc

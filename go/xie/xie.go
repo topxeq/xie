@@ -1,6 +1,7 @@
 package xie
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 
@@ -261,6 +262,10 @@ func (p *XieVM) Get2Params(strA string) (string, string, error) {
 	return listT[0], p2, nil
 }
 
+func (p *XieVM) ErrStrf(formatA string, argsA ...interface{}) string {
+	return fmt.Sprintf(fmt.Sprintf("TXERROR:(Line %v: %v) ", p.CodeSourceMapM[p.CodePointerM]+1, tk.LimitString(p.SourceM[p.CodeSourceMapM[p.CodePointerM]], 20))+formatA, argsA...)
+}
+
 func (p *XieVM) RunLine(lineA int) string {
 	lineT := p.CodeListM[lineA]
 
@@ -277,17 +282,10 @@ func (p *XieVM) RunLine(lineA int) string {
 	if cmdT == "pass" {
 		return ""
 	} else if cmdT == "var" {
-		// p1, errT := p.Get1Param(paramsT)
-		// if errT != nil {
-		// 	return tk.ErrStrf("not enough paramters")
-		// }
-
-		// nameT := p.GetName(p1)
-
 		p1, p2, errT := p.Get2Params(paramsT)
 		if errT != nil {
 			if p1 == "" {
-				return tk.ErrStrf("not enough paramters")
+				return p.ErrStrf("not enough paramters")
 			}
 		}
 
@@ -322,7 +320,7 @@ func (p *XieVM) RunLine(lineA int) string {
 	} else if cmdT == "assign" {
 		p1, p2, errT := p.Get2Params(paramsT)
 		if errT != nil {
-			return tk.ErrStrf("not enough paramters")
+			return p.ErrStrf("not enough paramters")
 		}
 
 		nameT := p.GetName(p1)
@@ -332,10 +330,23 @@ func (p *XieVM) RunLine(lineA int) string {
 		p.VarsM[nameT] = valueT
 
 		return ""
+	} else if cmdT == "assignBool" {
+		p1, p2, errT := p.Get2Params(paramsT)
+		if errT != nil {
+			return p.ErrStrf("not enough paramters")
+		}
+
+		nameT := p.GetName(p1)
+
+		valueT := p.GetValue(p2)
+
+		p.VarsM[nameT] = tk.ToBool(valueT)
+
+		return ""
 	} else if cmdT == "assignInt" {
 		p1, p2, errT := p.Get2Params(paramsT)
 		if errT != nil {
-			return tk.ErrStrf("not enough paramters")
+			return p.ErrStrf("not enough paramters")
 		}
 
 		nameT := p.GetName(p1)
@@ -345,10 +356,36 @@ func (p *XieVM) RunLine(lineA int) string {
 		p.VarsM[nameT] = tk.ToInt(valueT)
 
 		return ""
+	} else if cmdT == "assignFloat" {
+		p1, p2, errT := p.Get2Params(paramsT)
+		if errT != nil {
+			return p.ErrStrf("not enough paramters")
+		}
+
+		nameT := p.GetName(p1)
+
+		valueT := p.GetValue(p2)
+
+		p.VarsM[nameT] = tk.ToFloat(valueT)
+
+		return ""
+	} else if cmdT == "assignStr" {
+		p1, p2, errT := p.Get2Params(paramsT)
+		if errT != nil {
+			return p.ErrStrf("not enough paramters")
+		}
+
+		nameT := p.GetName(p1)
+
+		valueT := p.GetValue(p2)
+
+		p.VarsM[nameT] = tk.ToStr(valueT)
+
+		return ""
 	} else if cmdT == "<i" {
 		p1, p2, errT := p.Get2Params(paramsT)
 		if errT != nil {
-			return tk.ErrStrf("not enough paramters")
+			return p.ErrStrf("not enough paramters")
 		}
 
 		s1 := p.GetValue(p1)
@@ -361,7 +398,7 @@ func (p *XieVM) RunLine(lineA int) string {
 	} else if cmdT == ">i" {
 		p1, p2, errT := p.Get2Params(paramsT)
 		if errT != nil {
-			return tk.ErrStrf("not enough paramters")
+			return p.ErrStrf("not enough paramters")
 		}
 
 		s1 := p.GetValue(p1)
@@ -376,7 +413,7 @@ func (p *XieVM) RunLine(lineA int) string {
 	} else if cmdT == "if" {
 		p1, p2, errT := p.Get2Params(paramsT)
 		if errT != nil {
-			return tk.ErrStrf("not enough paramters")
+			return p.ErrStrf("not enough paramters")
 		}
 
 		s1 := p.GetValue(p1)
@@ -395,11 +432,19 @@ func (p *XieVM) RunLine(lineA int) string {
 
 		return ""
 	} else if cmdT == "exit" {
+		p1, errT := p.Get1Param(paramsT)
+		if errT != nil {
+			return "exit"
+		}
+
+		v1 := p.GetValue(p1)
+		p.SetVar("OutG", v1)
+
 		return "exit"
 	} else if cmdT == "strAdd" {
 		p1, p2, errT := p.Get2Params(paramsT)
 		if errT != nil {
-			return tk.ErrStrf("not enough paramters")
+			return p.ErrStrf("not enough paramters")
 		}
 
 		s1 := p.GetValue(p1)
@@ -412,7 +457,7 @@ func (p *XieVM) RunLine(lineA int) string {
 	} else if cmdT == "intAdd" {
 		p1, p2, errT := p.Get2Params(paramsT)
 		if errT != nil {
-			return tk.ErrStrf("not enough paramters")
+			return p.ErrStrf("not enough paramters")
 		}
 
 		s1 := p.GetValue(p1)
@@ -425,13 +470,25 @@ func (p *XieVM) RunLine(lineA int) string {
 	} else if cmdT == "inc" {
 		p1, errT := p.Get1Param(paramsT)
 		if errT != nil {
-			return tk.ErrStrf("not enough paramters")
+			return p.ErrStrf("not enough paramters")
 		}
 
 		s1 := p.GetName(p1)
 		v1 := p.GetValue(p1)
 
 		p.VarsM[s1] = tk.ToInt(v1) + 1
+
+		return ""
+	} else if cmdT == "dec" {
+		p1, errT := p.Get1Param(paramsT)
+		if errT != nil {
+			return p.ErrStrf("not enough paramters")
+		}
+
+		s1 := p.GetName(p1)
+		v1 := p.GetValue(p1)
+
+		p.VarsM[s1] = tk.ToInt(v1) - 1
 
 		return ""
 	} else if cmdT == "regReplaceAllStr" {
@@ -449,7 +506,7 @@ func (p *XieVM) RunLine(lineA int) string {
 		if errT != nil {
 			p.Push(tk.Trim(tk.ToStr(p.Pop())))
 			return ""
-			// return tk.ErrStrf("not enough paramters")
+			// return p.ErrStrf("not enough paramters")
 		}
 
 		s1 := p.GetValue(p1)
@@ -462,7 +519,7 @@ func (p *XieVM) RunLine(lineA int) string {
 		if errT != nil {
 			// tk.Pln()
 			// return ""
-			return tk.ErrStrf("failed to parse paramters")
+			return p.ErrStrf("failed to parse paramters")
 		}
 
 		list1T := []interface{}{}
@@ -477,14 +534,36 @@ func (p *XieVM) RunLine(lineA int) string {
 	} else if cmdT == "plo" {
 		p1, errT := p.Get1Param(paramsT)
 		if errT != nil {
-			tk.Pl("%v", p.Pop())
+			vT := p.Pop()
+			tk.Pl("(%T)%v", vT, vT)
 			return ""
-			// return tk.ErrStrf("not enough paramters")
+			// return p.ErrStrf("not enough paramters")
 		}
 
 		valueT := p.GetValue(p1)
 
-		tk.Pl("%v", valueT)
+		tk.Pl("(%T)%v", valueT, valueT)
+
+		return ""
+	} else if cmdT == "pl" {
+		listT, errT := tk.ParseCommandLine(paramsT)
+		if errT != nil {
+			return p.ErrStrf("failed to parse paramters")
+		}
+
+		list1T := []interface{}{}
+
+		formatT := ""
+
+		for i, v := range listT {
+			if i == 0 {
+				formatT = v
+				continue
+			}
+			list1T = append(list1T, p.GetValue(v))
+		}
+
+		tk.Pl(formatT, list1T...)
 
 		return ""
 	} else if cmdT == "plv" {
@@ -492,7 +571,7 @@ func (p *XieVM) RunLine(lineA int) string {
 		if errT != nil {
 			tk.Plv(p.Pop())
 			return ""
-			// return tk.ErrStrf("not enough paramters")
+			// return p.ErrStrf("not enough paramters")
 		}
 
 		valueT := p.GetValue(p1)
@@ -500,12 +579,35 @@ func (p *XieVM) RunLine(lineA int) string {
 		tk.Plv(valueT)
 
 		return ""
+	} else if cmdT == "convert" {
+		p1, p2, errT := p.Get2Params(paramsT)
+		if errT != nil {
+			return p.ErrStrf("not enough paramters")
+		}
+
+		s1 := p.GetValue(p1)
+
+		s2 := p.GetValue(p2)
+
+		if s2 == "bool" {
+			p.Push(tk.ToBool(s1))
+		} else if s2 == "int" {
+			p.Push(tk.ToInt(s1))
+		} else if s2 == "float" {
+			p.Push(tk.ToFloat(s1))
+		} else if s2 == "int" {
+			p.Push(tk.ToStr(s1))
+		} else {
+			return p.ErrStrf("unknown type")
+		}
+
+		return ""
 	} else if cmdT == "pop" {
 		p1, errT := p.Get1Param(paramsT)
 		if errT != nil {
 			p.VarsM["popG"] = p.Pop()
 			return ""
-			// return tk.ErrStrf("not enough paramters")
+			// return p.ErrStrf("not enough paramters")
 		}
 
 		nameT := p.GetName(p1)
@@ -513,12 +615,25 @@ func (p *XieVM) RunLine(lineA int) string {
 		p.VarsM[nameT] = p.Pop()
 
 		return ""
+	} else if cmdT == "popBool" {
+		p1, errT := p.Get1Param(paramsT)
+		if errT != nil {
+			p.VarsM["popG"] = tk.ToBool(p.Pop())
+			return ""
+			// return p.ErrStrf("not enough paramters")
+		}
+
+		nameT := p.GetName(p1)
+
+		p.VarsM[nameT] = tk.ToBool(p.Pop())
+
+		return ""
 	} else if cmdT == "popInt" {
 		p1, errT := p.Get1Param(paramsT)
 		if errT != nil {
-			p.VarsM["popG"] = p.Pop()
+			p.VarsM["popG"] = tk.ToInt(p.Pop())
 			return ""
-			// return tk.ErrStrf("not enough paramters")
+			// return p.ErrStrf("not enough paramters")
 		}
 
 		nameT := p.GetName(p1)
@@ -526,12 +641,25 @@ func (p *XieVM) RunLine(lineA int) string {
 		p.VarsM[nameT] = tk.ToInt(p.Pop())
 
 		return ""
+	} else if cmdT == "popFloat" {
+		p1, errT := p.Get1Param(paramsT)
+		if errT != nil {
+			p.VarsM["popG"] = tk.ToFloat(p.Pop())
+			return ""
+			// return p.ErrStrf("not enough paramters")
+		}
+
+		nameT := p.GetName(p1)
+
+		p.VarsM[nameT] = tk.ToFloat(p.Pop())
+
+		return ""
 	} else if cmdT == "popStr" {
 		p1, errT := p.Get1Param(paramsT)
 		if errT != nil {
 			p.VarsM["popG"] = p.Pop()
 			return ""
-			// return tk.ErrStrf("not enough paramters")
+			// return p.ErrStrf("not enough paramters")
 		}
 
 		nameT := p.GetName(p1)
@@ -544,7 +672,7 @@ func (p *XieVM) RunLine(lineA int) string {
 		if errT != nil {
 			p.VarsM["peekG"] = p.Peek()
 			return ""
-			// return tk.ErrStrf("not enough paramters")
+			// return p.ErrStrf("not enough paramters")
 		}
 
 		nameT := p.GetName(p1)
@@ -552,12 +680,25 @@ func (p *XieVM) RunLine(lineA int) string {
 		p.VarsM[nameT] = p.Peek()
 
 		return ""
+	} else if cmdT == "peekBool" {
+		p1, errT := p.Get1Param(paramsT)
+		if errT != nil {
+			p.VarsM["peekG"] = tk.ToBool(p.Peek())
+			return ""
+			// return p.ErrStrf("not enough paramters")
+		}
+
+		nameT := p.GetName(p1)
+
+		p.VarsM[nameT] = tk.ToBool(p.Peek())
+
+		return ""
 	} else if cmdT == "peekInt" {
 		p1, errT := p.Get1Param(paramsT)
 		if errT != nil {
-			p.VarsM["peekG"] = p.Peek()
+			p.VarsM["peekG"] = tk.ToInt(p.Peek())
 			return ""
-			// return tk.ErrStrf("not enough paramters")
+			// return p.ErrStrf("not enough paramters")
 		}
 
 		nameT := p.GetName(p1)
@@ -565,12 +706,25 @@ func (p *XieVM) RunLine(lineA int) string {
 		p.VarsM[nameT] = tk.ToInt(p.Peek())
 
 		return ""
+	} else if cmdT == "peekFloat" {
+		p1, errT := p.Get1Param(paramsT)
+		if errT != nil {
+			p.VarsM["peekG"] = tk.ToFloat(p.Peek())
+			return ""
+			// return p.ErrStrf("not enough paramters")
+		}
+
+		nameT := p.GetName(p1)
+
+		p.VarsM[nameT] = tk.ToFloat(p.Peek())
+
+		return ""
 	} else if cmdT == "peekStr" {
 		p1, errT := p.Get1Param(paramsT)
 		if errT != nil {
 			p.VarsM["peekG"] = p.Peek()
 			return ""
-			// return tk.ErrStrf("not enough paramters")
+			// return p.ErrStrf("not enough paramters")
 		}
 
 		nameT := p.GetName(p1)
@@ -583,7 +737,7 @@ func (p *XieVM) RunLine(lineA int) string {
 		if errT != nil {
 			p.Push(p.Pop())
 			return ""
-			// return tk.ErrStrf("not enough paramters")
+			// return p.ErrStrf("not enough paramters")
 		}
 
 		valueT := p.GetValue(p1)
@@ -591,12 +745,23 @@ func (p *XieVM) RunLine(lineA int) string {
 		p.Push(valueT)
 
 		return ""
+	} else if cmdT == "pushBool" {
+		p1, errT := p.Get1Param(paramsT)
+		if errT != nil {
+			p.Push(tk.ToBool(p.Pop()))
+			return ""
+		}
+
+		valueT := p.GetValue(p1)
+
+		p.Push(tk.ToBool(valueT))
+
+		return ""
 	} else if cmdT == "pushInt" {
 		p1, errT := p.Get1Param(paramsT)
 		if errT != nil {
 			p.Push(tk.ToInt(p.Pop()))
 			return ""
-			// return tk.ErrStrf("not enough paramters")
 		}
 
 		valueT := p.GetValue(p1)
@@ -604,12 +769,23 @@ func (p *XieVM) RunLine(lineA int) string {
 		p.Push(tk.ToInt(valueT))
 
 		return ""
+	} else if cmdT == "pushFloat" {
+		p1, errT := p.Get1Param(paramsT)
+		if errT != nil {
+			p.Push(tk.ToFloat(p.Pop()))
+			return ""
+		}
+
+		valueT := p.GetValue(p1)
+
+		p.Push(tk.ToFloat(valueT))
+
+		return ""
 	} else if cmdT == "pushStr" {
 		p1, errT := p.Get1Param(paramsT)
 		if errT != nil {
 			p.Push(tk.ToStr(p.Pop()))
 			return ""
-			// return tk.ErrStrf("not enough paramters")
 		}
 
 		valueT := p.GetValue(p1)
@@ -620,7 +796,7 @@ func (p *XieVM) RunLine(lineA int) string {
 	} else if cmdT == "getParam" {
 		p1, p2, errT := p.Get2Params(paramsT)
 		if errT != nil {
-			return tk.ErrStrf("not enough paramters")
+			return p.ErrStrf("not enough paramters")
 		}
 
 		s1 := p.GetValue(p1)
@@ -635,7 +811,7 @@ func (p *XieVM) RunLine(lineA int) string {
 	} else if cmdT == "addItem" {
 		p1, p2, errT := p.Get2Params(paramsT)
 		if errT != nil {
-			return tk.ErrStrf("not enough paramters")
+			return p.ErrStrf("not enough paramters")
 		}
 
 		s1 := p.GetName(p1)
@@ -648,7 +824,7 @@ func (p *XieVM) RunLine(lineA int) string {
 	} else if cmdT == "addStrItem" {
 		p1, p2, errT := p.Get2Params(paramsT)
 		if errT != nil {
-			return tk.ErrStrf("not enough paramters")
+			return p.ErrStrf("not enough paramters")
 		}
 
 		s1 := p.GetName(p1)
@@ -662,7 +838,7 @@ func (p *XieVM) RunLine(lineA int) string {
 		p1, p2, errT := p.Get2Params(paramsT)
 		if errT != nil {
 			if p1 == "" {
-				return tk.ErrStrf("not enough paramters")
+				return p.ErrStrf("not enough paramters")
 			}
 		}
 
@@ -687,7 +863,7 @@ func (p *XieVM) RunLine(lineA int) string {
 		p1, p2, errT := p.Get2Params(paramsT)
 		if errT != nil {
 			if p1 == "" {
-				return tk.ErrStrf("not enough paramters")
+				return p.ErrStrf("not enough paramters")
 			}
 		}
 
@@ -706,13 +882,22 @@ func (p *XieVM) RunLine(lineA int) string {
 		p.Push(rs)
 
 		return ""
-	} else if cmdT == "getRuntimeInfo" {
+	} else if cmdT == "getRuntimeInfo" || cmdT == "getDeInfo" {
 		p.Push(tk.ToJSONX(p, "-indent", "-sort"))
+
+		return ""
+	} else if cmdT == "debugInfo" {
+		tk.Pln(tk.ToJSONX(p, "-indent", "-sort"))
+
+		p1, _ := p.Get1Param(paramsT)
+		if p1 == "exit" {
+			return "exit"
+		}
 
 		return ""
 	}
 
-	return tk.ErrStrf("unknown command")
+	return p.ErrStrf("unknown command")
 }
 
 func (p *XieVM) Run() string {
@@ -722,7 +907,8 @@ func (p *XieVM) Run() string {
 		rs := p.RunLine(p.CodePointerM)
 
 		if tk.IsErrStr(rs) {
-			tk.Pl("[%v](xie) runtime error(line %v): %v", tk.GetNowTimeStringFormal(), p.CodeSourceMapM[p.CodePointerM]+1, tk.GetErrStr(rs))
+			return tk.ErrStrf("[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), tk.GetErrStr(rs))
+			// tk.Pl("[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), p.CodeSourceMapM[p.CodePointerM]+1, tk.GetErrStr(rs))
 			break
 		}
 
@@ -735,19 +921,19 @@ func (p *XieVM) Run() string {
 		} else if rs == "exit" {
 			break
 		} else {
-			p.CodePointerM = tk.StrToInt(rs)
+			tmpI := tk.StrToInt(rs)
 
-			if p.CodePointerM < 0 || p.CodePointerM >= len(p.CodeListM) {
-				tk.Plv(p)
-				return tk.ErrStrf("command index out of range: %v", p.CodePointerM)
+			if tmpI < 0 || tmpI >= len(p.CodeListM) {
+				return p.ErrStrf("command index out of range: %v", p.CodePointerM)
 			}
+
+			p.CodePointerM = tmpI
 		}
 	}
 
 	// tk.Pl(tk.ToJSONX(p, "-indent", "-sort"))
 
 	outT, ok := p.VarsM["OutG"]
-
 	if !ok {
 		return tk.ErrStrf("no result")
 	}
@@ -761,8 +947,13 @@ func RunCode(codeA string, objA interface{}, optsA ...string) string {
 
 	vmT.Load(codeA)
 
-	vmT.SetVar("argsG", optsA)
-	vmT.SetVar("inputG", objA)
+	if len(optsA) > 0 {
+		vmT.SetVar("argsG", optsA)
+	}
+
+	if objA != nil {
+		vmT.SetVar("inputG", objA)
+	}
 
 	// var argsT []string = tk.JSONToStringArray(tk.GetSwitch(optsA, "-args=", "[]"))
 

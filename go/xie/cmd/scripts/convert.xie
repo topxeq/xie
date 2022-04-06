@@ -1,0 +1,15 @@
+var a int
+
+assignInt a 15
+
+inc $a
+
+// debugInfo exit
+
+convert $a float
+
+pop $b
+
+pl a(%T)=%#v $a $a
+
+pl b(%T)=%#v $b $b

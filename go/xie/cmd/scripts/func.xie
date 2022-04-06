@@ -1,0 +1,18 @@
+assign $s |||| ab c123 天然
+森林 ||||
+
+plv $s
+
+push $s
+call func1
+
+pop $s
+
+plv $s
+
+exit
+
+:func1
+pop $v
+trim $v
+ret
