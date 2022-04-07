@@ -10,6 +10,11 @@ import (
 
 var versionG string = "0.0.1"
 
+type FuncContext struct {
+	VarsM          map[string]interface{}
+	ReturnPointerM int
+}
+
 type XieVM struct {
 	SourceM        []string
 	CodeListM      []string
@@ -19,6 +24,8 @@ type XieVM struct {
 	CodePointerM int
 
 	StackM []interface{}
+
+	FuncStackM []FuncContext
 
 	VarsM map[string]interface{}
 }
@@ -33,7 +40,19 @@ func NewXie() *XieVM {
 
 func (p *XieVM) InitVM() {
 	p.StackM = make([]interface{}, 0, 10)
+	p.FuncStackM = make([]FuncContext, 0, 10)
 	p.VarsM = make(map[string]interface{}, 10)
+}
+
+func (p *XieVM) PushFunc() {
+	funcContextT := FuncContext{VarsM: make(map[string]interface{}, 10), ReturnPointerM: p.CodePointerM + 1}
+	p.FuncStackM = append(p.FuncStackM, funcContextT)
+}
+
+func (p *XieVM) PopFunc() int {
+	funcContextT := p.FuncStackM[len(p.FuncStackM)-1]
+	p.FuncStackM = p.FuncStackM[:len(p.FuncStackM)-1]
+	return funcContextT.ReturnPointerM
 }
 
 func (p *XieVM) SetVar(keyA string, vA interface{}) {
@@ -41,7 +60,7 @@ func (p *XieVM) SetVar(keyA string, vA interface{}) {
 		p.InitVM()
 	}
 
-	p.VarsM[keyA] = vA
+	p.GetVars()[keyA] = vA
 }
 
 func (p *XieVM) GetVar(keyA string) interface{} {
@@ -49,7 +68,38 @@ func (p *XieVM) GetVar(keyA string) interface{} {
 		p.InitVM()
 	}
 
-	return p.VarsM[keyA]
+	return p.GetVars()[keyA]
+
+	// lenT := len(p.FuncStackM)
+
+	// if lenT > 0 {
+	// 	for i := lenT - 1; i >= 0; i-- {
+	// 		varsT := p.FuncStackM[i].VarsM
+
+	// 		vT, ok := varsT[keyA]
+
+	// 		if ok {
+	// 			return vT
+	// 		}
+	// 	}
+	// }
+
+	// return p.VarsM[keyA]
+}
+
+// get current vars in context
+func (p *XieVM) GetVars() map[string]interface{} {
+	if p.VarsM == nil {
+		p.InitVM()
+	}
+
+	lenT := len(p.FuncStackM)
+
+	if lenT > 0 {
+		return p.FuncStackM[lenT-1].VarsM
+	}
+
+	return p.VarsM
 }
 
 func (p *XieVM) Push(vA interface{}) {
@@ -198,7 +248,7 @@ func (p *XieVM) GetValue(nameA string) interface{} {
 			return p.Peek()
 		}
 
-		return p.VarsM[nameT]
+		return p.GetVars()[nameT]
 	} else if tk.StartsWith(nameA, `\`) {
 		return nameA[1:]
 	} else {
@@ -281,7 +331,7 @@ func (p *XieVM) RunLine(lineA int) string {
 
 	if cmdT == "pass" {
 		return ""
-	} else if cmdT == "var" {
+	} else if cmdT == "global" {
 		p1, p2, errT := p.Get2Params(paramsT)
 		if errT != nil {
 			if p1 == "" {
@@ -317,6 +367,44 @@ func (p *XieVM) RunLine(lineA int) string {
 		}
 
 		return ""
+	} else if cmdT == "var" {
+		p1, p2, errT := p.Get2Params(paramsT)
+		if errT != nil {
+			if p1 == "" {
+				return p.ErrStrf("not enough paramters")
+			}
+		}
+
+		nameT := p.GetName(p1)
+
+		varsT := p.GetVars()
+
+		if p2 == "" {
+			varsT[nameT] = ""
+			return ""
+		}
+
+		valueT := p.GetValue(p2)
+
+		if valueT == "bool" {
+			varsT[nameT] = false
+		} else if valueT == "int" {
+			varsT[nameT] = int(0)
+		} else if valueT == "float" {
+			varsT[nameT] = float64(0.0)
+		} else if valueT == "string" {
+			varsT[nameT] = ""
+		} else if valueT == "list" {
+			varsT[nameT] = []interface{}{}
+		} else if valueT == "strList" {
+			varsT[nameT] = []string{}
+		} else if valueT == "map" {
+			varsT[nameT] = map[string]interface{}{}
+		} else if valueT == "strMap" {
+			varsT[nameT] = map[string]string{}
+		}
+
+		return ""
 	} else if cmdT == "assign" {
 		p1, p2, errT := p.Get2Params(paramsT)
 		if errT != nil {
@@ -327,7 +415,7 @@ func (p *XieVM) RunLine(lineA int) string {
 
 		valueT := p.GetValue(p2)
 
-		p.VarsM[nameT] = valueT
+		p.GetVars()[nameT] = valueT
 
 		return ""
 	} else if cmdT == "assignBool" {
@@ -340,7 +428,7 @@ func (p *XieVM) RunLine(lineA int) string {
 
 		valueT := p.GetValue(p2)
 
-		p.VarsM[nameT] = tk.ToBool(valueT)
+		p.GetVars()[nameT] = tk.ToBool(valueT)
 
 		return ""
 	} else if cmdT == "assignInt" {
@@ -353,7 +441,7 @@ func (p *XieVM) RunLine(lineA int) string {
 
 		valueT := p.GetValue(p2)
 
-		p.VarsM[nameT] = tk.ToInt(valueT)
+		p.GetVars()[nameT] = tk.ToInt(valueT)
 
 		return ""
 	} else if cmdT == "assignFloat" {
@@ -366,7 +454,7 @@ func (p *XieVM) RunLine(lineA int) string {
 
 		valueT := p.GetValue(p2)
 
-		p.VarsM[nameT] = tk.ToFloat(valueT)
+		p.GetVars()[nameT] = tk.ToFloat(valueT)
 
 		return ""
 	} else if cmdT == "assignStr" {
@@ -379,7 +467,7 @@ func (p *XieVM) RunLine(lineA int) string {
 
 		valueT := p.GetValue(p2)
 
-		p.VarsM[nameT] = tk.ToStr(valueT)
+		p.GetVars()[nameT] = tk.ToStr(valueT)
 
 		return ""
 	} else if cmdT == "<i" {
@@ -476,7 +564,7 @@ func (p *XieVM) RunLine(lineA int) string {
 		s1 := p.GetName(p1)
 		v1 := p.GetValue(p1)
 
-		p.VarsM[s1] = tk.ToInt(v1) + 1
+		p.GetVars()[s1] = tk.ToInt(v1) + 1
 
 		return ""
 	} else if cmdT == "dec" {
@@ -488,7 +576,7 @@ func (p *XieVM) RunLine(lineA int) string {
 		s1 := p.GetName(p1)
 		v1 := p.GetValue(p1)
 
-		p.VarsM[s1] = tk.ToInt(v1) - 1
+		p.GetVars()[s1] = tk.ToInt(v1) - 1
 
 		return ""
 	} else if cmdT == "regReplaceAllStr" {
@@ -602,6 +690,27 @@ func (p *XieVM) RunLine(lineA int) string {
 		}
 
 		return ""
+	} else if cmdT == "call" {
+		p1, errT := p.Get1Param(paramsT)
+		if errT != nil {
+			return p.ErrStrf("not enough paramters")
+		}
+
+		nameT := p.GetName(p1)
+
+		labelPointerT, ok := p.LabelsM[nameT]
+
+		if !ok {
+			return p.ErrStrf("invalid label")
+		}
+
+		p.PushFunc()
+
+		return tk.ToStr(labelPointerT)
+	} else if cmdT == "ret" {
+		pT := p.PopFunc()
+
+		return tk.ToStr(pT)
 	} else if cmdT == "pop" {
 		p1, errT := p.Get1Param(paramsT)
 		if errT != nil {
@@ -612,7 +721,7 @@ func (p *XieVM) RunLine(lineA int) string {
 
 		nameT := p.GetName(p1)
 
-		p.VarsM[nameT] = p.Pop()
+		p.GetVars()[nameT] = p.Pop()
 
 		return ""
 	} else if cmdT == "popBool" {
@@ -625,7 +734,7 @@ func (p *XieVM) RunLine(lineA int) string {
 
 		nameT := p.GetName(p1)
 
-		p.VarsM[nameT] = tk.ToBool(p.Pop())
+		p.GetVars()[nameT] = tk.ToBool(p.Pop())
 
 		return ""
 	} else if cmdT == "popInt" {
@@ -638,7 +747,7 @@ func (p *XieVM) RunLine(lineA int) string {
 
 		nameT := p.GetName(p1)
 
-		p.VarsM[nameT] = tk.ToInt(p.Pop())
+		p.GetVars()[nameT] = tk.ToInt(p.Pop())
 
 		return ""
 	} else if cmdT == "popFloat" {
@@ -651,7 +760,7 @@ func (p *XieVM) RunLine(lineA int) string {
 
 		nameT := p.GetName(p1)
 
-		p.VarsM[nameT] = tk.ToFloat(p.Pop())
+		p.GetVars()[nameT] = tk.ToFloat(p.Pop())
 
 		return ""
 	} else if cmdT == "popStr" {
@@ -664,7 +773,7 @@ func (p *XieVM) RunLine(lineA int) string {
 
 		nameT := p.GetName(p1)
 
-		p.VarsM[nameT] = tk.ToStr(p.Pop())
+		p.GetVars()[nameT] = tk.ToStr(p.Pop())
 
 		return ""
 	} else if cmdT == "peek" {
@@ -677,7 +786,7 @@ func (p *XieVM) RunLine(lineA int) string {
 
 		nameT := p.GetName(p1)
 
-		p.VarsM[nameT] = p.Peek()
+		p.GetVars()[nameT] = p.Peek()
 
 		return ""
 	} else if cmdT == "peekBool" {
@@ -690,7 +799,7 @@ func (p *XieVM) RunLine(lineA int) string {
 
 		nameT := p.GetName(p1)
 
-		p.VarsM[nameT] = tk.ToBool(p.Peek())
+		p.GetVars()[nameT] = tk.ToBool(p.Peek())
 
 		return ""
 	} else if cmdT == "peekInt" {
@@ -703,7 +812,7 @@ func (p *XieVM) RunLine(lineA int) string {
 
 		nameT := p.GetName(p1)
 
-		p.VarsM[nameT] = tk.ToInt(p.Peek())
+		p.GetVars()[nameT] = tk.ToInt(p.Peek())
 
 		return ""
 	} else if cmdT == "peekFloat" {
@@ -716,7 +825,7 @@ func (p *XieVM) RunLine(lineA int) string {
 
 		nameT := p.GetName(p1)
 
-		p.VarsM[nameT] = tk.ToFloat(p.Peek())
+		p.GetVars()[nameT] = tk.ToFloat(p.Peek())
 
 		return ""
 	} else if cmdT == "peekStr" {
@@ -729,7 +838,7 @@ func (p *XieVM) RunLine(lineA int) string {
 
 		nameT := p.GetName(p1)
 
-		p.VarsM[nameT] = tk.ToStr(p.Peek())
+		p.GetVars()[nameT] = tk.ToStr(p.Peek())
 
 		return ""
 	} else if cmdT == "push" {
@@ -808,6 +917,26 @@ func (p *XieVM) RunLine(lineA int) string {
 		p.Push(paramT)
 
 		return ""
+	} else if cmdT == "getNowStr" {
+		p1, p2, _ := p.Get2Params(paramsT)
+
+		var timeStrT string
+
+		if p2 == "formal" {
+			timeStrT = tk.GetNowTimeStringFormal()
+		} else {
+			timeStrT = tk.GetNowTimeString()
+		}
+
+		if p1 == "" {
+			p.Push(timeStrT)
+		} else {
+			s1 := p.GetName(p1)
+
+			p.GetVars()[s1] = timeStrT
+		}
+
+		return ""
 	} else if cmdT == "addItem" {
 		p1, p2, errT := p.Get2Params(paramsT)
 		if errT != nil {
@@ -818,7 +947,7 @@ func (p *XieVM) RunLine(lineA int) string {
 
 		s2 := p.GetValue(p2)
 
-		p.VarsM[s1] = append((p.VarsM[s1]).([]interface{}), s2)
+		p.GetVars()[s1] = append((p.GetVars()[s1]).([]interface{}), s2)
 
 		return ""
 	} else if cmdT == "addStrItem" {
@@ -831,7 +960,7 @@ func (p *XieVM) RunLine(lineA int) string {
 
 		s2 := p.GetValue(p2)
 
-		p.VarsM[s1] = append((p.VarsM[s1]).([]string), tk.ToStr(s2))
+		p.GetVars()[s1] = append((p.GetVars()[s1]).([]string), tk.ToStr(s2))
 
 		return ""
 	} else if cmdT == "getWeb" {
@@ -886,7 +1015,7 @@ func (p *XieVM) RunLine(lineA int) string {
 		p.Push(tk.ToJSONX(p, "-indent", "-sort"))
 
 		return ""
-	} else if cmdT == "debugInfo" {
+	} else if cmdT == "debugInfo" || cmdT == "debug" {
 		tk.Pln(tk.ToJSONX(p, "-indent", "-sort"))
 
 		p1, _ := p.Get1Param(paramsT)

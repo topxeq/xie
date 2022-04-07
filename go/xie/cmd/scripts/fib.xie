@@ -1,0 +1,47 @@
+getParam $argsG 2
+
+convert $pop int
+
+getNowStr $t formal
+pln $t
+
+call fib
+
+plv $pop
+
+// debug
+
+getNowStr $t formal
+pln $t
+
+exit
+
+:fib
+
+pop $c
+
+// pln c= $c
+
+<i $c 2
+
+if $pop return1
+dec $c
+push $c
+call fib
+
+pop $d
+
+dec $c
+push $c
+call fib
+
+pop $e
+
+intAdd $d $e
+
+ret
+
+:return1
+push $c
+ret
+
