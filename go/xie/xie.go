@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/topxeq/tk"
 )
@@ -61,6 +62,14 @@ func (p *XieVM) SetVar(keyA string, vA interface{}) {
 	}
 
 	p.GetVars()[keyA] = vA
+}
+
+func (p *XieVM) PushVar(vA interface{}) {
+	if p.VarsM == nil {
+		p.InitVM()
+	}
+
+	p.Push(vA)
 }
 
 func (p *XieVM) GetVar(keyA string) interface{} {
@@ -257,7 +266,7 @@ func (p *XieVM) GetValue(nameA string) interface{} {
 }
 
 func (p *XieVM) Get1Param(strA string) (string, error) {
-	strT := tk.Trim(strA)
+	strT := strings.TrimSpace(strA)
 
 	if strT == "" {
 		return "", tk.Errf("empty")
@@ -271,7 +280,7 @@ func (p *XieVM) Get1Param(strA string) (string, error) {
 }
 
 func (p *XieVM) Get2Params(strA string) (string, string, error) {
-	strT := tk.Trim(strA)
+	strT := strings.TrimSpace(strA)
 
 	if strT == "" {
 		return "", "", tk.Errf("empty")
@@ -304,7 +313,7 @@ func (p *XieVM) Get2Params(strA string) (string, string, error) {
 		return listT[0], "", tk.Errf("not enough parameters")
 	}
 
-	p2 := tk.Trim(listT[1])
+	p2 := strings.TrimSpace(listT[1])
 	if tk.StartsWith(p2, "||||") && tk.EndsWith(p2, "||||") {
 		p2 = p2[4 : len(p2)-4]
 	}
@@ -316,7 +325,7 @@ func (p *XieVM) ErrStrf(formatA string, argsA ...interface{}) string {
 	return fmt.Sprintf(fmt.Sprintf("TXERROR:(Line %v: %v) ", p.CodeSourceMapM[p.CodePointerM]+1, tk.LimitString(p.SourceM[p.CodeSourceMapM[p.CodePointerM]], 20))+formatA, argsA...)
 }
 
-func (p *XieVM) RunLine(lineA int) string {
+func (p *XieVM) RunLine(lineA int) interface{} {
 	lineT := p.CodeListM[lineA]
 
 	listT := strings.SplitN(lineT, " ", 2)
@@ -326,7 +335,7 @@ func (p *XieVM) RunLine(lineA int) string {
 	paramsT := ""
 
 	if len(listT) > 1 {
-		paramsT = tk.Trim(listT[1])
+		paramsT = strings.TrimSpace(listT[1])
 	}
 
 	if cmdT == "pass" {
@@ -418,6 +427,17 @@ func (p *XieVM) RunLine(lineA int) string {
 		p.GetVars()[nameT] = valueT
 
 		return ""
+	} else if cmdT == "$assign" {
+		p1, errT := p.Get1Param(paramsT)
+		if errT != nil {
+			return p.ErrStrf("not enough paramters")
+		}
+
+		nameT := p.GetName(p1)
+
+		p.GetVars()[nameT] = p.Pop()
+
+		return ""
 	} else if cmdT == "assignBool" {
 		p1, p2, errT := p.Get2Params(paramsT)
 		if errT != nil {
@@ -483,6 +503,10 @@ func (p *XieVM) RunLine(lineA int) string {
 		p.Push(tk.ToInt(s1) < tk.ToInt(s2))
 
 		return ""
+	} else if cmdT == "$<i" {
+		p.Push(p.Pop().(int) > p.Pop().(int))
+
+		return ""
 	} else if cmdT == ">i" {
 		p1, p2, errT := p.Get2Params(paramsT)
 		if errT != nil {
@@ -515,6 +539,23 @@ func (p *XieVM) RunLine(lineA int) string {
 
 			if ok {
 				return tk.IntToStr(labelPointerT)
+			}
+		}
+
+		return ""
+	} else if cmdT == "$if" {
+		p1, errT := p.Get1Param(paramsT)
+		if errT != nil {
+			return p.ErrStrf("not enough paramters")
+		}
+
+		condT := p.Pop().(bool)
+
+		if condT {
+			labelPointerT, ok := p.LabelsM[p1]
+
+			if ok {
+				return labelPointerT
 			}
 		}
 
@@ -555,6 +596,23 @@ func (p *XieVM) RunLine(lineA int) string {
 		p.Push(tk.ToInt(s1) + tk.ToInt(s2))
 
 		return ""
+	} else if cmdT == "$intAdd" {
+		p.Push(p.Pop().(int) + p.Pop().(int))
+
+		return ""
+	} else if cmdT == "intDiv" {
+		p1, p2, errT := p.Get2Params(paramsT)
+		if errT != nil {
+			return p.ErrStrf("not enough paramters")
+		}
+
+		s1 := p.GetValue(p1)
+
+		s2 := p.GetValue(p2)
+
+		p.Push(tk.ToInt(s1) / tk.ToInt(s2))
+
+		return ""
 	} else if cmdT == "inc" {
 		p1, errT := p.Get1Param(paramsT)
 		if errT != nil {
@@ -577,6 +635,18 @@ func (p *XieVM) RunLine(lineA int) string {
 		v1 := p.GetValue(p1)
 
 		p.GetVars()[s1] = tk.ToInt(v1) - 1
+
+		return ""
+	} else if cmdT == "$dec" {
+		p1, errT := p.Get1Param(paramsT)
+		if errT != nil {
+			return p.ErrStrf("not enough paramters")
+		}
+
+		s1 := p.GetName(p1)
+		v1 := p.GetValue(p1)
+
+		p.GetVars()[s1] = v1.(int) - 1
 
 		return ""
 	} else if cmdT == "regReplaceAllStr" {
@@ -706,11 +776,11 @@ func (p *XieVM) RunLine(lineA int) string {
 
 		p.PushFunc()
 
-		return tk.ToStr(labelPointerT)
+		return labelPointerT
 	} else if cmdT == "ret" {
 		pT := p.PopFunc()
 
-		return tk.ToStr(pT)
+		return pT
 	} else if cmdT == "pop" {
 		p1, errT := p.Get1Param(paramsT)
 		if errT != nil {
@@ -785,6 +855,19 @@ func (p *XieVM) RunLine(lineA int) string {
 		}
 
 		nameT := p.GetName(p1)
+
+		p.GetVars()[nameT] = p.Peek()
+
+		return ""
+	} else if cmdT == "$peek" {
+		// p1, errT := p.Get1Param(paramsT)
+		// if errT != nil {
+		// 	p.VarsM["peekG"] = p.Peek()
+		// 	return ""
+		// 	// return p.ErrStrf("not enough paramters")
+		// }
+
+		nameT := paramsT
 
 		p.GetVars()[nameT] = p.Peek()
 
@@ -878,6 +961,36 @@ func (p *XieVM) RunLine(lineA int) string {
 		p.Push(tk.ToInt(valueT))
 
 		return ""
+	} else if cmdT == "$pushInt" {
+		p1, errT := p.Get1Param(paramsT)
+		if errT != nil {
+			p.Push(tk.ToInt(p.Pop()))
+			return ""
+		}
+
+		valueT := p.GetValue(p1)
+
+		cT, ok := valueT.(int)
+		if ok {
+			p.Push(cT)
+			return ""
+		}
+
+		sT, ok := valueT.(string)
+		if ok {
+			c1T, errT := tk.StrToIntQuick(sT)
+
+			if errT != nil {
+				return tk.ErrorToString(errT)
+			}
+
+			p.Push(c1T)
+
+			return ""
+		}
+
+		return p.ErrStrf("invalid data format")
+		// return ""
 	} else if cmdT == "pushFloat" {
 		p1, errT := p.Get1Param(paramsT)
 		if errT != nil {
@@ -935,6 +1048,38 @@ func (p *XieVM) RunLine(lineA int) string {
 
 			p.GetVars()[s1] = timeStrT
 		}
+
+		return ""
+	} else if cmdT == "now" {
+		p1, _ := p.Get1Param(paramsT)
+
+		// var timeStrT string
+
+		// if p2 == "formal" {
+		// 	timeStrT = tk.GetNowTimeStringFormal()
+		// } else {
+		// 	timeStrT = tk.GetNowTimeString()
+		// }
+
+		if p1 == "" {
+			p.Push(time.Now())
+		} else {
+			s1 := p.GetName(p1)
+
+			p.GetVars()[s1] = time.Now()
+		}
+
+		return ""
+	} else if cmdT == "timeSub" {
+		p1, p2, _ := p.Get2Params(paramsT)
+
+		s1 := p.GetValue(p1)
+
+		s2 := p.GetValue(p2)
+
+		sd := int(s1.(time.Time).Sub(s2.(time.Time)))
+
+		p.Push(sd / 1000000)
 
 		return ""
 	} else if cmdT == "addItem" {
@@ -1033,31 +1178,45 @@ func (p *XieVM) Run() string {
 	p.CodePointerM = 0
 
 	for {
-		rs := p.RunLine(p.CodePointerM)
+		resultT := p.RunLine(p.CodePointerM)
 
-		if tk.IsErrStr(rs) {
-			return tk.ErrStrf("[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), tk.GetErrStr(rs))
-			// tk.Pl("[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), p.CodeSourceMapM[p.CodePointerM]+1, tk.GetErrStr(rs))
-			break
-		}
+		c1T, ok := resultT.(int)
 
-		if rs == "" {
-			p.CodePointerM++
-
-			if p.CodePointerM >= len(p.CodeListM) {
-				break
-			}
-		} else if rs == "exit" {
-			break
+		if ok {
+			p.CodePointerM = c1T
 		} else {
-			tmpI := tk.StrToInt(rs)
+			rs, ok := resultT.(string)
 
-			if tmpI < 0 || tmpI >= len(p.CodeListM) {
-				return p.ErrStrf("command index out of range: %v", p.CodePointerM)
+			if !ok {
+				return p.ErrStrf("invalid return result: (%T)%v", resultT, resultT)
 			}
 
-			p.CodePointerM = tmpI
+			if tk.IsErrStr(rs) {
+				return tk.ErrStrf("[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), tk.GetErrStr(rs))
+				// tk.Pl("[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), p.CodeSourceMapM[p.CodePointerM]+1, tk.GetErrStr(rs))
+				// break
+			}
+
+			if rs == "" {
+				p.CodePointerM++
+
+				if p.CodePointerM >= len(p.CodeListM) {
+					break
+				}
+			} else if rs == "exit" {
+				break
+			} else {
+				tmpI := tk.StrToInt(rs)
+
+				if tmpI < 0 || tmpI >= len(p.CodeListM) {
+					return p.ErrStrf("command index out of range: %v", p.CodePointerM)
+				}
+
+				p.CodePointerM = tmpI
+			}
+
 		}
+
 	}
 
 	// tk.Pl(tk.ToJSONX(p, "-indent", "-sort"))
