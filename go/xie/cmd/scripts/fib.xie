@@ -2,40 +2,40 @@ getParam $argsG 2
 
 convert $pop int
 
-getNowStr $t formal
+nowStr $t
 pln $t
 
-call fib
+call :fib
 
 plv $pop
 
 // debug
 
-getNowStr $t formal
+nowStr $t
 pln $t
 
 exit
 
 :fib
 
-$peek c
+$peek $c
 
 // pln c= $c
 
-$pushInt 2
+pushI 2
 
 $<i
 
-$if return1
+$if :return1
 $dec $c
 $pushInt $c
-call fib
+call :fib
 
 // pop $d
 
 $dec $c
 $pushInt $c
-call fib
+call :fib
 
 // pop $e
 
@@ -44,6 +44,7 @@ $intAdd
 ret
 
 :return1
+// plv $c
 $pushInt $c
 ret
 
