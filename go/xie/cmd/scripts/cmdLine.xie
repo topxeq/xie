@@ -1,0 +1,5 @@
+push $inputG
+
+pln inputG: $inputG
+
+pl argsG=%v $argsG

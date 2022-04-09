@@ -1,0 +1,17 @@
+backQuote
+
+pln $pop
+
+backQuote $b
+
+pln $b
+
+assign $c ` $abc `
+
+strAdd $b $c
+
+strAdd $pop $b
+
+pln $pop
+
+// debug

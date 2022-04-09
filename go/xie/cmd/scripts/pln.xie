@@ -1,0 +1,23 @@
+assign $a xyz
+
+pln a= $a
+
+assign $b `监督方式累计发生的
+快乐水电费
+%……&*&……·`
+
+strAdd $a $b
+
+pln $pop
+
+strAdd ` abc 123 ` $b
+
+pln $pop
+
+pln
+
+pln abc
+
+pln ` $abc 好好好 `
+
+//debug

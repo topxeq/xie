@@ -1,0 +1,5 @@
+var $a
+
+assign $a abc12
+
+debug

@@ -1,0 +1,14 @@
+assign $u `M\u00fcn\tTAB\nchen \u0096 \r\n\"c:\\test.txt\"`
+
+plv $u
+
+unquote $u
+
+pln $peek
+
+quote
+
+// debug
+
+pln $pop
+
