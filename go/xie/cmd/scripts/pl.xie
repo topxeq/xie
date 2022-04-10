@@ -1,0 +1,9 @@
+assign $a #i15
+
+assign $b #i3
+
+intAdd $a $b
+
+pl `%v a(%v) + b(%v) = %v` `add test:` $a $b $pop
+
+//debug

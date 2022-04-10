@@ -20,4 +20,8 @@ pln abc
 
 pln ` $abc 好好好 `
 
+assignInt $a 15
+
+pln a=%v $a
+
 //debug

@@ -18,33 +18,37 @@ exit
 
 :fib
 
-$peek $c
+    *pop #i0
+    // pln c= $c
 
-// pln c= $c
+    // #pushInt #i2
 
-pushI 2
+    #regInt #i1 #i2
 
-$<i
+    // $<i
+    *<i
 
-$if :return1
-$dec $c
-$pushInt $c
-call :fib
+    *if :return1
+        *dec #i0
+        // debug exit
 
-// pop $d
+        *pushInt #i0
+        call :fib
 
-$dec $c
-$pushInt $c
-call :fib
+        // pop $d
 
-// pop $e
+        *dec #i0
+        *pushInt #i0
+        call :fib
 
-$intAdd
+        // pop $e
 
-ret
+        $intAdd
 
-:return1
-// plv $c
-$pushInt $c
-ret
+        ret
+
+    :return1
+    // plv $c
+        *pushInt #i0
+        ret
 

@@ -19,69 +19,84 @@ var InstrNameSet map[string]int = map[string]int{
 	"debugInfo": 103,
 	"exit":      199,
 
-	// var/push/peek/pop related
-	"global": 201,
-	"var":    203,
-
+	// push/peek/pop related
 	"push":  220,
 	"$push": 221,
 	"peek":  222,
 	"$peek": 223,
 	"pop":   224,
 	"$pop":  225,
+	"*peek": 226, // from reg
+	"*pop":  227, // from reg
 
 	"pushInt":  231,
 	"$pushInt": 232,
-	"pushI":    233,
+	"#pushInt": 233,
+	"*pushInt": 234,
+
+	// var related
+	"global": 201,
+	"var":    203,
+
+	// reg related
+
+	"regInt":  310,
+	"#regInt": 312, // from number
 
 	// assign related
-	"assign":    301,
-	"$assign":   302,
-	"assignInt": 310,
-	"assignI":   311,
-
-	// print related
-	"pln": 410,
-	"pl":  420,
-	"plv": 430,
-
-	// string related
-	"backQuote": 501,
-	"quote":     503,
-	"unquote":   504,
-	"trim":      509,
-	"strAdd":    510,
+	"assign":    401,
+	"$assign":   402,
+	"assignInt": 410,
+	"assignI":   411,
 
 	// if/else, switch related
 	"if":  610,
 	"$if": 611,
+	"*if": 612,
 
 	// compare related
 	">i":  710,
 	"<i":  720,
 	"$<i": 721,
+	"*<i": 722,
 
-	// convert related
-	"convert":  810,
-	"$convert": 811,
-
-	// time related
-	"now":           910,
-	"nowStrCompact": 911,
-	"nowStr":        912,
-	"nowStrFormal":  912,
+	// operator related
+	"$inc":    810,
+	"$dec":    811,
+	"*dec":    812,
+	"intAdd":  820,
+	"$intAdd": 821,
 
 	// func related
 	"call": 1010,
 	"ret":  1020,
 
-	// oprator related
-	"$inc":    1110,
-	"$dec":    1111,
-	"$intAdd": 1120,
+	// string related
+	"backQuote": 1501,
+	"quote":     1503,
+	"unquote":   1504,
+	"trim":      1509,
+	"strAdd":    1510,
+
+	// time related
+	"now":           1910,
+	"nowStrCompact": 1911,
+	"nowStr":        1912,
+	"nowStrFormal":  1912,
 
 	// command-line related
-	"getParam": 10001,
+	"getParam":       10001,
+	"getSwitch":      10002,
+	"ifSwitchExists": 10003,
+
+	// print related
+	"pln": 10410,
+	"pl":  10420,
+	"plv": 10430,
+
+	// convert related
+	"convert":  10810,
+	"$convert": 10811,
 }
 
 type VarRef struct {
@@ -99,9 +114,15 @@ type Instr struct {
 	// Param2Value interface{}
 }
 
+type Regs struct {
+	IntsM [5]int
+	CondM bool
+}
+
 type FuncContext struct {
 	VarsM          map[int]interface{}
 	ReturnPointerM int
+	RegsM          Regs
 }
 
 type XieVM struct {
@@ -121,6 +142,11 @@ type XieVM struct {
 	FuncStackM []FuncContext
 
 	VarsM map[int]interface{}
+
+	RegsM Regs
+
+	CurrentRegsM *Regs
+	CurrentVarsM *(map[int]interface{})
 }
 
 func NewXie(globalsA ...map[string]interface{}) *XieVM {
@@ -142,6 +168,9 @@ func (p *XieVM) InitVM(globalsA ...map[string]interface{}) {
 	p.VarsM = make(map[int]interface{}, 100)
 	p.VarNameMapM = make(map[int]string, 100)
 
+	p.CurrentRegsM = &(p.RegsM)
+	p.CurrentVarsM = &(p.VarsM)
+
 	p.SetVar("backQuoteG", "`")
 
 	if len(globalsA) > 0 {
@@ -151,6 +180,16 @@ func (p *XieVM) InitVM(globalsA ...map[string]interface{}) {
 			p.SetVar(k, v)
 		}
 	}
+
+	p.SourceM = make([]string, 0, 100)
+
+	p.CodeListM = make([]string, 0, 100)
+	p.InstrListM = make([]Instr, 0, 100)
+
+	p.LabelsM = make(map[int]int, 100)
+
+	p.CodeSourceMapM = make(map[int]int, 100)
+
 }
 
 func (p *XieVM) ParseVar(strA string) VarRef {
@@ -173,7 +212,7 @@ func (p *XieVM) ParseVar(strA string) VarRef {
 				varIndexT, ok := p.VarIndexMapM[vNameT]
 
 				if !ok {
-					varIndexT = len(p.VarIndexMapM) + 10 + 1
+					varIndexT = len(p.VarIndexMapM) + 100 + 1
 					p.VarIndexMapM[vNameT] = varIndexT
 					p.VarNameMapM[varIndexT] = vNameT
 				}
@@ -189,6 +228,26 @@ func (p *XieVM) ParseVar(strA string) VarRef {
 			}
 
 			return VarRef{3, p.LabelsM[varIndexT]}
+		} else if strings.HasPrefix(s1T, "#") { // values
+			if len(s1T) < 2 {
+				return VarRef{3, s1T}
+			}
+
+			// remainsT := s1T[2:]
+
+			typeT := s1T[1]
+
+			if typeT == 'i' {
+				c1T, errT := tk.StrToIntQuick(s1T[2:])
+
+				if errT != nil {
+					return VarRef{3, s1T}
+				}
+
+				return VarRef{3, c1T}
+			}
+
+			return VarRef{3, s1T}
 		} else {
 			return VarRef{3, s1T} // value(string)
 		}
@@ -209,11 +268,11 @@ func (p *XieVM) GetVarValue(varA VarRef) interface{} {
 		return p.Pop()
 	}
 
-	if idxT < 10 {
+	if idxT < 100 {
 		return fmt.Errorf("invalid var index")
 	}
 
-	return p.GetVars()[idxT]
+	return (*(p.CurrentVarsM))[idxT]
 }
 
 func (p *XieVM) ParseLine(commandA string) ([]string, error) {
@@ -296,20 +355,26 @@ func (p *XieVM) ParseLine(commandA string) ([]string, error) {
 
 func (p *XieVM) Load(codeA string) string {
 
-	p.SourceM = tk.SplitLines(codeA)
-	p.CodeListM = make([]string, 0, len(p.SourceM))
-	p.InstrListM = make([]Instr, 0, len(p.SourceM))
+	// originSourceLenT := len(p.SourceM)
+	originCodeLenT := len(p.CodeListM)
 
-	p.LabelsM = make(map[int]int, len(p.SourceM))
+	sourceT := tk.SplitLines(codeA)
 
-	p.CodeSourceMapM = make(map[int]int, len(p.SourceM))
+	p.SourceM = append(p.SourceM, sourceT...)
 
-	pointerT := 0
+	// p.CodeListM = make([]string, 0, len(p.SourceM))
+	// p.InstrListM = make([]Instr, 0, len(p.SourceM))
+
+	// p.LabelsM = make(map[int]int, len(p.SourceM))
+
+	// p.CodeSourceMapM = make(map[int]int, len(p.SourceM))
+
+	pointerT := originCodeLenT
 
 	var varCountT int
 
-	for i := 0; i < len(p.SourceM); i++ {
-		v := p.SourceM[i]
+	for i := 0; i < len(sourceT); i++ {
+		v := strings.TrimSpace(sourceT[i])
 
 		if tk.StartsWith(v, "//") {
 			continue
@@ -321,7 +386,7 @@ func (p *XieVM) Load(codeA string) string {
 			_, ok := p.VarIndexMapM[labelT]
 
 			if !ok {
-				varCountT = len(p.VarIndexMapM) + 10 + 1
+				varCountT = len(p.VarIndexMapM) + 100 + 1
 
 				p.VarIndexMapM[labelT] = varCountT
 				p.VarNameMapM[varCountT] = labelT
@@ -337,9 +402,9 @@ func (p *XieVM) Load(codeA string) string {
 			if strings.Count(v, "`")%2 != 0 {
 				foundT := false
 				var j int
-				for j = i + 1; j < len(p.SourceM); j++ {
-					if tk.Contains(p.SourceM[j], "`") {
-						v = tk.JoinLines(p.SourceM[i : j+1])
+				for j = i + 1; j < len(sourceT); j++ {
+					if tk.Contains(sourceT[j], "`") {
+						v = tk.JoinLines(sourceT[i : j+1])
 						foundT = true
 						break
 					}
@@ -364,8 +429,9 @@ func (p *XieVM) Load(codeA string) string {
 		pointerT++
 	}
 
-	for i, v := range p.CodeListM {
+	for i := originCodeLenT; i < len(p.CodeListM); i++ {
 		// listT := strings.SplitN(v, " ", 3)
+		v := p.CodeListM[i]
 		listT, errT := p.ParseLine(v)
 		if errT != nil {
 			return p.ErrStrf("failed to parse paramters")
@@ -396,137 +462,6 @@ func (p *XieVM) Load(codeA string) string {
 		instrT.Params = append(instrT.Params, list3T...)
 		instrT.ParamLen = lenT - 1
 
-		// if codeT == 410 { // pln
-		// 	list1T := strings.SplitN(v, " ", 2)
-
-		// 	var paramsT string = ""
-
-		// 	if len(list1T) > 1 {
-		// 		paramsT = strings.TrimSpace(list1T[1])
-		// 	}
-
-		// 	list2T, errT := p.ParseLine(paramsT)
-		// 	if errT != nil {
-		// 		return p.ErrStrf("failed to parse paramters")
-		// 	}
-
-		// 	list3T := []VarRef{}
-
-		// 	for _, v1 := range list2T {
-		// 		list3T = append(list3T, p.ParseVar(v1))
-		// 	}
-
-		// 	instrT.Params = append(instrT.Params, list3T...)
-		// 	instrT.ParamLen = len(list3T)
-		// } else if codeT == 510 { // strAdd
-		// 	var paramsT string = ""
-
-		// 	if lenT > 1 {
-		// 		paramsT += listT[1]
-		// 	}
-
-		// 	if lenT > 2 {
-		// 		paramsT += " " + listT[2]
-		// 	}
-
-		// 	list2T, errT := p.ParseLine(paramsT)
-		// 	if errT != nil {
-		// 		return p.ErrStrf("failed to parse paramters")
-		// 	}
-
-		// 	list3T := []VarRef{}
-
-		// 	for _, v1 := range list2T {
-		// 		list3T = append(list3T, p.ParseVar(v1))
-		// 	}
-
-		// 	instrT.Params = append(instrT.Params, list3T...)
-		// 	instrT.ParamLen = len(list3T)
-		// } else {
-		// 	if lenT > 1 {
-		// 		instrT.ParamLen = 1
-
-		// 		// refT, valueT := p.ParseVar(listT[1])
-
-		// 		instrT.Params = append(instrT.Params, p.ParseVar(listT[1]))
-
-		// 		// instrT.Param1Ref, instrT.Param1Value = refT, valueT
-
-		// 		// s1T := strings.TrimSpace(listT[1])
-
-		// 		// if strings.HasPrefix(s1T, "$") {
-		// 		// 	if s1T == "$pop" {
-		// 		// 		instrT.Param1Ref = 8
-		// 		// 	} else if s1T == "$peek" {
-		// 		// 		instrT.Param1Ref = 7
-		// 		// 	} else if s1T == "$push" {
-		// 		// 		instrT.Param1Ref = 5
-		// 		// 	} else {
-		// 		// 		vNameT := s1T[1:]
-		// 		// 		_, ok := p.VarIndexMapM[vNameT]
-
-		// 		// 		if !ok {
-		// 		// 			varCountT++
-
-		// 		// 			p.VarIndexMapM[vNameT] = varCountT
-		// 		// 			p.VarNameMapM[varCountT] = vNameT
-		// 		// 		}
-
-		// 		// 		instrT.Param1Ref = varCountT
-		// 		// 	}
-		// 		// } else {
-		// 		// 	instrT.Param1Ref = 3 // value(string)
-		// 		// 	instrT.Param1Value = s1T
-		// 		// }
-
-		// 	}
-
-		// 	if lenT > 2 {
-		// 		instrT.ParamLen = 2
-
-		// 		// refT, valueT := p.ParseVar(listT[2])
-
-		// 		instrT.Params = append(instrT.Params, p.ParseVar(listT[2]))
-		// 		// instrT.Param2Ref, instrT.Param2Value = refT, valueT
-
-		// 		// s2T := strings.TrimSpace(listT[2])
-
-		// 		// if strings.HasPrefix(s2T, "`") && strings.HasSuffix(s2T, "`") {
-		// 		// 	s2T = s2T[1 : len(s2T)-1]
-
-		// 		// 	instrT.Param2Ref = 3 // value(string)
-		// 		// 	instrT.Param2Value = s2T
-		// 		// } else {
-		// 		// 	if strings.HasPrefix(s2T, "$") {
-		// 		// 		if s2T == "$pop" {
-		// 		// 			instrT.Param2Ref = 8
-		// 		// 		} else if s2T == "$peek" {
-		// 		// 			instrT.Param2Ref = 7
-		// 		// 		} else if s2T == "$push" {
-		// 		// 			instrT.Param2Ref = 5
-		// 		// 		} else {
-		// 		// 			vNameT := s2T[1:]
-		// 		// 			_, ok := p.VarIndexMapM[vNameT]
-
-		// 		// 			if !ok {
-		// 		// 				varCountT++
-
-		// 		// 				p.VarIndexMapM[vNameT] = varCountT
-		// 		// 				p.VarNameMapM[varCountT] = vNameT
-		// 		// 			}
-
-		// 		// 			instrT.Param2Ref = varCountT
-		// 		// 		}
-		// 		// 	} else {
-		// 		// 		instrT.Param2Ref = 3 // value(string)
-		// 		// 		instrT.Param2Value = s2T
-		// 		// 	}
-		// 		// }
-
-		// 	}
-
-		// }
-
 		p.InstrListM = append(p.InstrListM, instrT)
 	}
 
@@ -534,17 +469,32 @@ func (p *XieVM) Load(codeA string) string {
 	// tk.Plv(p.CodeListM)
 	// tk.Plv(p.CodeSourceMapM)
 
-	return ""
+	return tk.ToStr(originCodeLenT)
 }
 
 func (p *XieVM) PushFunc() {
 	funcContextT := FuncContext{VarsM: make(map[int]interface{}, 10), ReturnPointerM: p.CodePointerM + 1}
 	p.FuncStackM = append(p.FuncStackM, funcContextT)
+
+	p.CurrentRegsM = &(p.FuncStackM[len(p.FuncStackM)-1].RegsM)
+	p.CurrentVarsM = &(p.FuncStackM[len(p.FuncStackM)-1].VarsM)
+
 }
 
 func (p *XieVM) PopFunc() int {
 	funcContextT := p.FuncStackM[len(p.FuncStackM)-1]
 	p.FuncStackM = p.FuncStackM[:len(p.FuncStackM)-1]
+
+	if len(p.FuncStackM) < 1 {
+		p.CurrentRegsM = &(p.RegsM)
+		p.CurrentVarsM = &(p.VarsM)
+
+	} else {
+		p.CurrentRegsM = &(p.FuncStackM[len(p.FuncStackM)-1].RegsM)
+		p.CurrentVarsM = &(p.FuncStackM[len(p.FuncStackM)-1].VarsM)
+
+	}
+
 	return funcContextT.ReturnPointerM
 }
 
@@ -558,11 +508,11 @@ func (p *XieVM) SetVarInt(keyA int, vA interface{}) error {
 		return nil
 	}
 
-	if keyA < 10 {
+	if keyA < 100 {
 		return fmt.Errorf("invalid var index")
 	}
 
-	p.GetVars()[keyA] = vA
+	(*(p.CurrentVarsM))[keyA] = vA
 
 	return nil
 }
@@ -572,12 +522,12 @@ func (p *XieVM) SetVar(keyA string, vA interface{}) {
 		p.InitVM()
 	}
 
-	lenT := len(p.VarIndexMapM) + 10
+	lenT := len(p.VarIndexMapM) + 100
 
 	p.VarIndexMapM[keyA] = lenT + 1
 	p.VarNameMapM[lenT+1] = keyA
 
-	p.GetVars()[lenT+1] = vA
+	(*(p.CurrentVarsM))[lenT+1] = vA
 }
 
 func (p *XieVM) PushVar(vA interface{}) {
@@ -593,7 +543,7 @@ func (p *XieVM) GetVarInt(keyA int) interface{} {
 		p.InitVM()
 	}
 
-	return p.GetVars()[keyA]
+	return (*(p.CurrentVarsM))[keyA]
 }
 
 func (p *XieVM) GetVar(keyA string) interface{} {
@@ -601,7 +551,7 @@ func (p *XieVM) GetVar(keyA string) interface{} {
 		p.InitVM()
 	}
 
-	return p.GetVars()[p.VarIndexMapM[keyA]]
+	return (*(p.CurrentVarsM))[p.VarIndexMapM[keyA]]
 
 	// lenT := len(p.FuncStackM)
 
@@ -633,6 +583,16 @@ func (p *XieVM) GetVars() map[int]interface{} {
 	}
 
 	return p.VarsM
+}
+
+func (p *XieVM) GetRegs() *Regs {
+	lenT := len(p.FuncStackM)
+
+	if lenT > 0 {
+		return &(p.FuncStackM[lenT-1].RegsM)
+	}
+
+	return &(p.RegsM)
 }
 
 func (p *XieVM) Push(vA interface{}) {
@@ -750,7 +710,7 @@ func (p *XieVM) GetVarRefValue(vA VarRef) interface{} {
 		return fmt.Errorf("N/A")
 	}
 
-	vT, ok := p.GetVars()[vA.Ref]
+	vT, ok := (*(p.CurrentVarsM))[vA.Ref]
 
 	if !ok {
 		return fmt.Errorf("undefined")
@@ -924,7 +884,7 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 
 		nameT := instrT.Params[0].Ref
 
-		varsT := p.GetVars()
+		varsT := (*(p.CurrentVarsM))
 
 		if instrT.ParamLen < 2 {
 			varsT[nameT] = ""
@@ -978,11 +938,11 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 			return ""
 		}
 
-		if p1 < 10 {
+		if p1 < 100 {
 			return p.ErrStrf("invalid var name")
 		}
 
-		p.GetVars()[p1] = p.Peek()
+		(*(p.CurrentVarsM))[p1] = p.Peek()
 
 		return ""
 	case 223: // $peek
@@ -992,10 +952,10 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 
 		p1 := instrT.Params[0].Ref
 
-		if p1 < 10 {
+		if p1 < 100 {
 			return p.ErrStrf("invalid var name")
 		}
-		p.GetVars()[p1] = p.Peek()
+		(*(p.CurrentVarsM))[p1] = p.Peek()
 
 		return ""
 	case 224: // pop
@@ -1005,11 +965,23 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 
 		p1 := instrT.Params[0].Ref
 
-		if p1 < 10 {
+		if p1 < 100 {
 			return p.ErrStrf("invalid var name")
 		}
 
-		p.GetVars()[p1] = p.Pop()
+		(*(p.CurrentVarsM))[p1] = p.Pop()
+
+		return ""
+	case 226: // *peek
+		v1 := instrT.Params[0].Value.(int)
+
+		p.CurrentRegsM.IntsM[v1] = p.Peek().(int)
+
+		return ""
+	case 227: // *pop
+		v1 := instrT.Params[0].Value.(int)
+
+		p.CurrentRegsM.IntsM[v1] = p.Pop().(int)
 
 		return ""
 	case 231: // pushInt
@@ -1060,23 +1032,36 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 		}
 
 		return p.ErrStrf("invalid data format")
-	case 233: // pushI
+	case 233: // #pushInt
 		if instrT.ParamLen < 1 {
 			return p.ErrStrf("not enough paramters")
 		}
 
-		v1 := instrT.Params[0].Value.(string)
+		v1 := instrT.Params[0].Value.(int)
 
-		c1T, errT := tk.StrToIntQuick(v1)
+		// c1T, errT := tk.StrToIntQuick(v1)
 
-		if errT != nil {
-			return p.ErrStrf("convert value to int failed: %v", errT)
-		}
+		// if errT != nil {
+		// 	return p.ErrStrf("convert value to int failed: %v", errT)
+		// }
 
-		p.Push(c1T)
+		p.Push(v1)
 
 		return ""
-	case 301: // assign
+	case 234: // *pushInt
+		v1 := instrT.Params[0].Value.(int)
+
+		p.Push(p.CurrentRegsM.IntsM[v1])
+
+		return ""
+	case 312: // #regInt  from value
+		v1 := instrT.Params[0].Value.(int)
+		v2 := instrT.Params[1].Value.(int)
+
+		p.CurrentRegsM.IntsM[v1] = v2
+
+		return ""
+	case 401: // assign
 		if instrT.ParamLen < 2 {
 			return p.ErrStrf("not enough paramters")
 		}
@@ -1089,10 +1074,10 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 
 		valueT := p.GetValue(instrT.Params[1].Ref, instrT.Params[1].Value)
 
-		p.GetVars()[nameT] = valueT
+		(*(p.CurrentVarsM))[nameT] = valueT
 
 		return ""
-	case 302: // $assign
+	case 402: // $assign
 		if instrT.ParamLen < 1 {
 			return p.ErrStrf("not enough paramters")
 		}
@@ -1103,10 +1088,10 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 			return p.ErrStrf("invalid var name")
 		}
 
-		p.GetVars()[nameT] = p.Pop()
+		(*(p.CurrentVarsM))[nameT] = p.Pop()
 
 		return ""
-	case 310: // assignInt
+	case 410: // assignInt
 		if instrT.ParamLen < 2 {
 			return p.ErrStrf("not enough paramters")
 		}
@@ -1122,7 +1107,7 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 		p.SetVarInt(nameT, tk.ToInt(valueT))
 
 		return ""
-	case 311: // assignI
+	case 411: // assignI
 		if instrT.ParamLen < 2 {
 			return p.ErrStrf("not enough paramters")
 		}
@@ -1144,102 +1129,6 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 		p.SetVarInt(p1, c2T)
 
 		return ""
-	case 410: // pln
-		list1T := []interface{}{}
-
-		for _, v := range instrT.Params {
-			list1T = append(list1T, p.GetVarValue(v))
-		}
-
-		fmt.Println(list1T...)
-
-		return ""
-	case 430: // plv
-		if instrT.ParamLen < 1 {
-			tk.Plv(p.Pop)
-			return ""
-			// return p.ErrStrf("not enough paramters")
-		}
-
-		s1 := p.GetVarValue(instrT.Params[0])
-
-		tk.Plv(s1)
-
-		return ""
-	case 501: // backQuote
-		if instrT.ParamLen > 0 {
-			p.SetVarInt(instrT.Params[0].Ref, "`")
-		}
-
-		p.Push("`")
-
-		return ""
-	case 503: // quote
-		if instrT.ParamLen < 1 {
-			rs := strconv.Quote(p.Pop().(string))
-
-			p.Push(rs[1 : len(rs)-1])
-			return ""
-			// return p.ErrStrf("not enough paramters")
-		}
-
-		s1 := p.GetVarValue(instrT.Params[0]).(string)
-
-		rs := strconv.Quote(s1)
-
-		p.Push(rs[1 : len(rs)-1])
-
-		return ""
-	case 504: // unquote
-		if instrT.ParamLen < 1 {
-			rs, errT := strconv.Unquote(`"` + p.Pop().(string) + `"`)
-
-			if errT != nil {
-				p.ErrStrf("failed to unquote: %v", errT)
-			}
-
-			p.Push(rs)
-
-			return ""
-			// return p.ErrStrf("not enough paramters")
-		}
-
-		s1 := p.GetVarValue(instrT.Params[0]).(string)
-
-		rs, errT := strconv.Unquote(`"` + s1 + `"`)
-
-		if errT != nil {
-			p.ErrStrf("failed to unquote: %v", errT)
-		}
-
-		p.Push(rs)
-
-		return ""
-	case 509: // trim
-		if instrT.ParamLen < 1 {
-			p.Push(strings.TrimSpace(tk.ToStr(p.Pop())))
-			return ""
-		}
-
-		s1 := p.GetVarValue(instrT.Params[0])
-
-		p.Push(strings.TrimSpace(tk.ToStr(s1)))
-
-		return ""
-
-	case 510: // strAdd
-		if instrT.ParamLen < 2 {
-			return p.ErrStrf("not enough paramters")
-		}
-
-		s1 := p.GetVarValue(instrT.Params[0]).(string)
-
-		s2 := p.GetVarValue(instrT.Params[1]).(string)
-
-		p.Push(s1 + s2)
-
-		return ""
-
 	case 610: // if
 		// tk.Plv(instrT)
 		if instrT.ParamLen < 2 {
@@ -1276,28 +1165,24 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 		if instrT.ParamLen < 1 {
 			return p.ErrStrf("not enough paramters")
 		}
+
 		condT := p.Pop().(bool)
 
-		p2 := p.GetVarRefValue(instrT.Params[0])
+		if condT {
+			return p.GetVarRefValue(instrT.Params[0]).(int)
+		}
 
-		s2, sok := p2.(string)
+		return ""
 
-		if !sok {
-			if condT {
-				c2, cok := p2.(int)
-				if cok {
-					return c2
-				}
-			}
-		} else {
-			if condT {
-				labelPointerT, ok := p.LabelsM[p.VarIndexMapM[s2]]
+	case 612: // *if
+		if instrT.ParamLen < 1 {
+			return p.ErrStrf("not enough paramters")
+		}
 
-				if ok {
-					return labelPointerT
-				}
-			}
+		condT := p.CurrentRegsM.CondM
 
+		if condT {
+			return p.GetVarRefValue(instrT.Params[0]).(int)
 		}
 
 		return ""
@@ -1371,7 +1256,301 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 
 		return ""
 
-	case 810: // convert
+	case 722: // *<i
+		regsT := p.CurrentRegsM
+		regsT.CondM = regsT.IntsM[0] < regsT.IntsM[1]
+
+		return ""
+
+	case 811: // $dec
+		if instrT.ParamLen < 1 {
+			return p.ErrStrf("not enough paramters")
+		}
+
+		varsT := (*(p.CurrentVarsM))
+
+		p1 := instrT.Params[0].Ref
+		// v1 := p.GetVarRefValue(instrT.Params[0])
+		v1 := varsT[p1].(int)
+
+		// if tk.IsError(v1) {
+		// 	return p.ErrStrf("invalid param: %v", v1)
+		// }
+
+		varsT[p1] = v1 - 1
+
+		return ""
+
+	case 812: // *dec
+		v1 := instrT.Params[0].Value.(int)
+
+		p.CurrentRegsM.IntsM[v1]--
+
+		return ""
+
+	case 820: // intAdd
+		if instrT.ParamLen < 2 {
+			return p.ErrStrf("not enough paramters")
+		}
+
+		v1 := p.GetVarRefValue(instrT.Params[0]).(int)
+
+		v2 := p.GetVarRefValue(instrT.Params[1])
+
+		p.Push(tk.ToInt(v1) + tk.ToInt(v2))
+
+		return ""
+
+	case 821: // $intAdd
+		p.Push(p.Pop().(int) + p.Pop().(int))
+
+		return ""
+
+	case 1010: // call
+		if instrT.ParamLen < 1 {
+			return p.ErrStrf("not enough paramters")
+		}
+
+		p1 := instrT.Params[0].Value.(int)
+
+		// tk.Pln(tk.ToJSONX(p, "-indent", "-sort"))
+		// tk.Pln("p1", p1)
+		// tk.Exit()
+		p.PushFunc()
+
+		return p1
+
+	case 1020: // ret
+		pT := p.PopFunc()
+
+		return pT
+
+	case 1501: // backQuote
+		if instrT.ParamLen > 0 {
+			p.SetVarInt(instrT.Params[0].Ref, "`")
+		}
+
+		p.Push("`")
+
+		return ""
+	case 1503: // quote
+		if instrT.ParamLen < 1 {
+			rs := strconv.Quote(p.Pop().(string))
+
+			p.Push(rs[1 : len(rs)-1])
+			return ""
+			// return p.ErrStrf("not enough paramters")
+		}
+
+		s1 := p.GetVarValue(instrT.Params[0]).(string)
+
+		rs := strconv.Quote(s1)
+
+		p.Push(rs[1 : len(rs)-1])
+
+		return ""
+	case 1504: // unquote
+		if instrT.ParamLen < 1 {
+			rs, errT := strconv.Unquote(`"` + p.Pop().(string) + `"`)
+
+			if errT != nil {
+				p.ErrStrf("failed to unquote: %v", errT)
+			}
+
+			p.Push(rs)
+
+			return ""
+			// return p.ErrStrf("not enough paramters")
+		}
+
+		s1 := p.GetVarValue(instrT.Params[0]).(string)
+
+		rs, errT := strconv.Unquote(`"` + s1 + `"`)
+
+		if errT != nil {
+			p.ErrStrf("failed to unquote: %v", errT)
+		}
+
+		p.Push(rs)
+
+		return ""
+	case 1509: // trim
+		if instrT.ParamLen < 1 {
+			p.Push(strings.TrimSpace(tk.ToStr(p.Pop())))
+			return ""
+		}
+
+		s1 := p.GetVarValue(instrT.Params[0])
+
+		p.Push(strings.TrimSpace(tk.ToStr(s1)))
+
+		return ""
+
+	case 1510: // strAdd
+		if instrT.ParamLen < 2 {
+			return p.ErrStrf("not enough paramters")
+		}
+
+		s1 := p.GetVarValue(instrT.Params[0]).(string)
+
+		s2 := p.GetVarValue(instrT.Params[1]).(string)
+
+		p.Push(s1 + s2)
+
+		return ""
+
+	case 1910: // now
+		if instrT.ParamLen < 1 {
+			p.Push(time.Now())
+
+			return ""
+		}
+
+		p1 := instrT.Params[0].Ref
+
+		if p1 == 5 {
+			p.Push(time.Now())
+			return ""
+		}
+
+		if p1 < 100 {
+			return p.ErrStrf("invalid var name")
+		}
+
+		(*(p.CurrentVarsM))[p1] = time.Now()
+
+		return ""
+
+	case 1911: // nowStrCompact
+		if instrT.ParamLen < 1 {
+			p.Push(tk.GetNowTimeString())
+
+			return ""
+		}
+
+		p1 := instrT.Params[0].Ref
+
+		if p1 == 5 {
+			p.Push(tk.GetNowTimeString())
+			return ""
+		}
+
+		if p1 < 100 {
+			return p.ErrStrf("invalid var name")
+		}
+
+		(*(p.CurrentVarsM))[p1] = tk.GetNowTimeString()
+
+		return ""
+
+	case 1912: // nowStr
+		if instrT.ParamLen < 1 {
+			p.Push(tk.GetNowTimeStringFormal())
+
+			return ""
+		}
+
+		p1 := instrT.Params[0].Ref
+
+		if p1 == 5 {
+			p.Push(tk.GetNowTimeStringFormal())
+			return ""
+		}
+
+		if p1 < 100 {
+			return p.ErrStrf("invalid var name")
+		}
+
+		(*(p.CurrentVarsM))[p1] = tk.GetNowTimeStringFormal()
+
+		return ""
+
+	case 10001: // getParam
+		if instrT.ParamLen < 2 {
+			return p.ErrStrf("not enough paramters")
+		}
+
+		v1 := p.GetVarRefValue(instrT.Params[0])
+
+		v2 := p.GetVarRefValue(instrT.Params[1])
+
+		paramT := tk.GetParameter(v1.([]string), tk.ToInt(v2))
+
+		p.Push(paramT)
+
+		return ""
+
+	case 10002: // getSwitch
+		if instrT.ParamLen < 2 {
+			return p.ErrStrf("not enough paramters")
+		}
+
+		v1 := p.GetVarRefValue(instrT.Params[0])
+
+		v2 := p.GetVarRefValue(instrT.Params[1])
+
+		paramT := tk.GetSwitch(v1.([]string), v2.(string))
+
+		p.Push(paramT)
+
+		return ""
+
+	case 10003: // ifSwitchExists
+		if instrT.ParamLen < 2 {
+			return p.ErrStrf("not enough paramters")
+		}
+
+		v1 := p.GetVarRefValue(instrT.Params[0])
+
+		v2 := p.GetVarRefValue(instrT.Params[1])
+
+		paramT := tk.IfSwitchExistsWhole(v1.([]string), v2.(string))
+
+		p.Push(paramT)
+
+		return ""
+
+	case 10410: // pln
+		list1T := []interface{}{}
+
+		for _, v := range instrT.Params {
+			list1T = append(list1T, p.GetVarValue(v))
+		}
+
+		fmt.Println(list1T...)
+
+		return ""
+	case 10420: // pl
+		list1T := []interface{}{}
+
+		formatT := ""
+
+		for i, v := range instrT.Params {
+			if i == 0 {
+				formatT = v.Value.(string)
+				continue
+			}
+
+			list1T = append(list1T, p.GetVarValue(v))
+		}
+
+		fmt.Printf(formatT+"\n", list1T...)
+
+		return ""
+	case 10430: // plv
+		if instrT.ParamLen < 1 {
+			tk.Plv(p.Pop)
+			return ""
+			// return p.ErrStrf("not enough paramters")
+		}
+
+		s1 := p.GetVarValue(instrT.Params[0])
+
+		tk.Plv(s1)
+
+		return ""
+
+	case 10810: // convert
 		if instrT.ParamLen < 2 {
 			return p.ErrStrf("not enough paramters")
 		}
@@ -1404,7 +1583,7 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 
 		return ""
 
-	case 811: // $convert
+	case 10811: // $convert
 		if instrT.ParamLen < 1 {
 			return p.ErrStrf("not enough paramters")
 		}
@@ -1430,127 +1609,6 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 		} else {
 			return p.ErrStrf("unknown type")
 		}
-
-		return ""
-
-	case 910: // now
-		if instrT.ParamLen < 1 {
-			p.Push(time.Now())
-
-			return ""
-		}
-
-		p1 := instrT.Params[0].Ref
-
-		if p1 == 5 {
-			p.Push(time.Now())
-			return ""
-		}
-
-		if p1 < 10 {
-			return p.ErrStrf("invalid var name")
-		}
-
-		p.GetVars()[p1] = time.Now()
-
-		return ""
-
-	case 911: // nowStrCompact
-		if instrT.ParamLen < 1 {
-			p.Push(tk.GetNowTimeString())
-
-			return ""
-		}
-
-		p1 := instrT.Params[0].Ref
-
-		if p1 == 5 {
-			p.Push(tk.GetNowTimeString())
-			return ""
-		}
-
-		if p1 < 10 {
-			return p.ErrStrf("invalid var name")
-		}
-
-		p.GetVars()[p1] = tk.GetNowTimeString()
-
-		return ""
-
-	case 912: // nowStr
-		if instrT.ParamLen < 1 {
-			p.Push(tk.GetNowTimeStringFormal())
-
-			return ""
-		}
-
-		p1 := instrT.Params[0].Ref
-
-		if p1 == 5 {
-			p.Push(tk.GetNowTimeStringFormal())
-			return ""
-		}
-
-		if p1 < 10 {
-			return p.ErrStrf("invalid var name")
-		}
-
-		p.GetVars()[p1] = tk.GetNowTimeStringFormal()
-
-		return ""
-
-	case 1010: // call
-		if instrT.ParamLen < 1 {
-			return p.ErrStrf("not enough paramters")
-		}
-
-		p1 := instrT.Params[0].Value.(int)
-
-		// tk.Pln(tk.ToJSONX(p, "-indent", "-sort"))
-		// tk.Pln("p1", p1)
-		// tk.Exit()
-		p.PushFunc()
-
-		return p1
-
-	case 1020: // ret
-		pT := p.PopFunc()
-
-		return pT
-
-	case 1111: // $dec
-		if instrT.ParamLen < 1 {
-			return p.ErrStrf("not enough paramters")
-		}
-
-		p1 := instrT.Params[0].Ref
-		v1 := p.GetVarRefValue(instrT.Params[0])
-
-		if tk.IsError(v1) {
-			return p.ErrStrf("invalid param: %v", v1)
-		}
-
-		p.GetVars()[p1] = v1.(int) - 1
-
-		return ""
-
-	case 1120: // $intAdd
-		p.Push(p.Pop().(int) + p.Pop().(int))
-
-		return ""
-
-	case 10001: // getParam
-		if instrT.ParamLen < 2 {
-			return p.ErrStrf("not enough paramters")
-		}
-
-		v1 := p.GetVarRefValue(instrT.Params[0])
-
-		v2 := p.GetVarRefValue(instrT.Params[1])
-
-		paramT := tk.GetParameter(v1.([]string), tk.ToInt(v2))
-
-		p.Push(paramT)
 
 		return ""
 
@@ -1738,10 +1796,6 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 // 		p.Push(tk.ToInt(s1) < tk.ToInt(s2))
 
 // 		return ""
-// 	} else if cmdT == "$<i" {
-// 		p.Push(p.Pop().(int) > p.Pop().(int))
-
-// 		return ""
 // 	} else if cmdT == ">i" {
 // 		p1, p2, errT := p.Get2Params(paramsT)
 // 		if errT != nil {
@@ -1778,46 +1832,6 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 // 		}
 
 // 		return ""
-// 	} else if cmdT == "$if" {
-// 		p1, errT := p.Get1Param(paramsT)
-// 		if errT != nil {
-// 			return p.ErrStrf("not enough paramters")
-// 		}
-
-// 		condT := p.Pop().(bool)
-
-// 		if condT {
-// 			labelPointerT, ok := p.LabelsM[p1]
-
-// 			if ok {
-// 				return labelPointerT
-// 			}
-// 		}
-
-// 		return ""
-// 	} else if cmdT == "exit" {
-// 		p1, errT := p.Get1Param(paramsT)
-// 		if errT != nil {
-// 			return "exit"
-// 		}
-
-// 		v1 := p.GetValue(p1)
-// 		p.SetVar("OutG", v1)
-
-// 		return "exit"
-// 	} else if cmdT == "strAdd" {
-// 		p1, p2, errT := p.Get2Params(paramsT)
-// 		if errT != nil {
-// 			return p.ErrStrf("not enough paramters")
-// 		}
-
-// 		s1 := p.GetValue(p1)
-
-// 		s2 := p.GetValue(p2)
-
-// 		p.Push(tk.ToStr(s1) + tk.ToStr(s2))
-
-// 		return ""
 // 	} else if cmdT == "intAdd" {
 // 		p1, p2, errT := p.Get2Params(paramsT)
 // 		if errT != nil {
@@ -1829,10 +1843,6 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 // 		s2 := p.GetValue(p2)
 
 // 		p.Push(tk.ToInt(s1) + tk.ToInt(s2))
-
-// 		return ""
-// 	} else if cmdT == "$intAdd" {
-// 		p.Push(p.Pop().(int) + p.Pop().(int))
 
 // 		return ""
 // 	} else if cmdT == "intDiv" {
@@ -1893,23 +1903,6 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 // 		s1 := p.GetValue(p1)
 
 // 		p.Push(tk.Trim(tk.ToStr(s1)))
-
-// 		return ""
-// 	} else if cmdT == "pln" {
-// 		listT, errT := tk.ParseCommandLine(paramsT)
-// 		if errT != nil {
-// 			// tk.Pln()
-// 			// return ""
-// 			return p.ErrStrf("failed to parse paramters")
-// 		}
-
-// 		list1T := []interface{}{}
-
-// 		for _, v := range listT {
-// 			list1T = append(list1T, p.GetValue(v))
-// 		}
-
-// 		tk.Pln(list1T...)
 
 // 		return ""
 // 	} else if cmdT == "plo" {
@@ -2353,22 +2346,16 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 // 		p.Push(tk.ToJSONX(p, "-indent", "-sort"))
 
 // 		return ""
-// 	} else if cmdT == "debugInfo" || cmdT == "debug" {
-// 		tk.Pln(tk.ToJSONX(p, "-indent", "-sort"))
-
-// 		p1, _ := p.Get1Param(paramsT)
-// 		if p1 == "exit" {
-// 			return "exit"
-// 		}
-
-// 		return ""
 // 	}
 
 // 	return p.ErrStrf("unknown command")
 // }
 
-func (p *XieVM) Run() string {
+func (p *XieVM) Run(posA ...int) string {
 	p.CodePointerM = 0
+	if len(posA) > 0 {
+		p.CodePointerM = posA[0]
+	}
 
 	for {
 		resultT := p.RunLine(p.CodePointerM)
