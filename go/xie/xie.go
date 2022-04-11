@@ -854,7 +854,7 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 			return "exit"
 		}
 
-		valueT := p.GetValue(instrT.Params[1].Ref, instrT.Params[1].Value)
+		valueT := p.GetValue(instrT.Params[0].Ref, instrT.Params[0].Value)
 
 		p.SetVar("OutG", valueT)
 
