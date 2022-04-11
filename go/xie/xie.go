@@ -2,6 +2,7 @@ package xie
 
 import (
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -106,6 +107,9 @@ var InstrNameSet map[string]int = map[string]int{
 	"isErrStr":    10910,
 	"$getErrStr":  10922,
 	"checkErrStr": 10931,
+
+	// http request/response
+	"writeResp": 20110,
 }
 
 type VarRef struct {
@@ -1703,6 +1707,19 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 		v1 := p.GetVarRefValue(instrT.Params[0]).(string)
 
 		p.Push(tk.GetErrStr(v1))
+
+		return ""
+
+	case 20110: // writeResp
+		if instrT.ParamLen < 2 {
+			return p.ErrStrf("not enough paramters")
+		}
+
+		v1 := p.GetVarRefValue(instrT.Params[0]).(http.ResponseWriter)
+
+		v2 := p.GetVarRefValue(instrT.Params[1]).(string)
+
+		tk.WriteResponse(v1, v2)
 
 		return ""
 
