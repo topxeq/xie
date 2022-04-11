@@ -1510,6 +1510,14 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 
 		paramT := tk.GetParameter(v1.([]string), tk.ToInt(v2))
 
+		if tk.IsErrStr(paramT) && instrT.ParamLen > 2 {
+			v3 := p.GetVarRefValue(instrT.Params[2])
+
+			p.Push(v3)
+
+			return ""
+		}
+
 		p.Push(paramT)
 
 		return ""

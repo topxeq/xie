@@ -1,10 +1,11 @@
-getParam $argsG 2
+getParam $argsG 2 ``
 checkErrStr $peek
 
 isEmpty $peek
 
 // debug exit
 $ifNot :next1
+pln `not enough parameters`
 exit
 
 :next1
