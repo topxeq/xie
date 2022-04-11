@@ -1,6 +1,6 @@
-var a int
+var $a int
 
-assignInt a 15
+assignInt $a 15
 
 inc $a
 

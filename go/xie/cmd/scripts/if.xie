@@ -15,7 +15,7 @@ assignInt $b 8
 
 <i $b $i
 
-$if :label3
+if$ :label3
 pln "label3 else"
 exit
 

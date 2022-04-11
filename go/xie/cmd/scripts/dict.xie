@@ -2,11 +2,11 @@ getParam $argsG 2
 
 pop $wordT
 
-strAdd http://dict.cn/ $wordT
+strAdd `http://dict.cn/` $wordT
 
 pop $urlT
 
-var paramsT list
+var $paramsT list
 
 addItem $paramsT -timeout=30
 // addItem $paramsT -detail
@@ -16,7 +16,7 @@ getWeb $urlT $paramsT
 
 // pops $resultT
 
-var paramsT strList
+var $paramsT strList
 
 addStrItem $paramsT -type=
 
@@ -28,10 +28,10 @@ peek $originalTextT
 
 pln "ORIGIN:" $originalTextT
 
-push ||||©.*?海词词典[\s\S]*||||
-push ||||||||
+push `©.*?海词词典[\s\S]*`
+push ``
 
-regReplaceAllStr
+regReplaceAllStr$
 
 pln "RESULT:" $pop
 
