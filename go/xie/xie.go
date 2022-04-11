@@ -50,9 +50,10 @@ var InstrNameSet map[string]int = map[string]int{
 	"assignI":   411,
 
 	// if/else, switch related
-	"if":  610,
-	"$if": 611,
-	"*if": 612,
+	"if":     610,
+	"$if":    611,
+	"*if":    612,
+	"$ifNot": 621,
 
 	// compare related
 	">i":  710,
@@ -76,7 +77,8 @@ var InstrNameSet map[string]int = map[string]int{
 	"quote":     1503,
 	"unquote":   1504,
 	"trim":      1509,
-	"strAdd":    1510,
+	"isEmpty":   1510,
+	"strAdd":    1520,
 
 	// time related
 	"now":           1910,
@@ -90,13 +92,20 @@ var InstrNameSet map[string]int = map[string]int{
 	"ifSwitchExists": 10003,
 
 	// print related
-	"pln": 10410,
-	"pl":  10420,
-	"plv": 10430,
+	"pln":      10410,
+	"pl":       10420,
+	"plv":      10430,
+	"plErr":    10440,
+	"plErrStr": 10440,
 
 	// convert related
 	"convert":  10810,
 	"$convert": 10811,
+
+	// err string(TXERROR:) related
+	"isErrStr":    10910,
+	"$getErrStr":  10922,
+	"checkErrStr": 10931,
 }
 
 type VarRef struct {
@@ -273,6 +282,32 @@ func (p *XieVM) GetVarValue(varA VarRef) interface{} {
 	}
 
 	return (*(p.CurrentVarsM))[idxT]
+}
+
+func (p *XieVM) GetVarRefValue(vA VarRef) interface{} {
+	if vA.Ref == 3 {
+		return vA.Value
+	}
+
+	if vA.Ref == 8 {
+		return p.Pop()
+	}
+
+	if vA.Ref == 7 {
+		return p.Peek()
+	}
+
+	if vA.Ref == 5 {
+		return fmt.Errorf("N/A")
+	}
+
+	vT, ok := (*(p.CurrentVarsM))[vA.Ref]
+
+	if !ok {
+		return fmt.Errorf("undefined")
+	}
+
+	return vT
 }
 
 func (p *XieVM) ParseLine(commandA string) ([]string, error) {
@@ -688,32 +723,6 @@ func (p *XieVM) GetValue(codeA int, vA interface{}) interface{} {
 
 	if !ok {
 		return tk.ErrStrf("undefined")
-	}
-
-	return vT
-}
-
-func (p *XieVM) GetVarRefValue(vA VarRef) interface{} {
-	if vA.Ref == 3 {
-		return vA.Value
-	}
-
-	if vA.Ref == 8 {
-		return p.Pop()
-	}
-
-	if vA.Ref == 7 {
-		return p.Peek()
-	}
-
-	if vA.Ref == 5 {
-		return fmt.Errorf("N/A")
-	}
-
-	vT, ok := (*(p.CurrentVarsM))[vA.Ref]
-
-	if !ok {
-		return fmt.Errorf("undefined")
 	}
 
 	return vT
@@ -1187,6 +1196,19 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 
 		return ""
 
+	case 621: // $ifNot
+		if instrT.ParamLen < 1 {
+			return p.ErrStrf("not enough paramters")
+		}
+
+		condT := p.Pop().(bool)
+
+		if !condT {
+			return p.GetVarRefValue(instrT.Params[0]).(int)
+		}
+
+		return ""
+
 	case 710: // >i
 		if instrT.ParamLen < 2 {
 			return p.ErrStrf("not enough paramters")
@@ -1386,7 +1408,19 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 
 		return ""
 
-	case 1510: // strAdd
+	case 1510: // isEmpty
+		if instrT.ParamLen < 1 {
+			p.Push(strings.TrimSpace(tk.ToStr(p.Pop())))
+			return ""
+		}
+
+		v1 := p.GetVarRefValue(instrT.Params[0]).(string)
+
+		p.Push(v1 == "")
+
+		return ""
+
+	case 1520: // strAdd
 		if instrT.ParamLen < 2 {
 			return p.ErrStrf("not enough paramters")
 		}
@@ -1550,6 +1584,32 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 
 		return ""
 
+	case 10440: // plErr
+		if instrT.ParamLen < 1 {
+			tk.PlErr(p.Pop().(error))
+			return ""
+			// return p.ErrStrf("not enough paramters")
+		}
+
+		s1 := p.GetVarValue(instrT.Params[0]).(error)
+
+		tk.PlErr(s1)
+
+		return ""
+
+	case 10450: // plErrStr
+		if instrT.ParamLen < 1 {
+			tk.PlErrString(p.Pop().(string))
+			return ""
+			// return p.ErrStrf("not enough paramters")
+		}
+
+		s1 := p.GetVarValue(instrT.Params[0]).(string)
+
+		tk.PlErrString(s1)
+
+		return ""
+
 	case 10810: // convert
 		if instrT.ParamLen < 2 {
 			return p.ErrStrf("not enough paramters")
@@ -1608,6 +1668,47 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 			p.Push(tk.ToStr(s1))
 		} else {
 			return p.ErrStrf("unknown type")
+		}
+
+		return ""
+
+	case 10910: // isErrStr
+		if instrT.ParamLen < 1 {
+			return p.ErrStrf("not enough paramters")
+		}
+
+		v1 := p.GetVarRefValue(instrT.Params[0]).(string)
+
+		if tk.IsErrStr(v1) {
+			p.Push(true)
+		} else {
+			p.Push(false)
+		}
+
+		return ""
+
+	case 10922: // $getErrStr
+		if instrT.ParamLen < 1 {
+			return p.ErrStrf("not enough paramters")
+		}
+
+		v1 := p.GetVarRefValue(instrT.Params[0]).(string)
+
+		p.Push(tk.GetErrStr(v1))
+
+		return ""
+
+	case 10931: // checkErrStr
+		if instrT.ParamLen < 1 {
+			return p.ErrStrf("not enough paramters")
+		}
+
+		v1 := p.GetVarRefValue(instrT.Params[0]).(string)
+
+		if tk.IsErrStr(v1) {
+			// tk.Pln(v1)
+			return p.ErrStrf(tk.GetErrStr(v1))
+			// return "exit"
 		}
 
 		return ""

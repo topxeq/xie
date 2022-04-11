@@ -1,4 +1,13 @@
 getParam $argsG 2
+checkErrStr $peek
+
+isEmpty $peek
+
+// debug exit
+$ifNot :next1
+exit
+
+:next1
 
 convert $pop int
 
