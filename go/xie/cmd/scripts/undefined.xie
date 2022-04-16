@@ -2,6 +2,8 @@ pop $a
 
 plv $a
 
+pln $a
+
 == $a $undefined
 
 pln $pop
