@@ -1,0 +1,20 @@
+push `input 1`
+
+goFunc 1 `
+pop $arg1
+
+:loop1
+pln sub $arg1
+
+sleep #f2
+
+goto :loop1
+`
+
+pln main $pop
+
+:loop1
+
+sleep #f1
+
+goto :loop1

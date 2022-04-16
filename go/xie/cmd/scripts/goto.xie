@@ -1,0 +1,10 @@
+pln start...
+
+push a1
+
+:loop1
+pln $peek
+
+sleep #f2.0
+
+goto :loop1

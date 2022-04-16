@@ -1,0 +1,19 @@
+push #f1.6
+push #f2.3
+
+# if 0 args, 2rd arg could be omitted
+callFunc 2 `
+pop $arg1
+pop $arg2
+
+pln arg1= $arg1
+pln arg2= $arg2
+
+floatAdd $arg1 $arg2
+pln $peek
+
+# should return in outG the return args in stack
+assign $outG 1
+`
+
+pln $pop

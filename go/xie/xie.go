@@ -13,12 +13,24 @@ import (
 
 var versionG string = "0.0.1"
 
+type UndefinedStruct struct {
+	int
+}
+
+func (o UndefinedStruct) String() string {
+	return "undefined"
+}
+
+var Undefined UndefinedStruct = UndefinedStruct{0}
+
 var InstrNameSet map[string]int = map[string]int{
 
 	// internal & debug related
 	"pass":      101,
 	"debug":     102,
 	"debugInfo": 103,
+	"isUndef":   111,
+	"goto":      180,
 	"exit":      199,
 
 	// push/peek/pop related
@@ -36,6 +48,8 @@ var InstrNameSet map[string]int = map[string]int{
 	"pushInt#": 233,
 	"pushInt*": 234,
 
+	// "pushLocal": 290,
+
 	// var related
 	"global": 201,
 	"var":    203,
@@ -51,6 +65,8 @@ var InstrNameSet map[string]int = map[string]int{
 	"assignInt": 410,
 	"assignI":   411,
 
+	"assignGlobal": 491,
+
 	// if/else, switch related
 	"if":     610,
 	"if$":    611,
@@ -58,6 +74,8 @@ var InstrNameSet map[string]int = map[string]int{
 	"ifNot$": 621,
 
 	// compare related
+	"==": 701,
+
 	">i":  710,
 	"<i":  720,
 	"<i$": 721,
@@ -71,11 +89,14 @@ var InstrNameSet map[string]int = map[string]int{
 	"intAdd":   820,
 	"intAdd$":  821,
 	"intDiv":   831,
-	"floatDiv": 841,
+	"floatAdd": 840,
+	"floatDiv": 848,
 
 	// func related
-	"call": 1010,
-	"ret":  1020,
+	"call":     1010,
+	"ret":      1020,
+	"callFunc": 1050,
+	"goFunc":   1060,
 
 	// array related
 	"addItem":    1110,
@@ -129,10 +150,13 @@ var InstrNameSet map[string]int = map[string]int{
 
 	// regex related
 	"regReplaceAllStr$": 20411,
+
+	// system related
+	"sleep": 20501,
 }
 
 type VarRef struct {
-	Ref   int // 8 - pop, 7 - peek, 5 - push, 3 - var(string), > 10 normal vars
+	Ref   int // -8 - pop, -7 - peek, -5 - push, -3 - var(string), > 0 normal vars
 	Value interface{}
 }
 
@@ -152,9 +176,13 @@ type Regs struct {
 }
 
 type FuncContext struct {
-	VarsM          map[int]interface{}
+	// VarsM          map[int]interface{}
+	VarsLocalMapM  map[int]int
+	VarsM          *[]interface{}
 	ReturnPointerM int
 	RegsM          Regs
+
+	// StackM []interface{}
 }
 
 type XieVM struct {
@@ -173,12 +201,19 @@ type XieVM struct {
 
 	FuncStackM []FuncContext
 
-	VarsM map[int]interface{}
+	// VarsM map[int]interface{}
+	// VarsLocalMapM map[int]int
+	// VarsM []interface{}
 
-	RegsM Regs
+	// RegsM Regs
 
-	CurrentRegsM *Regs
-	CurrentVarsM *(map[int]interface{})
+	FuncContextM FuncContext
+
+	// CurrentRegsM *Regs
+	// // CurrentVarsM *(map[int]interface{})
+	// CurrentVarsM *([]interface{})
+
+	CurrentFuncContextM *FuncContext
 }
 
 func NewXie(globalsA ...map[string]interface{}) *XieVM {
@@ -197,13 +232,20 @@ func (p *XieVM) InitVM(globalsA ...map[string]interface{}) {
 	p.VarIndexMapM = make(map[string]int, 100)
 	p.VarNameMapM = make(map[int]string, 100)
 
-	p.VarsM = make(map[int]interface{}, 100)
-	p.VarNameMapM = make(map[int]string, 100)
+	// p.VarsM = make(map[int]interface{}, 100)
+	// p.VarsM = make([]interface{}, 0, 100)
+	// p.VarsLocalMapM = make(map[int]string, 100)
 
-	p.CurrentRegsM = &(p.RegsM)
-	p.CurrentVarsM = &(p.VarsM)
+	// p.CurrentFuncContextM.RegsM = &(p.RegsM)
+	// p.CurrentVarsM = &(p.VarsM)
+
+	// p.FuncContextM = FuncContext{VarsM: make([]interface{}, 0, 10), VarsLocalMapM: make(map[int]int, 10), ReturnPointerM: -1}
+	p.FuncContextM = FuncContext{VarsM: &([]interface{}{}), VarsLocalMapM: make(map[int]int, 10), ReturnPointerM: -1}
+
+	p.CurrentFuncContextM = &(p.FuncContextM)
 
 	p.SetVar("backQuoteG", "`")
+	p.SetVar("undefined", Undefined)
 
 	if len(globalsA) > 0 {
 		globalsT := globalsA[0]
@@ -230,21 +272,36 @@ func (p *XieVM) ParseVar(strA string) VarRef {
 	if strings.HasPrefix(s1T, "`") && strings.HasSuffix(s1T, "`") {
 		s1T = s1T[1 : len(s1T)-1]
 
-		return VarRef{3, s1T} // value(string)
+		return VarRef{-3, s1T} // value(string)
 	} else {
 		if strings.HasPrefix(s1T, "$") {
 			if s1T == "$pop" {
-				return VarRef{8, nil}
+				return VarRef{-8, nil}
 			} else if s1T == "$peek" {
-				return VarRef{7, nil}
+				return VarRef{-7, nil}
 			} else if s1T == "$push" {
-				return VarRef{5, nil}
+				return VarRef{-5, nil}
 			} else {
 				vNameT := s1T[1:]
+
+				// if strings.HasPrefix(vNameT, "$") {
+				// 	vNameT = vNameT[1:]
+
+				// 	varIndexT, ok := p.VarIndexMapM[vNameT]
+
+				// 	if !ok {
+				// 		varIndexT = len(p.VarIndexMapM) + 10000 + 1
+				// 		p.VarIndexMapM[vNameT] = varIndexT
+				// 		p.VarNameMapM[varIndexT] = vNameT
+				// 	}
+
+				// 	return VarRef{varIndexT, nil}
+				// }
+
 				varIndexT, ok := p.VarIndexMapM[vNameT]
 
 				if !ok {
-					varIndexT = len(p.VarIndexMapM) + 100 + 1
+					varIndexT = len(p.VarIndexMapM)
 					p.VarIndexMapM[vNameT] = varIndexT
 					p.VarNameMapM[varIndexT] = vNameT
 				}
@@ -256,13 +313,13 @@ func (p *XieVM) ParseVar(strA string) VarRef {
 			varIndexT, ok := p.VarIndexMapM[vNameT]
 
 			if !ok {
-				return VarRef{3, s1T}
+				return VarRef{-3, s1T}
 			}
 
-			return VarRef{3, p.LabelsM[varIndexT]}
+			return VarRef{-3, p.LabelsM[varIndexT]}
 		} else if strings.HasPrefix(s1T, "#") { // values
 			if len(s1T) < 2 {
-				return VarRef{3, s1T}
+				return VarRef{-3, s1T}
 			}
 
 			// remainsT := s1T[2:]
@@ -273,15 +330,23 @@ func (p *XieVM) ParseVar(strA string) VarRef {
 				c1T, errT := tk.StrToIntQuick(s1T[2:])
 
 				if errT != nil {
-					return VarRef{3, s1T}
+					return VarRef{-3, s1T}
 				}
 
-				return VarRef{3, c1T}
+				return VarRef{-3, c1T}
+			} else if typeT == 'f' {
+				c1T, errT := tk.StrToFloat64E(s1T[2:])
+
+				if errT != nil {
+					return VarRef{-3, s1T}
+				}
+
+				return VarRef{-3, c1T}
 			}
 
-			return VarRef{3, s1T}
+			return VarRef{-3, s1T}
 		} else {
-			return VarRef{3, s1T} // value(string)
+			return VarRef{-3, s1T} // value(string)
 		}
 	}
 }
@@ -309,29 +374,113 @@ func (p *XieVM) ParseVar(strA string) VarRef {
 
 func (p *XieVM) GetVarValue(vA VarRef) interface{} {
 	idxT := vA.Ref
-	if idxT == 3 {
+	if idxT == -3 {
 		return vA.Value
 	}
 
-	if idxT == 8 {
+	if idxT == -8 {
 		return p.Pop()
 	}
 
-	if idxT == 7 {
+	if idxT == -7 {
 		return p.Peek()
 	}
 
-	if idxT == 5 {
-		return fmt.Errorf("N/A")
+	if idxT == -5 {
+		return Undefined
 	}
 
-	vT, ok := (*(p.CurrentVarsM))[idxT]
+	if idxT < 0 {
+		return Undefined
+	}
+
+	contextT := p.CurrentFuncContextM
+
+	nv, ok := contextT.VarsLocalMapM[idxT]
 
 	if !ok {
-		return fmt.Errorf("undefined")
+		return Undefined
 	}
 
-	return vT
+	return (*contextT.VarsM)[nv]
+
+	// vT, ok := (*(p.CurrentVarsM))[idxT]
+
+	// if !ok {
+	// 	return Undefined
+	// }
+
+	// return vT
+}
+
+func (p *XieVM) GetVarRef(vA VarRef) *interface{} {
+	idxT := vA.Ref
+	if idxT == -3 {
+		return nil
+	}
+
+	if idxT == -8 {
+		return nil
+	}
+
+	if idxT == -7 {
+		return nil
+	}
+
+	if idxT == -5 {
+		return nil
+	}
+
+	if idxT < 0 {
+		return nil
+	}
+
+	// _, ok := p.VarsM[idxT]
+
+	// if !ok {
+	// 	return nil
+	// }
+
+	contextT := p.CurrentFuncContextM
+
+	return &((*contextT.VarsM)[contextT.VarsLocalMapM[idxT]])
+}
+
+func (p *XieVM) GetVarValueGlobal(vA VarRef) interface{} {
+	idxT := vA.Ref
+	if idxT == -3 {
+		return vA.Value
+	}
+
+	if idxT == -8 {
+		return p.Pop()
+	}
+
+	if idxT == -7 {
+		return p.Peek()
+	}
+
+	if idxT == -5 {
+		return Undefined
+	}
+
+	if idxT < 0 {
+		return Undefined
+	}
+
+	contextT := p.FuncContextM
+
+	return (*contextT.VarsM)[contextT.VarsLocalMapM[idxT]]
+
+	// return p.VarsM[idxT]
+
+	// vT, ok := p.VarsM[idxT]
+
+	// if !ok {
+	// 	return Undefined
+	// }
+
+	// return vT
 }
 
 func (p *XieVM) ParseLine(commandA string) ([]string, error) {
@@ -445,7 +594,7 @@ func (p *XieVM) Load(codeA string) string {
 			_, ok := p.VarIndexMapM[labelT]
 
 			if !ok {
-				varCountT = len(p.VarIndexMapM) + 100 + 1
+				varCountT = len(p.VarIndexMapM)
 
 				p.VarIndexMapM[labelT] = varCountT
 				p.VarNameMapM[varCountT] = labelT
@@ -532,11 +681,16 @@ func (p *XieVM) Load(codeA string) string {
 }
 
 func (p *XieVM) PushFunc() {
-	funcContextT := FuncContext{VarsM: make(map[int]interface{}, 10), ReturnPointerM: p.CodePointerM + 1}
+	// funcContextT := FuncContext{VarsM: make(map[int]interface{}, 10), ReturnPointerM: p.CodePointerM + 1}
+	// funcContextT := FuncContext{VarsM: make([]interface{}, 0, 10), VarsLocalMapM: make(map[int]int, 10), ReturnPointerM: p.CodePointerM + 1}
+	funcContextT := FuncContext{VarsM: &([]interface{}{}), VarsLocalMapM: make(map[int]int, 10), ReturnPointerM: p.CodePointerM + 1}
+
 	p.FuncStackM = append(p.FuncStackM, funcContextT)
 
-	p.CurrentRegsM = &(p.FuncStackM[len(p.FuncStackM)-1].RegsM)
-	p.CurrentVarsM = &(p.FuncStackM[len(p.FuncStackM)-1].VarsM)
+	// p.CurrentFuncContextM.RegsM = &(p.FuncStackM[len(p.FuncStackM)-1].RegsM)
+	// p.CurrentVarsM = &(p.FuncStackM[len(p.FuncStackM)-1].VarsM)
+
+	p.CurrentFuncContextM = &(p.FuncStackM[len(p.FuncStackM)-1])
 
 }
 
@@ -545,12 +699,13 @@ func (p *XieVM) PopFunc() int {
 	p.FuncStackM = p.FuncStackM[:len(p.FuncStackM)-1]
 
 	if len(p.FuncStackM) < 1 {
-		p.CurrentRegsM = &(p.RegsM)
-		p.CurrentVarsM = &(p.VarsM)
-
+		// p.CurrentFuncContextM.RegsM = &(p.RegsM)
+		// p.CurrentVarsM = &(p.VarsM)
+		p.CurrentFuncContextM = &(p.FuncContextM)
 	} else {
-		p.CurrentRegsM = &(p.FuncStackM[len(p.FuncStackM)-1].RegsM)
-		p.CurrentVarsM = &(p.FuncStackM[len(p.FuncStackM)-1].VarsM)
+		p.CurrentFuncContextM = &(p.FuncStackM[len(p.FuncStackM)-1])
+		// p.CurrentFuncContextM.RegsM = &(p.FuncStackM[len(p.FuncStackM)-1].RegsM)
+		// p.CurrentVarsM = &(p.FuncStackM[len(p.FuncStackM)-1].VarsM)
 
 	}
 
@@ -558,39 +713,172 @@ func (p *XieVM) PopFunc() int {
 }
 
 func (p *XieVM) SetVarInt(keyA int, vA interface{}) error {
-	if p.VarsM == nil {
+	if p.FuncContextM.VarsM == nil {
 		p.InitVM()
 	}
 
-	if keyA == 5 {
+	if keyA == -5 {
 		p.Push(vA)
 		return nil
 	}
 
-	if keyA < 100 {
+	if keyA < 0 {
 		return fmt.Errorf("invalid var index")
 	}
 
-	(*(p.CurrentVarsM))[keyA] = vA
+	contextT := *(p.CurrentFuncContextM)
+
+	localIdxT, ok := contextT.VarsLocalMapM[keyA]
+
+	if !ok {
+		localIdxT = len((*contextT.VarsM))
+
+		contextT.VarsLocalMapM[keyA] = localIdxT
+
+		(*contextT.VarsM) = append((*contextT.VarsM), vA)
+
+		// tk.Pln(contextT.VarsM, "***")
+
+		return nil
+	}
+
+	// tk.Pln(contextT.VarsLocalMapM, contextT.VarsM, keyA, localIdxT, ok)
+	(*contextT.VarsM)[localIdxT] = vA
+	// varsT := *(p.CurrentVarsM)
+
+	// idxT, ok := varsT[keyA]
+
+	// varsT[keyA] = vA
+
+	return nil
+}
+
+func (p *XieVM) SetVarIntGlobal(keyA int, vA interface{}) error {
+	if p.FuncContextM.VarsM == nil {
+		p.InitVM()
+	}
+
+	if keyA == -5 {
+		p.Push(vA)
+		return nil
+	}
+
+	if keyA < 0 {
+		return fmt.Errorf("invalid var index")
+	}
+
+	// contextT := p.FuncContextM
+
+	localIdxT, ok := p.FuncContextM.VarsLocalMapM[keyA]
+
+	if !ok {
+		localIdxT = len(*p.FuncContextM.VarsM)
+
+		p.FuncContextM.VarsLocalMapM[keyA] = localIdxT
+
+		*p.FuncContextM.VarsM = append(*p.FuncContextM.VarsM, vA)
+
+		return nil
+	}
+
+	(*p.FuncContextM.VarsM)[localIdxT] = vA
+	// p.VarsM[keyA] = vA
 
 	return nil
 }
 
 func (p *XieVM) SetVar(keyA string, vA interface{}) {
-	if p.VarsM == nil {
+	if p.FuncContextM.VarsM == nil {
 		p.InitVM()
 	}
 
-	lenT := len(p.VarIndexMapM) + 100
+	idxT, ok := p.VarIndexMapM[keyA]
+	// tk.Pln(keyA, idxT, ok, p.VarIndexMapM)
 
-	p.VarIndexMapM[keyA] = lenT + 1
-	p.VarNameMapM[lenT+1] = keyA
+	if !ok {
+		idxT = len(p.VarIndexMapM)
 
-	(*(p.CurrentVarsM))[lenT+1] = vA
+		p.VarIndexMapM[keyA] = idxT
+		p.VarNameMapM[idxT] = keyA
+
+		// tk.Pln(idxT, p.VarIndexMapM, p.VarNameMapM)
+	}
+
+	contextT := *(p.CurrentFuncContextM)
+
+	localIdxT, ok := contextT.VarsLocalMapM[idxT]
+
+	// tk.Pln(idxT, localIdxT, ok, contextT.VarsLocalMapM)
+
+	if !ok {
+		localIdxT = len((*contextT.VarsM))
+
+		contextT.VarsLocalMapM[idxT] = localIdxT
+
+		(*contextT.VarsM) = append((*contextT.VarsM), vA)
+
+		// tk.Pln(idxT, localIdxT, contextT.VarsLocalMapM, contextT.VarsM, "---")
+
+		return
+	}
+
+	(*contextT.VarsM)[localIdxT] = vA
+
+	// lenT := len(contextT.VarsM)
+
+	// if lenT < idxT {
+
+	// }
+
+	// varsT := *(p.CurrentVarsM)
+
+	// if len(varsT) < lenT {
+	// 	varsT = append(varsT, vA)
+	// }
+
+	// ()[lenT] = vA
+}
+
+func (p *XieVM) SetVarGlobal(keyA string, vA interface{}) {
+	if p.FuncContextM.VarsM == nil {
+		p.InitVM()
+	}
+
+	idxT, ok := p.VarIndexMapM[keyA]
+
+	if !ok {
+		lenT := len(p.VarIndexMapM) + 1
+
+		p.VarIndexMapM[keyA] = lenT
+		p.VarNameMapM[lenT] = keyA
+
+	}
+
+	// contextT := *(p.CurrentFuncContextM)
+
+	localIdxT, ok := p.FuncContextM.VarsLocalMapM[idxT]
+
+	if !ok {
+		localIdxT = len(*p.FuncContextM.VarsM)
+
+		p.FuncContextM.VarsLocalMapM[idxT] = localIdxT
+
+		*p.FuncContextM.VarsM = append(*p.FuncContextM.VarsM, vA)
+
+		return
+	}
+
+	(*p.FuncContextM.VarsM)[localIdxT] = vA
+	// lenT := len(p.VarIndexMapM) + 100
+
+	// p.VarIndexMapM[keyA] = lenT + 1
+	// p.VarNameMapM[lenT+1] = keyA
+
+	// p.VarsM[lenT+1] = vA
 }
 
 func (p *XieVM) PushVar(vA interface{}) {
-	if p.VarsM == nil {
+	if p.FuncContextM.VarsM == nil {
 		p.InitVM()
 	}
 
@@ -598,19 +886,42 @@ func (p *XieVM) PushVar(vA interface{}) {
 }
 
 func (p *XieVM) GetVarInt(keyA int) interface{} {
-	if p.VarsM == nil {
+	if p.FuncContextM.VarsM == nil {
 		p.InitVM()
 	}
 
-	return (*(p.CurrentVarsM))[keyA]
+	contextT := *(p.CurrentFuncContextM)
+
+	localIdxT, ok := contextT.VarsLocalMapM[keyA]
+
+	if !ok {
+		return Undefined
+	}
+
+	return (*contextT.VarsM)[localIdxT]
 }
 
 func (p *XieVM) GetVar(keyA string) interface{} {
-	if p.VarsM == nil {
+	if p.FuncContextM.VarsM == nil {
 		p.InitVM()
 	}
 
-	return (*(p.CurrentVarsM))[p.VarIndexMapM[keyA]]
+	idxT, ok := p.VarIndexMapM[keyA]
+
+	if !ok {
+		return Undefined
+
+	}
+
+	contextT := *(p.CurrentFuncContextM)
+
+	localIdxT, ok := contextT.VarsLocalMapM[idxT]
+
+	if !ok {
+		return Undefined
+	}
+
+	return (*contextT.VarsM)[localIdxT]
 
 	// lenT := len(p.FuncStackM)
 
@@ -630,18 +941,18 @@ func (p *XieVM) GetVar(keyA string) interface{} {
 }
 
 // get current vars in context
-func (p *XieVM) GetVars() map[int]interface{} {
-	if p.VarsM == nil {
+func (p *XieVM) GetVars() []interface{} {
+	if p.FuncContextM.VarsM == nil {
 		p.InitVM()
 	}
 
 	lenT := len(p.FuncStackM)
 
 	if lenT > 0 {
-		return p.FuncStackM[lenT-1].VarsM
+		return *p.FuncStackM[lenT-1].VarsM
 	}
 
-	return p.VarsM
+	return *p.FuncContextM.VarsM
 }
 
 func (p *XieVM) GetRegs() *Regs {
@@ -651,7 +962,7 @@ func (p *XieVM) GetRegs() *Regs {
 		return &(p.FuncStackM[lenT-1].RegsM)
 	}
 
-	return &(p.RegsM)
+	return &(p.FuncContextM.RegsM)
 }
 
 func (p *XieVM) Push(vA interface{}) {
@@ -662,17 +973,32 @@ func (p *XieVM) Push(vA interface{}) {
 	p.StackM = append(p.StackM, vA)
 }
 
+// func (p *XieVM) PushLocal(vA interface{}) {
+// 	if p.StackM == nil {
+// 		p.InitVM()
+// 	}
+
+// 	lenT := len(p.FuncStackM)
+
+// 	if lenT > 0 {
+// 		p.FuncStackM[lenT-1].StackM = append(p.FuncStackM[lenT-1].StackM, vA)
+// 		return
+// 	}
+
+// 	p.StackM = append(p.StackM, vA)
+// }
+
 func (p *XieVM) Pop() interface{} {
 	if p.StackM == nil {
 		p.InitVM()
 
-		return nil
+		return Undefined
 	}
 
 	lenT := len(p.StackM)
 
 	if lenT < 1 {
-		return nil
+		return Undefined
 	}
 
 	rs := p.StackM[lenT-1]
@@ -681,6 +1007,74 @@ func (p *XieVM) Pop() interface{} {
 
 	return rs
 }
+
+// func (p *XieVM) PopLocal() interface{} {
+// 	if p.StackM == nil {
+// 		p.InitVM()
+
+// 		return Undefined
+// 	}
+
+// 	len1T := len(p.FuncStackM)
+
+// 	if len1T > 0 {
+// 		lenT := len(p.FuncStackM[len1T-1].StackM)
+
+// 		if lenT < 1 {
+// 			return Undefined
+// 		}
+
+// 		rs := p.FuncStackM[len1T-1].StackM[lenT-1]
+
+// 		p.FuncStackM[len1T-1].StackM = p.FuncStackM[len1T-1].StackM[0 : lenT-1]
+
+// 		return rs
+// 	}
+
+// 	lenT := len(p.StackM)
+
+// 	if lenT < 1 {
+// 		return Undefined
+// 	}
+
+// 	rs := p.StackM[lenT-1]
+
+// 	p.StackM = p.StackM[0 : lenT-1]
+
+// 	return rs
+// }
+
+// func (p *XieVM) PeekLocal() interface{} {
+// 	if p.StackM == nil {
+// 		p.InitVM()
+
+// 		return Undefined
+// 	}
+
+// 	len1T := len(p.FuncStackM)
+
+// 	if len1T > 0 {
+// 		lenT := len(p.FuncStackM[len1T-1].StackM)
+
+// 		if lenT < 1 {
+// 			return Undefined
+// 		}
+
+// 		rs := p.FuncStackM[len1T-1].StackM[lenT-1]
+
+// 		return rs
+// 	}
+
+// 	lenT := len(p.StackM)
+
+// 	if lenT < 1 {
+// 		return Undefined
+// 	}
+
+// 	rs := p.StackM[lenT-1]
+
+// 	return rs
+// }
 
 func (p *XieVM) Pops() string {
 	if p.StackM == nil {
@@ -706,13 +1100,13 @@ func (p *XieVM) Peek() interface{} {
 	if p.StackM == nil {
 		p.InitVM()
 
-		return nil
+		return Undefined
 	}
 
 	lenT := len(p.StackM)
 
 	if lenT < 1 {
-		return nil
+		return Undefined
 	}
 
 	return p.StackM[lenT-1]
@@ -727,29 +1121,44 @@ func (p *XieVM) Peek() interface{} {
 // }
 
 func (p *XieVM) GetValue(codeA int, vA interface{}) interface{} {
-	if codeA == 3 {
+	if codeA == -3 {
 		return vA
 	}
 
-	if codeA == 8 {
+	if codeA == -8 {
 		return p.Pop()
 	}
 
-	if codeA == 7 {
+	if codeA == -7 {
 		return p.Peek()
 	}
 
-	if codeA == 5 {
-		return tk.ErrStrf("N/A")
+	if codeA == -5 {
+		return Undefined
 	}
 
-	vT, ok := p.VarsM[codeA]
+	if codeA < 0 {
+		return Undefined
+	}
+
+	contextT := *(p.CurrentFuncContextM)
+
+	localIdxT, ok := contextT.VarsLocalMapM[codeA]
 
 	if !ok {
-		return tk.ErrStrf("undefined")
+		return Undefined
 	}
 
-	return vT
+	return (*contextT.VarsM)[localIdxT]
+	// return p.VarsM[codeA]
+
+	// vT, ok := p.VarsM[codeA]
+
+	// if !ok {
+	// 	return Undefined
+	// }
+
+	// return vT
 }
 
 // func (p *XieVM) GetValue(nameA string) interface{} {
@@ -846,7 +1255,7 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 		tk.Pln(tk.ToJSONX(p, "-indent", "-sort"))
 
 		if instrT.ParamLen > 0 {
-			if instrT.Params[0].Ref == 3 {
+			if instrT.Params[0].Ref == -3 {
 				if instrT.Params[0].Value.(string) == "exit" {
 					return "exit"
 				}
@@ -862,13 +1271,32 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 
 		nameT := instrT.Params[0].Ref
 
-		if !(nameT == 5 || nameT > 8) {
+		if !(nameT == -5 || nameT > 0) {
 			return p.ErrStrf("invalid var int")
 		}
 
 		p.SetVarInt(nameT, tk.ToJSONX(p, "-indent", "-sort"))
 
 		return ""
+	case 111: // isUndef
+		if instrT.ParamLen < 1 {
+			return p.ErrStrf("not enough paramters")
+		}
+
+		v1 := p.GetVarValue(instrT.Params[0])
+
+		p.Push(v1 == Undefined)
+
+		return ""
+
+	case 180: // goto
+		if instrT.ParamLen < 1 {
+			return p.ErrStrf("not enough paramters")
+		}
+
+		valueT := p.GetVarValue(instrT.Params[0]).(int)
+
+		return valueT
 	case 199: // exit
 		if instrT.ParamLen < 1 {
 			return "exit"
@@ -876,7 +1304,7 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 
 		valueT := p.GetValue(instrT.Params[0].Ref, instrT.Params[0].Value)
 
-		p.SetVar("OutG", valueT)
+		p.SetVar("outG", valueT)
 
 		return "exit"
 	case 201: // global
@@ -885,28 +1313,37 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 		}
 
 		if instrT.ParamLen < 2 {
-			p.VarsM[instrT.Params[0].Ref] = ""
+			p.SetVarInt(instrT.Params[0].Ref, "")
+			// p.Curr.VarsM[instrT.Params[0].Ref] = ""
 			return ""
 		}
 
 		valueT := instrT.Params[1].Value
 
 		if valueT == "bool" {
-			p.VarsM[instrT.Params[0].Ref] = false
+			p.SetVarInt(instrT.Params[0].Ref, false)
+			// p.VarsM[instrT.Params[0].Ref] = false
 		} else if valueT == "int" {
-			p.VarsM[instrT.Params[0].Ref] = int(0)
+			p.SetVarInt(instrT.Params[0].Ref, int(0))
+			// p.VarsM[instrT.Params[0].Ref] = int(0)
 		} else if valueT == "float" {
-			p.VarsM[instrT.Params[0].Ref] = float64(0.0)
+			p.SetVarInt(instrT.Params[0].Ref, float64(0.0))
+			// p.VarsM[instrT.Params[0].Ref] = float64(0.0)
 		} else if valueT == "string" {
-			p.VarsM[instrT.Params[0].Ref] = ""
+			p.SetVarInt(instrT.Params[0].Ref, "")
+			// p.VarsM[instrT.Params[0].Ref] = ""
 		} else if valueT == "list" {
-			p.VarsM[instrT.Params[0].Ref] = []interface{}{}
+			p.SetVarInt(instrT.Params[0].Ref, []interface{}{})
+			// p.VarsM[instrT.Params[0].Ref] = []interface{}{}
 		} else if valueT == "strList" {
-			p.VarsM[instrT.Params[0].Ref] = []string{}
+			p.SetVarInt(instrT.Params[0].Ref, []string{})
+			// p.VarsM[instrT.Params[0].Ref] = []string{}
 		} else if valueT == "map" {
-			p.VarsM[instrT.Params[0].Ref] = map[string]interface{}{}
+			p.SetVarInt(instrT.Params[0].Ref, map[string]interface{}{})
+			// p.VarsM[instrT.Params[0].Ref] = map[string]interface{}{}
 		} else if valueT == "strMap" {
-			p.VarsM[instrT.Params[0].Ref] = map[string]string{}
+			p.SetVarInt(instrT.Params[0].Ref, map[string]string{})
+			// p.VarsM[instrT.Params[0].Ref] = map[string]string{}
 		}
 
 		return ""
@@ -917,31 +1354,40 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 
 		nameT := instrT.Params[0].Ref
 
-		varsT := (*(p.CurrentVarsM))
+		// contextT := p.CurrentFuncContextM
 
 		if instrT.ParamLen < 2 {
-			varsT[nameT] = ""
+			p.SetVarInt(nameT, "")
+			// varsT[nameT] = ""
 			return ""
 		}
 
 		valueT := instrT.Params[1].Value
 
 		if valueT == "bool" {
-			varsT[nameT] = false
+			p.SetVarInt(nameT, false)
+			// varsT[nameT] = false
 		} else if valueT == "int" {
-			varsT[nameT] = int(0)
+			p.SetVarInt(nameT, int(0))
+			// varsT[nameT] = int(0)
 		} else if valueT == "float" {
-			varsT[nameT] = float64(0.0)
+			p.SetVarInt(nameT, float64(0.0))
+			// varsT[nameT] = float64(0.0)
 		} else if valueT == "string" {
-			varsT[nameT] = ""
+			p.SetVarInt(nameT, "")
+			// varsT[nameT] = ""
 		} else if valueT == "list" {
-			varsT[nameT] = []interface{}{}
+			p.SetVarInt(nameT, []interface{}{})
+			// varsT[nameT] = []interface{}{}
 		} else if valueT == "strList" {
-			varsT[nameT] = []string{}
+			p.SetVarInt(nameT, []string{})
+			// varsT[nameT] = []string{}
 		} else if valueT == "map" {
-			varsT[nameT] = map[string]interface{}{}
+			p.SetVarInt(nameT, map[string]interface{}{})
+			// varsT[nameT] = map[string]interface{}{}
 		} else if valueT == "strMap" {
-			varsT[nameT] = map[string]string{}
+			p.SetVarInt(nameT, map[string]string{})
+			// varsT[nameT] = map[string]string{}
 		}
 
 		return ""
@@ -966,16 +1412,18 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 
 		p1 := instrT.Params[0].Ref
 
-		if p1 == 5 {
+		if p1 == -5 {
 			p.Push(p.Peek())
 			return ""
 		}
 
-		if p1 < 100 {
+		if p1 < 0 {
 			return p.ErrStrf("invalid var name")
 		}
 
-		(*(p.CurrentVarsM))[p1] = p.Peek()
+		p.SetVarInt(p1, p.Peek())
+
+		// (*(p.CurrentVarsM))[p1] = p.Peek()
 
 		return ""
 	case 223: // peek$
@@ -985,10 +1433,12 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 
 		p1 := instrT.Params[0].Ref
 
-		if p1 < 100 {
+		if p1 < 0 {
 			return p.ErrStrf("invalid var name")
 		}
-		(*(p.CurrentVarsM))[p1] = p.Peek()
+
+		p.SetVarInt(p1, p.Peek())
+		// (*(p.CurrentVarsM))[p1] = p.Peek()
 
 		return ""
 	case 224: // pop
@@ -999,23 +1449,24 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 
 		p1 := instrT.Params[0].Ref
 
-		if p1 < 100 {
+		if p1 < 0 {
 			return p.ErrStrf("invalid var name")
 		}
 
-		(*(p.CurrentVarsM))[p1] = p.Pop()
+		p.SetVarInt(p1, p.Pop())
+		// (*(p.CurrentVarsM))[p1] = p.Pop()
 
 		return ""
 	case 226: // peek*
 		v1 := instrT.Params[0].Value.(int)
 
-		p.CurrentRegsM.IntsM[v1] = p.Peek().(int)
+		p.CurrentFuncContextM.RegsM.IntsM[v1] = p.Peek().(int)
 
 		return ""
 	case 227: // pop*
 		v1 := instrT.Params[0].Value.(int)
 
-		p.CurrentRegsM.IntsM[v1] = p.Pop().(int)
+		p.CurrentFuncContextM.RegsM.IntsM[v1] = p.Pop().(int)
 
 		return ""
 	case 231: // pushInt
@@ -1085,14 +1536,28 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 	case 234: // pushInt*
 		v1 := instrT.Params[0].Value.(int)
 
-		p.Push(p.CurrentRegsM.IntsM[v1])
+		p.Push(p.CurrentFuncContextM.RegsM.IntsM[v1])
 
 		return ""
+	// case 290: // pushLocal
+	// 	if instrT.ParamLen < 1 {
+	// 		return p.ErrStrf("not enough paramters")
+	// 	}
+
+	// 	v1 := p.GetVarValue(instrT.Params[0])
+
+	// 	if tk.IsError(v1) {
+	// 		return p.ErrStrf("invalid param")
+	// 	}
+
+	// 	p.Push(v1)
+
+	// 	return ""
 	case 312: // regInt#  from value
 		v1 := instrT.Params[0].Value.(int)
 		v2 := instrT.Params[1].Value.(int)
 
-		p.CurrentRegsM.IntsM[v1] = v2
+		p.CurrentFuncContextM.RegsM.IntsM[v1] = v2
 
 		return ""
 	case 401: // assign
@@ -1102,13 +1567,15 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 
 		nameT := instrT.Params[0].Ref
 
-		if nameT <= 0 {
+		if nameT < 0 {
 			return p.ErrStrf("invalid var name")
 		}
 
 		valueT := p.GetValue(instrT.Params[1].Ref, instrT.Params[1].Value)
 
-		(*(p.CurrentVarsM))[nameT] = valueT
+		p.SetVarInt(nameT, valueT)
+
+		// (*(p.CurrentVarsM))[nameT] = valueT
 
 		return ""
 	case 402: // assign$
@@ -1118,11 +1585,12 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 
 		nameT := instrT.Params[0].Ref
 
-		if nameT <= 0 {
+		if nameT < 0 {
 			return p.ErrStrf("invalid var name")
 		}
 
-		(*(p.CurrentVarsM))[nameT] = p.Pop()
+		p.SetVarInt(nameT, p.Pop())
+		// (*(p.CurrentVarsM))[nameT] = p.Pop()
 
 		return ""
 	case 410: // assignInt
@@ -1132,7 +1600,7 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 
 		nameT := instrT.Params[0].Ref
 
-		if nameT <= 0 {
+		if nameT < 0 {
 			return p.ErrStrf("invalid var name")
 		}
 
@@ -1161,6 +1629,40 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 		}
 
 		p.SetVarInt(p1, c2T)
+
+		return ""
+	case 491: // assignGlobal
+		if instrT.ParamLen < 2 {
+			return p.ErrStrf("not enough paramters")
+		}
+
+		nameT := instrT.Params[0].Ref
+
+		if nameT < 0 {
+			return p.ErrStrf("invalid var name")
+		}
+
+		valueT := p.GetValue(instrT.Params[1].Ref, instrT.Params[1].Value)
+
+		p.SetVarInt(nameT, valueT)
+
+		// p.VarsM[nameT] = valueT
+
+		return ""
+	case 492: // assignFromGlobal
+		if instrT.ParamLen < 2 {
+			return p.ErrStrf("not enough paramters")
+		}
+
+		p1 := instrT.Params[0].Ref
+
+		if p1 <= 0 {
+			return p.ErrStrf("invalid var name")
+		}
+
+		valueT := p.GetVarValueGlobal(instrT.Params[1])
+
+		p.SetVarInt(p1, valueT)
 
 		return ""
 	case 610: // if
@@ -1213,7 +1715,7 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 			return p.ErrStrf("not enough paramters")
 		}
 
-		condT := p.CurrentRegsM.CondM
+		condT := p.CurrentFuncContextM.RegsM.CondM
 
 		if condT {
 			return p.GetVarValue(instrT.Params[0]).(int)
@@ -1231,6 +1733,19 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 		if !condT {
 			return p.GetVarValue(instrT.Params[0]).(int)
 		}
+
+		return ""
+
+	case 701: // ==
+		if instrT.ParamLen < 2 {
+			return p.ErrStrf("not enough paramters")
+		}
+
+		s1 := p.GetVarValue(instrT.Params[0])
+
+		s2 := p.GetVarValue(instrT.Params[0])
+
+		p.Push(s1 == s2)
 
 		return ""
 
@@ -1304,7 +1819,7 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 		return ""
 
 	case 722: // <i*
-		regsT := p.CurrentRegsM
+		regsT := p.CurrentFuncContextM.RegsM
 		regsT.CondM = regsT.IntsM[0] < regsT.IntsM[1]
 
 		return ""
@@ -1314,12 +1829,14 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 			return p.ErrStrf("not enough paramters")
 		}
 
-		varsT := (*(p.CurrentVarsM))
+		// varsT := (*(p.CurrentVarsM))
 
-		p1 := instrT.Params[0].Ref
-		v1 := varsT[p1].(int)
+		v1 := p.GetVarValue(instrT.Params[0]).(int)
+		// v1 := varsT[p1].(int)
 
-		varsT[p1] = v1 + 1
+		p.SetVarInt(instrT.Params[0].Ref, v1+1)
+
+		// varsT[p1] = v1 + 1
 
 		return ""
 
@@ -1328,24 +1845,25 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 			return p.ErrStrf("not enough paramters")
 		}
 
-		varsT := (*(p.CurrentVarsM))
+		// varsT := (*(p.CurrentVarsM))
 
 		p1 := instrT.Params[0].Ref
 		// v1 := p.GetVarValue(instrT.Params[0])
-		v1 := varsT[p1].(int)
+		v1 := p.GetVarValue(instrT.Params[0]).(int)
 
 		// if tk.IsError(v1) {
 		// 	return p.ErrStrf("invalid param: %v", v1)
 		// }
 
-		varsT[p1] = v1 - 1
+		p.SetVarInt(p1, v1-1)
+		// varsT[p1] = v1 - 1
 
 		return ""
 
 	case 812: // dec*
 		v1 := instrT.Params[0].Value.(int)
 
-		p.CurrentRegsM.IntsM[v1]--
+		p.CurrentFuncContextM.RegsM.IntsM[v1]--
 
 		return ""
 
@@ -1380,7 +1898,20 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 
 		return ""
 
-	case 841: // floatDiv
+	case 840: // floatAdd
+		if instrT.ParamLen < 2 {
+			return p.ErrStrf("not enough paramters")
+		}
+
+		v1 := p.GetVarValue(instrT.Params[0])
+
+		v2 := p.GetVarValue(instrT.Params[1])
+
+		p.Push(tk.ToFloat(v1) + tk.ToFloat(v2))
+
+		return ""
+
+	case 848: // floatDiv
 		if instrT.ParamLen < 2 {
 			return p.ErrStrf("not enough paramters")
 		}
@@ -1412,17 +1943,57 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 
 		return pT
 
+	case 1050: // callFunc
+		if instrT.ParamLen < 1 {
+			return p.ErrStrf("not enough paramters")
+		}
+
+		argCountT := 0
+
+		codeT := ""
+
+		if instrT.ParamLen > 1 {
+			argCountT = tk.ToInt(p.GetVarValue(instrT.Params[0]))
+
+			codeT = p.GetVarValue(instrT.Params[1]).(string)
+		} else {
+			codeT = p.GetVarValue(instrT.Params[0]).(string)
+		}
+
+		return p.CallFunc(codeT, argCountT)
+
+	case 1060: // goFunc
+		if instrT.ParamLen < 1 {
+			return p.ErrStrf("not enough paramters")
+		}
+
+		argCountT := 0
+
+		codeT := ""
+
+		if instrT.ParamLen > 1 {
+			argCountT = tk.ToInt(p.GetVarValue(instrT.Params[0]))
+
+			codeT = p.GetVarValue(instrT.Params[1]).(string)
+		} else {
+			codeT = p.GetVarValue(instrT.Params[0]).(string)
+		}
+
+		return p.GoFunc(codeT, argCountT)
+
 	case 1110: // addItem
 		if instrT.ParamLen < 2 {
 			return p.ErrStrf("not enough paramters")
 		}
 
-		varsT := (*(p.CurrentVarsM))
+		// varsT := (*(p.CurrentVarsM))
 
 		p1 := instrT.Params[0].Ref
 		// v1 := p.GetVarValue(instrT.Params[0])
 
 		v2 := p.GetVarValue(instrT.Params[1])
+
+		varsT := p.GetVars()
 
 		varsT[p1] = append((varsT[p1]).([]interface{}), v2)
 
@@ -1433,7 +2004,7 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 			return p.ErrStrf("not enough paramters")
 		}
 
-		varsT := (*(p.CurrentVarsM))
+		varsT := p.GetVars()
 
 		p1 := instrT.Params[0].Ref
 		// v1 := p.GetVarValue(instrT.Params[0])
@@ -1539,16 +2110,18 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 
 		p1 := instrT.Params[0].Ref
 
-		if p1 == 5 {
+		if p1 == -5 {
 			p.Push(time.Now())
 			return ""
 		}
 
-		if p1 < 100 {
+		if p1 < 0 {
 			return p.ErrStrf("invalid var name")
 		}
 
-		(*(p.CurrentVarsM))[p1] = time.Now()
+		p.SetVarInt(p1, time.Now())
+
+		// (*(p.CurrentVarsM))[p1] = time.Now()
 
 		return ""
 
@@ -1561,16 +2134,17 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 
 		p1 := instrT.Params[0].Ref
 
-		if p1 == 5 {
+		if p1 == -5 {
 			p.Push(tk.GetNowTimeString())
 			return ""
 		}
 
-		if p1 < 100 {
+		if p1 < 0 {
 			return p.ErrStrf("invalid var name")
 		}
 
-		(*(p.CurrentVarsM))[p1] = tk.GetNowTimeString()
+		p.SetVarInt(p1, tk.GetNowTimeString())
+		// (*(p.CurrentVarsM))[p1] = tk.GetNowTimeString()
 
 		return ""
 
@@ -1583,16 +2157,17 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 
 		p1 := instrT.Params[0].Ref
 
-		if p1 == 5 {
+		if p1 == -5 {
 			p.Push(tk.GetNowTimeStringFormal())
 			return ""
 		}
 
-		if p1 < 100 {
+		if p1 < 0 {
 			return p.ErrStrf("invalid var name")
 		}
 
-		(*(p.CurrentVarsM))[p1] = tk.GetNowTimeStringFormal()
+		p.SetVarInt(p1, tk.GetNowTimeStringFormal())
+		// (*(p.CurrentVarsM))[p1] = tk.GetNowTimeStringFormal()
 
 		return ""
 	case 1921: // timeSub
@@ -1910,10 +2485,79 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 
 		return ""
 
+	case 20501: // sleep
+		if instrT.ParamLen < 1 {
+			return p.ErrStrf("not enough paramters")
+		}
+
+		v1 := p.GetVarValue(instrT.Params[0]).(float64)
+
+		tk.Sleep(v1)
+
+		return ""
+
 		// end of switch
 	}
 
 	return p.ErrStrf("unknown command")
+}
+
+func (p *XieVM) CallFunc(codeA string, argCountA int) string {
+	vmT := NewXie()
+
+	// argCountT := p.Pop()
+
+	// if argCountT == Undefined {
+	// 	return tk.ErrStrf()
+	// }
+
+	for i := 0; i < argCountA; i++ {
+		vmT.Push(p.Pop())
+	}
+
+	lrs := vmT.Load(codeA)
+
+	if tk.IsErrStr(lrs) {
+		return lrs
+	}
+
+	rs := vmT.Run()
+
+	tk.Plv(rs)
+
+	if !tk.IsErrStr(rs) {
+		argCountT := tk.ToInt(rs) // vmT.Pop().(int)
+
+		for i := 0; i < argCountT; i++ {
+			p.Push(vmT.Pop())
+		}
+	}
+
+	return ""
+}
+
+func (p *XieVM) GoFunc(codeA string, argCountA int) string {
+	vmT := NewXie()
+
+	// argCountT := p.Pop()
+
+	// if argCountT == Undefined {
+	// 	return tk.ErrStrf()
+	// }
+
+	for i := 0; i < argCountA; i++ {
+		vmT.Push(p.Pop())
+	}
+
+	lrs := vmT.Load(codeA)
+
+	if tk.IsErrStr(lrs) {
+		return lrs
+	}
+
+	go vmT.Run()
+
+	return ""
 }
 
 // func (p *XieVM) RunLine(lineA int) interface{} {
@@ -2673,16 +3317,16 @@ func (p *XieVM) Run(posA ...int) string {
 
 	// tk.Pl(tk.ToJSONX(p, "-indent", "-sort"))
 
-	outIndexT, ok := p.VarIndexMapM["OutG"]
+	outIndexT, ok := p.VarIndexMapM["outG"]
 	if !ok {
 		return tk.ErrStrf("no result")
 	}
 
-	return tk.ToStr(p.VarsM[outIndexT])
+	return tk.ToStr((*p.FuncContextM.VarsM)[p.FuncContextM.VarsLocalMapM[outIndexT]])
 
 }
 
-func RunCode(codeA string, objA interface{}, optsA ...string) string {
+func RunCode(codeA string, objA interface{}, optsA ...string) interface{} {
 	vmT := NewXie()
 
 	if len(optsA) > 0 {
@@ -2696,7 +3340,7 @@ func RunCode(codeA string, objA interface{}, optsA ...string) string {
 	lrs := vmT.Load(codeA)
 
 	if tk.IsErrStr(lrs) {
-		return lrs
+		return tk.ErrStrToErr(lrs)
 	}
 
 	// var argsT []string = tk.JSONToStringArray(tk.GetSwitch(optsA, "-args=", "[]"))

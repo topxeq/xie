@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/topxeq/tk"
 	"github.com/topxeq/xie/go/xie"
@@ -43,7 +44,7 @@ func runInteractiveShell() int {
 		lrs := vmT.Load(source)
 
 		if tk.IsErrStr(lrs) {
-			fmt.Println("failed to load source")
+			fmt.Println("failed to load source:", tk.GetErrStr(lrs))
 			continue
 		}
 
@@ -51,7 +52,7 @@ func runInteractiveShell() int {
 
 		noResultT := (rs == "TXERROR:no result")
 
-		if tk.IsErrStr(rs) && !noResultT {
+		if tk.IsErrStrX(rs) && !noResultT {
 			fmt.Fprintln(os.Stderr, "failed to run: "+tk.GetErrStr(rs))
 			following = false
 			source = ""
@@ -88,9 +89,23 @@ func main() {
 
 	// tk.Pln(os.Args[1])
 
-	fcT := tk.LoadStringFromFile(os.Args[1])
+	var scriptT string = ""
 
-	rs := xie.RunCode(fcT, nil, os.Args...)
+	filePathT := tk.GetParameterByIndexWithDefaultValue(os.Args, 1, "")
+
+	if strings.HasPrefix(filePathT, "http") {
+		rsT := tk.DownloadWebPageX(filePathT)
+
+		if tk.IsErrStr(rsT) {
+			scriptT = ""
+		} else {
+			scriptT = rsT
+		}
+	} else {
+		scriptT = tk.LoadStringFromFile(filePathT)
+	}
+
+	rs := xie.RunCode(scriptT, nil, os.Args...)
 	if rs != "TXERROR:no result" {
 		tk.Pl("%v", rs)
 	}

@@ -1,0 +1,17 @@
+pop $a
+
+plv $a
+
+== $a $undefined
+
+pln $pop
+
+isUndef $b
+
+pln $pop
+
+assign $c #f1.6
+
+isUndef $c
+
+pln $pop
