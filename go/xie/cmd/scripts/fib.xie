@@ -12,6 +12,8 @@ exit
 
 convert $pop int
 
+# plo $peek
+
 now $t1
 pln $t1
 
@@ -31,23 +33,26 @@ pl `%v s` $pop
 exit
 
 :fib
-
     pop* #i0
     // pln c= $c
 
     // pushInt# #i2
 
     regInt# #i1 #i2
-
+ 
     // <i$
     <i*
-
+ 
     if* :return1
         dec* #i0
-        // debug exit
+        # debug context 
+        # exit
 
         pushInt* #i0
+
+    # debug exit
         call :fib
+
 
         // pop $d
 

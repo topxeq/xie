@@ -29,7 +29,10 @@ var InstrNameSet map[string]int = map[string]int{
 	"pass":      101,
 	"debug":     102,
 	"debugInfo": 103,
+	"varInfo":   104,
 	"isUndef":   111,
+	"test":      121,
+	"typeOf":    131,
 	"goto":      180,
 	"exit":      199,
 
@@ -61,6 +64,7 @@ var InstrNameSet map[string]int = map[string]int{
 
 	// assign related
 	"assign":    401,
+	"=":         401,
 	"assign$":   402,
 	"assignInt": 410,
 	"assignI":   411,
@@ -171,8 +175,10 @@ type Instr struct {
 }
 
 type Regs struct {
-	IntsM [5]int
-	CondM bool
+	IntsM   [5]int
+	FloatsM [5]float64
+	CondsM  [3]bool
+	StrsM   [5]string
 }
 
 type FuncContext struct {
@@ -180,7 +186,9 @@ type FuncContext struct {
 	VarsLocalMapM  map[int]int
 	VarsM          *[]interface{}
 	ReturnPointerM int
-	RegsM          Regs
+	RegsM          *Regs
+
+	Layer int
 
 	// StackM []interface{}
 }
@@ -240,7 +248,7 @@ func (p *XieVM) InitVM(globalsA ...map[string]interface{}) {
 	// p.CurrentVarsM = &(p.VarsM)
 
 	// p.FuncContextM = FuncContext{VarsM: make([]interface{}, 0, 10), VarsLocalMapM: make(map[int]int, 10), ReturnPointerM: -1}
-	p.FuncContextM = FuncContext{VarsM: &([]interface{}{}), VarsLocalMapM: make(map[int]int, 10), ReturnPointerM: -1}
+	p.FuncContextM = FuncContext{VarsM: &([]interface{}{}), VarsLocalMapM: make(map[int]int, 10), ReturnPointerM: -1, RegsM: &Regs{}}
 
 	p.CurrentFuncContextM = &(p.FuncContextM)
 
@@ -342,6 +350,8 @@ func (p *XieVM) ParseVar(strA string) VarRef {
 				}
 
 				return VarRef{-3, c1T}
+			} else if typeT == 'b' {
+				return VarRef{-3, tk.ToBool(s1T[2:])}
 			}
 
 			return VarRef{-3, s1T}
@@ -399,10 +409,97 @@ func (p *XieVM) GetVarValue(vA VarRef) interface{} {
 	nv, ok := contextT.VarsLocalMapM[idxT]
 
 	if !ok {
+
+		for {
+			if contextT.Layer < 1 {
+				break
+			}
+
+			if contextT.Layer < 2 {
+				contextT = &p.FuncContextM
+			} else {
+				contextT = &p.FuncStackM[contextT.Layer-2]
+			}
+
+			nv, ok = contextT.VarsLocalMapM[idxT]
+
+			if !ok {
+				continue
+			}
+
+			return (*contextT.VarsM)[nv]
+		}
+
 		return Undefined
 	}
 
 	return (*contextT.VarsM)[nv]
+
+	// vT, ok := (*(p.CurrentVarsM))[idxT]
+
+	// if !ok {
+	// 	return Undefined
+	// }
+
+	// return vT
+}
+
+func (p *XieVM) GetVarValueWithLayer(vA VarRef) (interface{}, int) {
+	idxT := vA.Ref
+	if idxT == -3 {
+		return vA.Value, -1
+	}
+
+	if idxT == -8 {
+		return p.Pop(), -2
+	}
+
+	if idxT == -7 {
+		return p.Peek(), -2
+	}
+
+	if idxT == -5 {
+		return Undefined, -2
+	}
+
+	if idxT < 0 {
+		return Undefined, -3
+	}
+
+	// layerT := len(p.FuncStackM)
+
+	contextT := p.CurrentFuncContextM
+
+	nv, ok := contextT.VarsLocalMapM[idxT]
+
+	if !ok {
+
+		for {
+			if contextT.Layer < 1 {
+				break
+			}
+
+			if contextT.Layer < 2 {
+				contextT = &p.FuncContextM
+			} else {
+				contextT = &p.FuncStackM[contextT.Layer-2]
+			}
+
+			// layerT--
+
+			nv, ok = contextT.VarsLocalMapM[idxT]
+
+			if !ok {
+				continue
+			}
+
+			return (*contextT.VarsM)[nv], (*contextT).Layer
+		}
+
+		return Undefined, (*contextT).Layer
+	}
+
+	return (*contextT.VarsM)[nv], (*contextT).Layer
 
 	// vT, ok := (*(p.CurrentVarsM))[idxT]
 
@@ -443,7 +540,35 @@ func (p *XieVM) GetVarRef(vA VarRef) *interface{} {
 
 	contextT := p.CurrentFuncContextM
 
-	return &((*contextT.VarsM)[contextT.VarsLocalMapM[idxT]])
+	nv, ok := contextT.VarsLocalMapM[idxT]
+
+	if !ok {
+
+		for {
+			if contextT.Layer < 1 {
+				break
+			}
+
+			if contextT.Layer < 2 {
+				contextT = &p.FuncContextM
+			} else {
+				contextT = &p.FuncStackM[contextT.Layer-2]
+			}
+
+			nv, ok = contextT.VarsLocalMapM[idxT]
+
+			if !ok {
+				continue
+			}
+
+			return &((*contextT.VarsM)[nv])
+		}
+
+		return nil
+	}
+
+	return &((*contextT.VarsM)[nv])
+	// return &((*contextT.VarsM)[contextT.VarsLocalMapM[idxT]])
 }
 
 func (p *XieVM) GetVarValueGlobal(vA VarRef) interface{} {
@@ -470,7 +595,13 @@ func (p *XieVM) GetVarValueGlobal(vA VarRef) interface{} {
 
 	contextT := p.FuncContextM
 
-	return (*contextT.VarsM)[contextT.VarsLocalMapM[idxT]]
+	nv, ok := contextT.VarsLocalMapM[idxT]
+
+	if !ok {
+		return Undefined
+	}
+
+	return (*contextT.VarsM)[nv]
 
 	// return p.VarsM[idxT]
 
@@ -683,7 +814,7 @@ func (p *XieVM) Load(codeA string) string {
 func (p *XieVM) PushFunc() {
 	// funcContextT := FuncContext{VarsM: make(map[int]interface{}, 10), ReturnPointerM: p.CodePointerM + 1}
 	// funcContextT := FuncContext{VarsM: make([]interface{}, 0, 10), VarsLocalMapM: make(map[int]int, 10), ReturnPointerM: p.CodePointerM + 1}
-	funcContextT := FuncContext{VarsM: &([]interface{}{}), VarsLocalMapM: make(map[int]int, 10), ReturnPointerM: p.CodePointerM + 1}
+	funcContextT := FuncContext{VarsM: &([]interface{}{}), VarsLocalMapM: make(map[int]int, 10), ReturnPointerM: p.CodePointerM + 1, Layer: len(p.FuncStackM) + 1, RegsM: &Regs{}}
 
 	p.FuncStackM = append(p.FuncStackM, funcContextT)
 
@@ -726,11 +857,38 @@ func (p *XieVM) SetVarInt(keyA int, vA interface{}) error {
 		return fmt.Errorf("invalid var index")
 	}
 
-	contextT := *(p.CurrentFuncContextM)
+	contextT := p.CurrentFuncContextM
 
 	localIdxT, ok := contextT.VarsLocalMapM[keyA]
 
 	if !ok {
+		contextTmpT := contextT
+		for {
+			if contextTmpT.Layer < 1 {
+				break
+			}
+
+			if contextTmpT.Layer < 2 {
+				contextTmpT = &p.FuncContextM
+			} else {
+				contextTmpT = &p.FuncStackM[contextTmpT.Layer-2]
+			}
+
+			localIdxT, ok = contextTmpT.VarsLocalMapM[keyA]
+
+			if !ok {
+				continue
+			}
+
+			(*contextTmpT.VarsM)[localIdxT] = vA
+
+			return nil
+		}
+
+		// return Undefined
+
+		// return (*contextT.VarsM)[nv]
+
 		localIdxT = len((*contextT.VarsM))
 
 		contextT.VarsLocalMapM[keyA] = localIdxT
@@ -787,7 +945,7 @@ func (p *XieVM) SetVarIntGlobal(keyA int, vA interface{}) error {
 	return nil
 }
 
-func (p *XieVM) SetVar(keyA string, vA interface{}) {
+func (p *XieVM) SetVar(keyA string, vA interface{}) error {
 	if p.FuncContextM.VarsM == nil {
 		p.InitVM()
 	}
@@ -804,13 +962,36 @@ func (p *XieVM) SetVar(keyA string, vA interface{}) {
 		// tk.Pln(idxT, p.VarIndexMapM, p.VarNameMapM)
 	}
 
-	contextT := *(p.CurrentFuncContextM)
+	contextT := p.CurrentFuncContextM
 
 	localIdxT, ok := contextT.VarsLocalMapM[idxT]
 
 	// tk.Pln(idxT, localIdxT, ok, contextT.VarsLocalMapM)
 
 	if !ok {
+		contextTmpT := contextT
+		for {
+			if contextTmpT.Layer < 1 {
+				break
+			}
+
+			if contextTmpT.Layer < 2 {
+				contextTmpT = &p.FuncContextM
+			} else {
+				contextTmpT = &p.FuncStackM[contextTmpT.Layer-2]
+			}
+
+			localIdxT, ok = contextTmpT.VarsLocalMapM[idxT]
+
+			if !ok {
+				continue
+			}
+
+			(*contextTmpT.VarsM)[localIdxT] = vA
+
+			return nil
+		}
+
 		localIdxT = len((*contextT.VarsM))
 
 		contextT.VarsLocalMapM[idxT] = localIdxT
@@ -819,7 +1000,7 @@ func (p *XieVM) SetVar(keyA string, vA interface{}) {
 
 		// tk.Pln(idxT, localIdxT, contextT.VarsLocalMapM, contextT.VarsM, "---")
 
-		return
+		return nil
 	}
 
 	(*contextT.VarsM)[localIdxT] = vA
@@ -837,6 +1018,7 @@ func (p *XieVM) SetVar(keyA string, vA interface{}) {
 	// }
 
 	// ()[lenT] = vA
+	return nil
 }
 
 func (p *XieVM) SetVarGlobal(keyA string, vA interface{}) {
@@ -959,10 +1141,10 @@ func (p *XieVM) GetRegs() *Regs {
 	lenT := len(p.FuncStackM)
 
 	if lenT > 0 {
-		return &(p.FuncStackM[lenT-1].RegsM)
+		return (p.FuncStackM[lenT-1].RegsM)
 	}
 
-	return &(p.FuncContextM.RegsM)
+	return (p.FuncContextM.RegsM)
 }
 
 func (p *XieVM) Push(vA interface{}) {
@@ -1141,15 +1323,45 @@ func (p *XieVM) GetValue(codeA int, vA interface{}) interface{} {
 		return Undefined
 	}
 
-	contextT := *(p.CurrentFuncContextM)
+	// contextT := *(p.CurrentFuncContextM)
+	contextT := p.CurrentFuncContextM
 
-	localIdxT, ok := contextT.VarsLocalMapM[codeA]
+	nv, ok := contextT.VarsLocalMapM[codeA]
 
 	if !ok {
+
+		for {
+			if contextT.Layer < 1 {
+				break
+			}
+
+			if contextT.Layer < 2 {
+				contextT = &p.FuncContextM
+			} else {
+				contextT = &p.FuncStackM[contextT.Layer-2]
+			}
+
+			nv, ok = contextT.VarsLocalMapM[codeA]
+
+			if !ok {
+				continue
+			}
+
+			return (*contextT.VarsM)[nv]
+		}
+
 		return Undefined
 	}
 
-	return (*contextT.VarsM)[localIdxT]
+	return (*contextT.VarsM)[nv]
+
+	// localIdxT, ok := contextT.VarsLocalMapM[codeA]
+
+	// if !ok {
+	// 	return Undefined
+	// }
+
+	// return (*contextT.VarsM)[localIdxT]
 	// return p.VarsM[codeA]
 
 	// vT, ok := p.VarsM[codeA]
@@ -1252,14 +1464,22 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 	case 101: // pass
 		return ""
 	case 102: // debug
-		tk.Pln(tk.ToJSONX(p, "-indent", "-sort"))
-
 		if instrT.ParamLen > 0 {
 			if instrT.Params[0].Ref == -3 {
 				if instrT.Params[0].Value.(string) == "exit" {
+					tk.Pln(tk.ToJSONX(p, "-inddent", "-sort"))
 					return "exit"
+				} else if instrT.Params[0].Value.(string) == "context" {
+					tk.Pl("[Line: %v] STACK: %v, CONTEXT: %v", p.CodeSourceMapM[p.CodePointerM]+1, p.StackM, tk.ToJSONX(p.CurrentFuncContextM, "-inddent", "-sort"))
+					return ""
 				}
+			} else if instrT.Params[0].Ref >= 0 {
+				v1, layerT := p.GetVarValueWithLayer(instrT.Params[0])
+
+				tk.Pl("[VAR INFO]: %v(L: %v) -> (%T) %v", instrT.Params[0].Ref, layerT, v1, v1)
 			}
+		} else {
+			tk.Pln(tk.ToJSONX(p, "-inddent", "-sort"))
 		}
 
 		return ""
@@ -1278,6 +1498,18 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 		p.SetVarInt(nameT, tk.ToJSONX(p, "-indent", "-sort"))
 
 		return ""
+	case 104: // varInfo
+		if instrT.ParamLen < 1 {
+			p.Push(tk.Spr("[VAR INFO]: %v(L: %v) -> (%T) %v", "$peek", -2, p.Peek(), p.Peek()))
+			return ""
+		}
+
+		p1 := instrT.Params[0].Ref
+		v1, layerT := p.GetVarValueWithLayer(instrT.Params[0])
+
+		p.Push(tk.Spr("[VAR INFO]: %v(L: %v) -> (%T) %v", p1, layerT, v1, v1))
+
+		return ""
 	case 111: // isUndef
 		if instrT.ParamLen < 1 {
 			return p.ErrStrf("not enough paramters")
@@ -1289,6 +1521,34 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 
 		return ""
 
+	case 121: // test
+		if instrT.ParamLen < 2 {
+			return p.ErrStrf("not enough paramters")
+		}
+
+		v1 := p.GetVarValue(instrT.Params[0])
+		v2 := p.GetVarValue(instrT.Params[1])
+
+		if v1 == v2 {
+			tk.Pl("test passed: %#v <-> %#v", v1, v2)
+		} else {
+			return p.ErrStrf("test failed: %#v <-> %#v", v1, v2)
+		}
+
+		return ""
+
+	case 131: // typeOf
+		if instrT.ParamLen < 1 {
+			p.Push(tk.Spr("%T", p.Peek()))
+			return ""
+		}
+
+		// p1 := instrT.Params[0].Ref
+		v1 := p.GetVarValue(instrT.Params[0])
+
+		p.Push(tk.Spr("%T", v1))
+
+		return ""
 	case 180: // goto
 		if instrT.ParamLen < 1 {
 			return p.ErrStrf("not enough paramters")
@@ -1715,7 +1975,7 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 			return p.ErrStrf("not enough paramters")
 		}
 
-		condT := p.CurrentFuncContextM.RegsM.CondM
+		condT := p.CurrentFuncContextM.RegsM.CondsM[0]
 
 		if condT {
 			return p.GetVarValue(instrT.Params[0]).(int)
@@ -1820,7 +2080,7 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 
 	case 722: // <i*
 		regsT := p.CurrentFuncContextM.RegsM
-		regsT.CondM = regsT.IntsM[0] < regsT.IntsM[1]
+		regsT.CondsM[0] = regsT.IntsM[0] < regsT.IntsM[1]
 
 		return ""
 
@@ -2217,7 +2477,13 @@ func (p *XieVM) RunLine(lineA int) interface{} {
 
 		v2 := p.GetVarValue(instrT.Params[1])
 
-		paramT := tk.GetSwitch(v1.([]string), v2.(string))
+		var paramT string
+
+		if len(instrT.Params) > 2 {
+			paramT = tk.GetSwitch(v1.([]string), tk.ToStr(v2), tk.ToStr(p.GetVarValue(instrT.Params[2])))
+		} else {
+			paramT = tk.GetSwitch(v1.([]string), tk.ToStr(v2))
+		}
 
 		p.Push(paramT)
 
