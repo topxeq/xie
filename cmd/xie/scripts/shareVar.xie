@@ -1,0 +1,37 @@
+assign $a #btrue
+
+ref $a
+
+goFunc 1 `
+
+pop $arg1
+
+unref $arg2 $arg1
+
+plo $arg2
+
+:loop1
+
+assignRef $arg1 false
+
+unref $arg2 $arg1
+
+pl "arg2=%v" $arg2
+
+sleep #f2
+
+goto :loop1
+`
+
+pln main $pop
+
+:loop1
+
+assign $a #btrue
+
+pl "main a=%v" $a
+
+sleep #f1
+
+
+goto :loop1

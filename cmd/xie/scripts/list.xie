@@ -1,0 +1,114 @@
+// 定义一个列表变量list1
+var $list1 list
+
+// 查看列表对象，此时应为空的列表
+plo $list1
+
+// 给列表list1中添加一项整数8
+addItem $list1 #i8
+
+// 给列表list1中添加一项浮点数12.7
+addItem $list1 #f12.7
+
+// 再次查看列表list1中内容，此时应有两项
+plo $list1
+
+// 用赋值的方法直接将一个数组赋值给列表变量list2
+// #号后带大写的L表示后接JSON格式表达的数组
+assign $list2 #L`["abc", 2, 1.3, true]`
+
+// 输出list2进行查看
+plo $list2
+
+// 查看list2的长度（即其中元素的个数）
+len $list2
+
+pln length= $tmp
+
+// 获取列表list1中序号为0的项（列表序号从零开始，即第1项）
+// 结果将入栈
+getItem $push $list1 #i0
+
+// 获取list2中的序号为1的项，结果放入变量a中
+getItem $a $list2 #i1
+
+// 将变量a转换为整数（原来是浮点数）并存回a中
+convert $a $a int
+
+// 查看变量a中的值
+plo $a
+
+// 将弹栈值（此时栈顶值是列表list1中序号为0的项）与变量a相加
+// 结果压栈
+add $push $pop $a
+
+// 查看弹栈值
+plo $pop
+
+// 将列表list1与列表list2进行合并
+// 结果放入新的列表变量list3中
+// 注意，如果没有指定结果参数（省略第一个，此时应共有2个参数），将把结果存回list1
+// 相当于把list1加上了list2中所有的项
+addItems $list3 $list1 $list2
+
+// 查看列表list3的内容
+plo $list3
+
+// 将list3进行切片，截取序号1（包含）至序号5（不包含）之间的项
+// 形成一个新的列表，放入变量list4中
+slice $list4 $list3 #i1 #i5
+
+// 查看列表list3的内容
+plo $list4
+
+// 循环遍历列表list4中所有的项，对其调用标号range1开始的代码块
+// 该代码块必须使用continue指令继续循环遍历
+// 或者break指令跳出循环遍历
+// 遍历完毕或者break跳出遍历后，代码将继续从rangeList指令的下一条指令继续执行
+// 遍历每项时，rangeList会先将当前遍历项和当前序号值（从0开始）先后压栈
+rangeList $list4 :range1
+
+// 删除list4中序号为2的项(此时该项为整数2)
+deleteItem $list4 #i2
+
+// 再次删除list4中序号为2的项(此时该项为浮点数1.3)
+deleteItem $list4 #i2
+
+// 修改list4中序号为1的项为字符串“烙红尘”
+setItem $list4 #i1 烙红尘
+
+// 再次删除list4中序号为0的项(此时该项为浮点数12.7)
+deleteItem $list4 #i0
+
+// 再次查看列表list4的内容
+// 此时应只剩1项字符串“烙红尘”
+plo $list4
+
+// 结束程序的运行
+exit
+
+// 标号range1的代码段，用于遍历列表list4
+:range1
+    // 弹栈获得遍历序号值放入变量i中
+    pop $i
+
+    // 弹栈获得遍历项放入变量v中
+    pop $v
+
+    // 判断i值是否小于3，结果压栈
+    < $i #i3
+
+    // 如果是则跳转到next1（继续执行遍历代码）
+    if $tmp :next1
+
+        // 否则跳出循环遍历
+        break
+
+    // 标号next1
+    :next1
+
+    // 输出提示信息
+    pl `第%v项是%v` $i $v
+
+    // 继续循环遍历，如欲跳出循环遍历，可以使用break指令
+    continue

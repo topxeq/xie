@@ -1,0 +1,65 @@
+getParam $argsG 2 ``
+
+isEmpty $peek
+
+ifNot :next1
+    pln `参数不够`
+exit
+
+:next1
+
+convert $pop int
+
+now $t1
+
+call :fib
+
+now $t2
+
+timeSub $t2 $t1
+
+floatDiv $pop 1000
+
+pl `%v 秒` $pop
+
+pln $pop
+
+exit
+
+:fib
+    var $c
+ 
+    pop $c
+
+    < $c #i2
+
+    if $pop :label1
+
+    :else
+        assignLocal $fibo #i1
+        assignLocal $fiboPrev #i1
+
+        assignLocal $i #i2
+
+        var $temp
+        
+        :loop1
+            add $i #i10
+
+            assign $temp $fibo
+
+            add $fibo $fibo $fiboPrev
+
+            assign $fiboPrev $temp
+
+            inc $i
+            < $i $c
+            if $pop :loop1
+
+        push $fibo
+        ret
+
+    :label1
+        push $c
+        ret
+

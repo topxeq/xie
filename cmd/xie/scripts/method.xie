@@ -1,0 +1,11 @@
+assign $str1 "  asdjfskdfn_ "
+
+method $result $str1 trimSpace
+
+pln $result
+
+assign $c1 #i688
+
+mt $r $c1 toStr
+
+pln $r

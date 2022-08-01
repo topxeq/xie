@@ -1,0 +1,39 @@
+// 给变量i赋值整数11
+assign $i #i11
+
+// 比较变量i是否大于整数10
+// 结果放入变量a中
+> $a $i #i10
+
+// 判断$a是否为布尔值true
+// 如果是则跳转到标号label2
+if $a :label2
+    // 否则执行下面的语句
+    pln "else branch"
+
+//终止程序执行
+exit
+
+// 标号label2
+:label2
+    // 输出“if branch”
+    pln "if branch"
+
+    // 将变量b赋值为整数8
+    assign $b #i8
+
+    // 比较变量b是否小于或等于变量i
+    // 由于省略了结果变量，结果将被放入$tmp中
+    <= $b $i
+
+    // 是（tmp值是true）则跳转到标号label3
+    ifNot $tmp :label3
+        // 否则输出
+        pln "label3 else"
+    // 终止代码执行
+    exit
+
+    // 标号label3
+    :label3
+        // 输出“label3 if”
+        pln "label3 if"

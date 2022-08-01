@@ -1,0 +1,58 @@
+
+//  test var def
+
+var $a
+
+assign $a abc12
+
+pln $a
+
+typeOf $a
+
+test $peek string
+
+pln $pop
+
+debug $a
+
+varInfo $a
+
+pln $pop
+
+test $a `abc12`
+
+
+// test local
+
+assign $a #f1.6
+assign $b #f2.8
+
+call :func1
+
+pln $a $b $c
+
+test $b 7
+
+goto :next1
+
+exit
+
+:func1
+
+pln $a $b $c
+
+= $b 7
+
+= $c `abc`
+
+pln $a $b $c
+
+ret
+
+:next1
+
+pass
+
+// test getParam
+
+

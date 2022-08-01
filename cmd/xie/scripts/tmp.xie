@@ -1,0 +1,5 @@
+pln "a:" $a
+
+var $a
+
+pln "a:" $a

@@ -1,0 +1,43 @@
+// 循环遍历整数5，每次执行标号label1处的循环体代码
+// 将循环5次，遍历值分别是0，1，2，3，4
+// 相当于其他语言中的 for i := 1, i < 5; i ++……
+range #i5 :label1
+
+// 第一个循环结束
+pln "end for1"
+
+// 跳转到标号next1处
+goto :next1
+
+:label1
+    // 从栈中分别弹出遍历序和遍历值
+    assign $i $pop
+    assign $v $pop
+
+    // 输出供参考
+    pl "i: %v, v: %v" $i $v
+
+    // 继续循环遍历
+    continue
+
+:next1
+
+// 进行第二个循环
+range "abc123" :label2
+
+// 第二个循环结束
+pln "end for2"
+
+// 退出程序执行
+exit
+
+:label2
+    // 从栈中分别弹出遍历序和遍历值
+    assign $i $pop
+    assign $v $pop
+
+    // 输出供参考
+    pl "i: %v, v: %v" $i $v
+
+    // 继续循环遍历
+    continue

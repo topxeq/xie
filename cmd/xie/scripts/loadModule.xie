@@ -1,0 +1,53 @@
+// 载入第1个代码文件module1.xie并压栈
+loadText $push `scripts/module1.xie`
+
+// 输出代码文件内容查看
+pln 加载的代码： "\n" $peek "\n"
+
+// 弹栈加载代码
+// 并将结果值返回，成功将返回加载代码的第1行行号（注意是字符串类型）
+// 失败将返回TXERROR:开头的错误信息
+loadCode $push $pop
+
+// 查看加载结果
+plo $pop
+
+// 压栈两个整数
+push #i11
+push #i12
+
+// 调用module1.xie文件中定义的快速函数add1
+fastCall :add1
+
+// 查看函数返回结果（不弹栈）
+plo $peek
+
+// 再压入一个整数5
+push #i5
+
+// 调用module1.xie文件中定义的快速函数sub1
+fastCall :sub1
+
+// 查看函数返回结果（不弹栈）
+plo $peek
+
+// 载入第2个代码文件module2.xie并置于变量code1中
+loadText $code1 `scripts/module2.xie`
+
+// 加载code1中的代码
+// 由于不需要loadCode指令返回的行号，因此用$drop变量将其丢弃
+loadCode $drop $code1
+
+// 再入栈一个整数99
+// 此时栈中还有一个整数18
+push #i99
+
+// 调用module2.xie文件中定义的一般函数mul1
+call :mul1
+
+// 查看函数返回结果（弹栈）
+plo $pop
+
+// 退出程序执行
+// 注意：如果不加exit指令，程序会继续向下执行module1.xie和module2.xie中的代码
+exit

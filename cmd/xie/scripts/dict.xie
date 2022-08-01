@@ -1,0 +1,38 @@
+getParam $argsG 2 ""
+
+pop $wordT
+
+strAdd `http://dict.cn/` $wordT
+
+pop $urlT
+
+var $paramsT list
+
+addItem $paramsT -timeout=30
+// addItem $paramsT -detail
+// addItem $paramsT -verbose
+
+getWeb $push $urlT $paramsT
+
+// pops $resultT
+
+htmlToText $push $pop -type=
+
+trim
+
+peek $originalTextT
+
+pln "ORIGIN:" $originalTextT
+
+push `©.*?海词词典[\s\S]*`
+push ``
+
+regReplaceAllStr$
+
+pln "RESULT:" $pop
+
+// getRuntimeInfo
+
+// plo
+
+

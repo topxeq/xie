@@ -1,0 +1,55 @@
+获取参数 $全局参数 2 ``
+
+是否空串 $看栈
+
+否则$ :下一步
+输出行 `参数不够`
+终止
+
+:下一步
+
+转换 $出栈 整数
+
+现在时间 $时间1
+输出行 $时间1
+
+调用 :斐波那契
+
+输出值 $pop
+
+现在时间 $时间2
+输出行 $时间2
+
+时间减 $时间2 $时间1
+floatDiv $pop 1000
+pl `%v s` $pop
+
+exit
+
+:斐波那契
+    pop* #i0
+
+    regInt# #i1 #i2
+ 
+    <i*
+ 
+    if* :return1
+        dec* #i0
+
+        pushInt* #i0
+
+        call :斐波那契
+
+
+        dec* #i0
+        pushInt* #i0
+        call :斐波那契
+
+        intAdd$
+
+        ret
+
+    :return1
+        pushInt* #i0
+        ret
+

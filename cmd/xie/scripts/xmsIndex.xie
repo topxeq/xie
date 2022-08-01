@@ -1,0 +1,26 @@
+// 设定默认的全局返回值变量outG为字符串TX_END_RESPONSE_XT
+// 默认谢语言服务器如果收到处理请求的函数返回结果是TX_END_RESPONSE_XT
+// 将会终止处理，否则将把返回值作为字符串输出到网页上
+assign $outG "TX_END_RESPONSE_XT"
+
+// 获得相应的网页模板
+// joinPath指令将把多个文件路径合并成一个完整的文件路径
+// 第一个参数表示结果将要放入的变量，这里的$push表示压栈
+// basePathG是内置全局变量，表示服务的根目录
+joinPath $push $basePathG `xmsTmpl.html`
+
+pln $basePathG
+pln $peek
+
+// 将该文件作为文本字符串载入，结果压栈
+loadText $push $pop
+
+// 替换其中的{{text1}}标记为字母A
+strReplace $push $pop "{{text1}}" "A"
+
+// 将弹栈值写网页输出
+// responseG也是内置的全局变量，表示要写入的网页输出对象
+writeResp $responseG $pop
+
+// 终止请求响应处理微服务
+exit

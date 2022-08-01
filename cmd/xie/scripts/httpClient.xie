@@ -1,0 +1,32 @@
+// getWeb指令可以用于各种基于HTTP的网络请求，
+// 此处是获取某URL处的网页内容
+// 第一个参数pageT用于存放访问的结果内容
+// -timeout参数用于指定超时时间，单位是秒
+getWeb $pageT "http://127.0.0.1/xms/xmsIndex" -timeout=15
+
+// 输出获取到的内容参考
+pln $pageT
+
+// 定义一个映射类型的变量mapT
+// 用于存放准备POST的参数
+var $mapT map
+
+// 设置示例的POST参数
+setMapItem $mapT param1 value1
+setMapItem $mapT param2 value2
+
+// 输出映射内容参考
+pln $mapT
+
+// 以POST的方式来访问WEB API
+// getWeb指令除了第一个参数必须是返回结果的变量，
+// 第二个参数是访问的URL，其他所有参数都是可选的
+// method还可以是GET等
+// encoding用于指定返回信息的编码形式，例如GB2312、GBK、UTF-8等
+// headers是一个JSON格式的字符串，表示需要加上的自定义的请求头内容键值对
+// 参数中可以有一个映射类型的变量或值，表示需要POST到服务器的参数
+getWeb $resultT "http://127.0.0.1:80/xms/xmsApi" -method=POST -encoding=UTF-8 -timeout=15 -headers=`{"Content-Type": "application/json"}` $mapT
+
+// 查看结果
+pln $resultT
+

@@ -1,0 +1,5 @@
+assign $a "abc"
+
+// 表达式做参数
+// 注意“?”后面再加双引号或反引号括起表达式
+pl "[%v] test params: %v" ?"(?nowStr $push)" $a

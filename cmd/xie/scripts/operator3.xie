@@ -1,0 +1,15 @@
+// 三元操作符?用法示例
+
+// 判断整数2是否小于整数5
+< #i2 #i5
+
+// 给变量s1赋值为字符串abc
+assign $s1 "abc"
+
+// 判断弹栈值是否为true
+// 如果为true，则将变量s1中值赋给变量result
+// 否则将浮点数16.9赋给变量result
+? $result $pop $s1 #f16.9
+
+// 输出变量result供参考
+plo $result

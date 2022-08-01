@@ -1,0 +1,11 @@
+assign $b #Y`[11,22,33]`
+
+plo $b
+
+assign $s abc123天气很好
+
+plo $s
+
+convert $y $s byteList
+
+plo $y

@@ -1,0 +1,53 @@
+// 新建一个路由处理器
+newMux $muxT
+
+// 设置处理路由“/test”的处理函数
+// 第4个参数是字符串类型的处理函数代码
+// 将以新的虚拟机运行
+// 虚拟机内将默认有4个全局变量：
+// requestG 表示http请求对象
+// responseG 表示http响应对象
+// paraMapG 表示http请求传入的query参数或post参数
+// inputG 是调用setMuxHandler指令传入的第3个参数的值
+setMuxHandler $muxT "/test" #i123 `
+
+// 输出参考信息
+pln "/test" $paraMapG
+
+// 拼装输出的信息字符串
+// spr类似于其他语言中的sprintf函数
+spr $strT "[%v] 请求名: test，请求参数： %v，inputG：%v" ?(?nowStr) $paraMapG $inputG
+
+// 设置输出的http响应头中的键值对
+setRespHeader $responseG "Content-Type" "text/json; charset=utf-8"
+
+// 设置输出http响应的状态值为200（表示成功，即HTTP_OK）
+writeRespHeader $responseG 200
+
+// 准备一个映射对象用于拼装返回结果的JSON字符串
+var $resMapT map
+
+setMapItem $resMapT "Status" "success"
+setMapItem $resMapT "Value" $strT
+
+// 转换为JSON
+toJson $jsonStrT $resMapT
+
+// 写http响应内容，即前面拼装并转换的变量jsonStrT中的JSON字符串
+writeResp $responseG $jsonStrT
+
+// 设置函数返回值为TX_END_RESPONSE_XT
+// 此时响应将中止输出，否则将会把该返回值输出到响应中
+assign $outG  "TX_END_RESPONSE_XT"
+
+`
+
+pln 启动服务器……
+
+// 在端口8080上启动http服务器
+// 指定路由处理器为muxT
+// 结果放入变量resultT中
+// 由于startHttpServer如果执行成功是阻塞的
+// 因此resultT只有失败或被Ctrl-C中断时才会有值
+startHttpServer $resultT ":8080" $muxT
+

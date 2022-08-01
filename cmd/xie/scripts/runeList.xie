@@ -1,0 +1,11 @@
+assign $b #R`[11,22,33]`
+
+plo $b
+
+assign $s abc123天气很好
+
+plo $s
+
+convert $r $s runeList
+
+plo $r

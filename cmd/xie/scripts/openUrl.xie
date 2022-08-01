@@ -1,0 +1,42 @@
+new $muxT mux
+
+setMuxHandler $muxT "/api" #i123 `
+
+pln "/api" $paraMapG
+
+spr $strT "[%v] 请求路由: %v，请求参数： %v，inputG：%v" ?(?nowStr) $reqNameG $paraMapG $inputG
+
+setRespHeader $responseG "Content-Type" "text/json; charset=utf-8"
+
+writeRespHeader $responseG 200
+
+var $resMapT map
+
+setMapItem $resMapT "Status" "success"
+setMapItem $resMapT "Value" $strT
+
+toJson $jsonStrT $resMapT
+
+writeResp $responseG $jsonStrT
+
+assign $outG  "TX_END_RESPONSE_XT"
+
+`
+
+getRandomInt $portNumberT 37400 37499
+
+spr $portT ":%v" $portNumberT
+
+pln 启动服务器，端口 $portT ……
+
+startHttpServer $resultT $portT $muxT -go
+
+spr $urlT "http://127.0.0.1%v/api?req=test" $portT
+
+openWithDefault $urlT
+
+pass
+
+sleep 1.0
+
+goto -2

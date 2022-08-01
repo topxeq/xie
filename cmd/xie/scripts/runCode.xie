@@ -1,0 +1,47 @@
+// 设定传入参数inputT，在虚拟机中通过全局变量inputG访问
+assign $inputT #L`[{"name": "tom", "age": 25}, 15]`
+
+// 用runCode指令运行代码
+// 代码将在新的虚拟机中执行
+// 除结果参数（不可省略）外，第一个参数是字符串类型的代码（必选，后面参数都是可选）
+// 第二个参数为任意类型的传入虚拟机的参数（虚拟机内通过inputG全局变量来获取该参数）
+// 再后面的参数可以是一个字符串数组类型的变量或者多个字符串类型的变量，虚拟机内通过argsG（字符串数组）来对其进行访问
+runCode $result `
+
+// 输出inputG供参考
+pln "inputG=" $inputG
+
+// 获取inputG中的第二项（序号为1，值为数字15）
+getItem $item2 $inputG 1
+
+plo $item2
+
+// 由于数字可能被JSON解析为浮点数，因此将其转换为整数
+toInt $item2 $item2
+
+// 从argsG中获取第一项（序号为0）
+getItem $v3 $argsG 0
+
+// 由于argsG中每一项都是字符串，因此将其转换为整数
+toInt $v3 $v3
+
+// 从argsG中获取第二项（序号为1）
+getItem $v4 $argsG 1
+
+toInt $v4 $v4
+
+// 定义一个变量a并赋值为整数6
+assign $a #i6
+
+// 用eval指令计算几个数相加的值，结果入栈
+// 由于虚拟机已经用了反引号括起代码
+// 因此可以用双引号括起表达式以免冲突
+eval "$a + $item2 + $v3 + $v4"
+
+// 设置虚拟机的返回值
+assign $outG $tmp
+
+` $inputT 22 9
+
+// 最后结果应为52
+pln result= $result

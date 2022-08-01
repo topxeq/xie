@@ -1,0 +1,43 @@
+// 给全局变量a和b赋值为浮点数
+assign $a #f1.6
+assign $b #f2.8
+
+// 调用函数func1
+call :func1
+
+// 输出调用函数后a、b、c、d四个变量的值
+pln $a $b $c $d
+
+// 退出程序执行
+exit
+
+// 函数func1
+:func1
+    // 输出进入函数时a、b、c、d四个变量的值
+    pln $a $b $c $d
+
+    // 将变量a与0.9相加后将结果再放入变量a中
+    add $a $a #f0.9
+
+    // 声明一个局部变量b（与全局变量b是两个变量）
+    var $b
+
+    // 给局部变量b赋值为整数9
+    assign $b #i9
+
+    // 将局部变量b中的值加1
+    inc $b
+
+    // 将变量c赋值为字符串
+    = $c `abc`
+
+    // 声明一个全局变量d
+    global $d
+
+    // 给变量d赋值为布尔值true
+    = $d #btrue
+
+    // 退出函数时输出a、b、c、d四个变量的值
+    pln $a $b $c $d
+
+    ret

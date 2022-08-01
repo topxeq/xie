@@ -1,0 +1,48 @@
+getParam $argsG 2 ``
+
+isEmpty $peek
+
+ifNot :next1
+    pln `参数不够`
+exit
+
+:next1
+
+convert $pop int
+
+now $t1
+
+call :fib
+
+plv $pop
+
+now $t2
+
+timeSub $t2 $t1
+floatDiv $pop 1000
+pl `%v 秒` $pop
+
+exit
+
+:fib
+    pop @i0
+
+    < @b0 @i0 #i2
+ 
+    if @b0 :return1
+        dec* #i0
+        push @i0
+        call :fib
+
+        dec* #i0
+        push @i0
+        call :fib
+
+        add
+
+        ret
+
+    :return1
+        push @i0
+        ret
+

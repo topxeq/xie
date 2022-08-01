@@ -1,0 +1,105 @@
+// 将变量t1赋值为当前时间
+// #t后带空字符串或now都表示当前时间值
+assign $t1 #t
+
+// 输出t1中的值查看
+plo $t1
+
+// 用字符串表示时间
+// “=”是指令assign的简写写法
+= $t2 #t`2022-08-06 11:22:00`
+
+pln t2= $t2
+
+// 简化的字符串表示形式
+= $t3 #t`20220807112200`
+
+pl t3=%v $t3
+
+// 带毫秒时间的表示方法
+= $t4 #t`2022-08-06 11:22:00.019`
+
+pl t4=%v $t4
+
+// 时间的加减操作
+// 与时间的计算，如果有数字参与运算（除了除法之外），一般都是以毫秒为单位
+pl t2-3000毫秒=%v ?`$t2 - 3000`
+
+pl t2+50000毫秒=%v ?`$t2 + 50000`
+
+pl 当前时间+50000毫秒=%v ?`(?now $push) + 50000`
+
+pl t3-t2=%v(毫秒) ?`$t3 - $t2`
+
+// 注意，如果不用括号，表达式计算将严格从左到右，没有运算符的优先级
+pl t3-t2=%v(小时) ?`$t3 - $t2 / #i1000 / #i60 / #i60`
+
+// 时间的比较
+pl `t2 < t3 ? %v` ?`$t2 < $t3`
+
+pl `t2 >= t3 ? %v` ?`$t2 >= $t3`
+
+pl `t4 == t3 ? %v` ?`$t4 == $t3`
+
+pl `t1 != t3 ? %v` ?`$t1 != $t3`
+
+// 用convert指令转换时间
+convert $tr `2021-08-06 11:22:00` time
+
+pln tr= $tr
+
+// 用convert指令将时间转换为普通字符串
+convert $s1 $tr str
+
+pln s1= $s1
+
+// 用convert指令将时间转换为特定格式的时间字符串
+convert $s2 $tr timeStr `2006/01/02_15.04.05`
+
+pln s2= $s2
+
+// 用convert指令将时间转换为UNIX时间戳格式
+convert $s3 $tr tick
+
+pln s3= $s3
+
+// 用convert指令将UNIX格式时间戳转换为时间
+convert $t5 `1628220120000` time
+
+pln t5= $t5
+
+// UTC相关
+// 用convert指令转换时间为UTC时区
+convert $trUTC `2021-08-06 11:22:00` time -global
+
+pln trUTC= $trUTC
+
+nowUTC $t6
+
+pln t6= $t6
+
+timeToLocal $t7 $t6
+
+pln t7= $t7
+
+timeToGlobal $t8 $t7
+
+pln t8= $t8
+
+// 用var指令也可以定义一个时间类型变量
+// 默认值是当前时间
+var $t9 time
+
+// 调用时间类型变量的addDate方法将其加上1个月
+// 三个参数分别表示要加的年、月、日，可以是负数
+// 结果还放回t9
+mt $t9 $t9 addDate 0 1 0
+
+// 调用时间类型变量的format函数将其格式化为字符串
+// 格式参数参考[这里](https://pkg.go.dev/time#pkg-constants)
+mt $result $t9 format "20060102"
+
+// 应输出 t9: 20220825
+pl "t9: %v" $result
+
+

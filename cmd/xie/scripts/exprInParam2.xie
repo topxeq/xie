@@ -1,0 +1,13 @@
+= $a 1
+
+if ?`($a == 1)` :next1
+
+pln abc1
+
+exit
+
+:next1
+
+pln zzz1
+
+exit

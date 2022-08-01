@@ -1,0 +1,12 @@
+pln start...
+
+push #f1.8
+
+goto :label1
+
+pop $c
+
+pln `c =` $c
+
+:label1
+    pln "label1 =" $peek

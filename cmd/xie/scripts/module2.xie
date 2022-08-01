@@ -1,0 +1,8 @@
+:mul1
+    pop $v2L
+    pop $v1L
+
+    mul $push $v1L $v2L
+
+    ret
+

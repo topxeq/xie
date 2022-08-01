@@ -1,0 +1,43 @@
+// 将变量s赋值为一个多行字符串
+// 即所需解码的JSON文本
+assign $s `
+{
+  "姓名": "张三",
+  "子女": [
+  {
+    "姓名": "张胜利",
+    "年龄": 5
+  }
+],
+  "年龄": 39
+}
+`
+
+// 用fromJson指令将s中的文本解码到变量map1中
+fromJson $map1 $s
+
+// 获取map1的数据类型
+// 可用于以后根据不同类型进行不同处理
+// 结果入栈
+typeOf $push $map1
+
+// 输出类型名称
+pln 类型是： $pop
+
+// 输出map1的内容
+plo $map1
+
+// 获取map1中的键名为子女的项
+// 结果放入变量list1中
+getMapItem $list1 $map1 子女
+
+// 获取list1中序号为0的项
+// 结果放入变量map2中
+getItem $map2 $list1 #i0
+
+// 获取map2中键名为姓名的项
+// 结果压栈
+getMapItem $push $map2 姓名
+
+// 输出弹栈值
+pln 姓名： $pop

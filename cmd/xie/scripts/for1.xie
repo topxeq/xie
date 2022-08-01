@@ -1,0 +1,13 @@
+// 将字符串压栈
+push "欢迎"
+
+// 设定标号loop1
+:loop1
+    // 输出栈顶值
+    pln $peek
+
+    // 休眠2.5秒
+    sleep #f2.5
+
+// 跳转到标号loop1处继续往下执行
+goto :loop1

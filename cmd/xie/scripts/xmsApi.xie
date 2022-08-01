@@ -1,0 +1,25 @@
+// 获取当前时间放入变量t
+nowStr $t
+
+// 输出参考信息
+// 其中reqNameG是内置全局变量，表示服务名，也就是访问URL中最后的部分
+// argsG也是全局变量，表示HTTP请求包含的URL参数或Form参数（可以是GET请求或POST请求中的）
+pl `[%v] %v args: %v` $t $reqNameG $argsG
+
+// 设置输出响应头信息（JSON格式）
+setRespHeader $responseG "Content-Type" "text/json; charset=utf-8"
+
+// 写响应状态为整数200（HTTP_OK），表示是成功的请求响应
+writeRespHeader $responseG #i200
+
+// 用spr指令拼装响应字符串
+spr $push "请求是：%v，参数是：%v" $reqNameG $argsG
+
+// 用genJsonResp生成封装的JSON响应，也可以自行输出其他格式的字符串
+genJsonResp $push $requestG "success" $pop
+
+// 将响应字符串写输出（到网页）
+writeResp $responseG $pop
+
+// 结束处理函数，并返回TX_END_RESPONSE_XT以终止响应流的继续输出
+exit TX_END_RESPONSE_XT

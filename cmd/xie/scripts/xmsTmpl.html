@@ -1,0 +1,24 @@
+<html>
+<body>
+    <script>
+        function test() {
+            let xhr = new XMLHttpRequest();
+
+            xhr.open('POST', 'http://127.0.0.1:80/xms/xmsApi', true);
+
+            xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded")
+
+            xhr.onload = function(){
+                alert(xhr.responseText);
+            }
+
+            xhr.send("param1=abc&param2=123");
+        }
+    </script>
+
+    <div>
+        <span>请按按钮{{text1}}：</span><button onclick="javascript:test();">按钮1</button>
+    </div>
+
+</body>
+</html>

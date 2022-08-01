@@ -1,0 +1,25 @@
+> #i3 #i2
+
+if $tmp :label1 :else1
+
+:label1
+    pln label1
+
+    goto :next1
+
+:else1
+   pln else1 
+
+:next1
+
+> $push #f1.5 #f3.6
+if $pop :label2 :else2
+
+:label2
+    pln label2
+
+    exit
+
+:else2
+   pln else2
+

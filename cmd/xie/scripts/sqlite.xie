@@ -1,0 +1,94 @@
+// 判断是否存在该库（SQLite库是放在单一的文件中的）
+// 注意请确保c:\tmp文件夹已存在
+// 结果放入变量b中
+fileExists $b `c:\tmpx\test.db`
+
+// 如果否则跳到下一步继续执行
+// 如果存在则删除该文件
+// removeFile指令的运行结果将被丢弃（因为使用了内置全局变量drop）
+ifNot $b :next
+	removeFile $drop `c:\tmpx\test.db`
+
+:next1
+// 创建新库
+// dbConnect用于连接数据库
+// 除结果参数外第一个参数是数据库驱动名称，支持sqlite3、mysql、godror（即Oracle）、mssql（即MS SQLServer）等
+// 第二个参数是连接字符串，类似 server=129.0.3.99;port=1433;portNumber=1433;user id=sa;password=pass123;database=hr 或 user/pass@129.0.9.11:1521/testdb 等
+// SQLite3的驱动将基于文件创建或连接数据库
+// 所以第二个参数直接给出数据库文件路径即可
+dbConnect $db "sqlite3" `c:\tmpx\test.db`
+
+// 判断创建（或连接）数据库是否失败
+// rs中是布尔类型表示变量db是否是错误对象
+// 如果是错误对象，errMsg中将是错误原因描述字符串
+isErr $rs $db $errMsg
+
+// 如果为否则继续执行，否则输出错误信息并退出
+ifNot $rs :next2
+	pl "创建数据库文件时发生错误：%v" $errMsg
+	exit
+
+:next2
+
+// 将变量sqlStmt中放入要执行的建表SQL语句
+assign $sqlStmt = `create table TEST (ID integer not null primary key, CODE text);`
+
+// 执行SQL语句，dbExec用于执行insert、delete、update等SQL语句
+dbExec $rs $db $sqlStmt
+
+// 判断是否SQL执行出错，方式与前面连接数据库时类似
+isErr $errStatus $rs $errMsg
+
+ifNot $errStatus :next3
+	pl "执行SQL语句建表时发生错误：%v" $errMsg
+
+	// 出现错误时，因为数据库连接已打开，因此需要关闭
+	dbClose $drop $db
+
+	exit
+
+:next3
+
+// 进行循环，在库中插入5条记录
+// i是循环变量
+assign $i #i0
+
+:loop1
+assign $sql `insert into TEST(ID, CODE) values(?, ?)`
+
+// genRandomStr指令用于产生随机字符串
+genRandomStr $str1
+
+dbExec $rs $db $sql $i $str1
+
+isErr $errStatus $rs $errMsg
+
+ifNot $errStatus :next4
+	pl "执行SQL语句新增记录时发生错误：%v" $errMsg
+	dbClose $drop $db
+
+	exit
+
+:next4
+inc $i
+< $i #i5
+if $tmp :loop1
+
+// 进行数据库查询，验证查看刚刚新增的记录
+assign $sql `select ID, CODE from TEST`
+
+// dbQuery指令用于执行一条查询（select）语句
+// 结果将是一个数组，数组中每一项代表查询结果集中的一条记录
+// 每条记录是一个映射，键名对应于数据库中的字段名，键值是相应的字段值，但均转换成字符串类型
+dbQuery $rs $db $sql
+
+// dbClose指令用于关闭数据库连接
+dbClose $drop $db
+
+pln $rs
+
+// 用toJson指令将结果集转换为JSON格式以便输出查看
+toJson $jsonStr $rs -indent -sort
+
+pln $jsonStr
+

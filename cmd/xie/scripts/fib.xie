@@ -1,0 +1,32 @@
+push int 35
+call :fib
+pln $pop
+
+exit
+
+:fib
+    var $n1
+ 
+    pop $n1
+
+    < $push $n1 #i2
+
+    if $pop :label1
+
+    :else
+        dec $n1
+        push int $n1
+        call :fib
+
+        dec $n1
+        push int $n1
+        call :fib
+
+        add $push
+
+        ret
+
+    :label1
+        push $n1
+        ret
+

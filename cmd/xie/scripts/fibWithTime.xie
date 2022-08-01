@@ -1,0 +1,41 @@
+push int 35
+
+now $t1
+
+call :fib
+
+now $t2
+timeSub $t2 $t1
+floatDiv $pop 1000
+pl `%v 秒` $pop
+
+pln $pop
+
+exit
+
+:fib
+    var $n1
+ 
+    pop $n1
+
+    <i $n1 2
+
+    if $pop :label1
+
+    :else
+        dec $n1
+        push int $n1
+        call :fib
+
+        dec $n1
+        push int $n1
+        call :fib
+
+        intAdd$
+
+        ret
+
+    :label1
+        push $n1
+        ret
+

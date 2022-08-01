@@ -1,0 +1,30 @@
+// strBuf即Go语言中的strings.Builder
+// 是一个可以动态向其中添加字符串的缓冲区
+// 最后可以一次性获取所有写入的字符串为一个大字符串
+new $bufT strBuf
+
+// 调用bufT的append方法往其中写入字符串abc
+// method（可以简写为mt）指令是调用对象的某个方法
+// append/writeString/write方法实际上是一样的，都是向其中追加写入字符串
+// 结果参数是$drop，因为一般用不到
+method $drop $bufT append abc
+
+
+// 使用双引号括起的字符串中间的转义符会被转义
+method $drop $bufT writeString "\n"
+
+mt $drop $bufT write 123
+
+// 使用反引号括起的字符串中的转义符不会被转义
+mt $drop $bufT append `\n`
+
+// 用两种方式输出bufT中的内容供参考
+
+// 调用bufT的str方法（也可以写作string、getStr等）获取其中的字符串
+mt $rsT $bufT str
+
+plo $rsT
+
+// 直接用表达式来输出
+pln ?`(?mt $push $bufT str)`
+

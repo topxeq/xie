@@ -1,0 +1,35 @@
+// 新建一个string对象，赋以初值字符串“abc 123”，放入变量s中
+newObj $s string `abc 123`
+
+// 获取对象本体值，结果压栈
+getObjValue $push $s
+
+// 将弹栈值加上字符串“天气很好”，结果存入tmp
+add $pop "天气很好"
+
+// 输出tmp值供参考
+pln $tmp
+
+// 设置变量s中string对象的本体值为字符串“very”
+setObjValue $s "very"
+
+// 输出对象值供参考
+pln $s
+
+// 调用该对象的add方法，并传入参数字符串“ nice”
+// 该方法将把该string对象的本体值加上传入的字符串
+callObj $s add " nice"
+
+// 再次输出对象值供参考
+pln $s
+
+// 调用该对象的trimSet方法，并传入参数字符串“ve”
+// 该方法将把该string对象的本体值去掉头尾的字符v和e
+// 直至头尾不是这两个字符任意之一
+callObj $s trimSet "ve"
+
+// 再次输出对象值供参考
+pln $s
+
+
+
