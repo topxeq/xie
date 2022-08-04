@@ -26,7 +26,7 @@ import (
 	"github.com/topxeq/tk"
 )
 
-var VersionG string = "0.2.3"
+var VersionG string = "0.3.1"
 
 type UndefinedStruct struct {
 	int
@@ -37,6 +37,8 @@ func (o UndefinedStruct) String() string {
 }
 
 var Undefined UndefinedStruct = UndefinedStruct{0}
+
+type XieHandler func(actionA string, dataA interface{}, paramsA ...interface{}) interface{}
 
 // 指令集
 // 关于结果参数：很多命令需要一个用于指定接收指令执行结果的参数，称作结果参数
@@ -592,6 +594,10 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"ensureMakeDirs": 21921,
 
+	// console related 命令行相关
+	"getInput":    22001, // 从命令行获取输入，第一个参数是提示字符串
+	"getPassword": 22003, // 从命令行获取密码输入（输入字符不显示），第一个参数是提示字符串
+
 	// json related JSON相关
 	"toJson": 22101, // 将对象编码为JSON字符串
 	"toJSON": 22101,
@@ -671,31 +677,34 @@ var InstrNameSet map[string]int = map[string]int{
 	"runCode": 60001, // 运行一段谢语言代码，在新的虚拟机中执行，除结果参数（不可省略）外，第一个参数是字符串类型的代码（必选，后面参数都是可选），第二个参数为任意类型的传入虚拟机的参数（虚拟机内通过inputG全局变量来获取该参数），后面的参数可以是一个字符串数组类型的变量或者多个字符串类型的变量，虚拟机内通过argsG（字符串数组）来对其进行访问。
 
 	// line editor related 内置行文本编辑器有关
-	"leClear":       70001, // 清空行文本编辑器缓冲区，例：leClear()
-	"leLoadStr":     70003, // 行文本编辑器缓冲区载入指定字符串内容，例：leLoadStr("abc\nbbb\n结束")
-	"leSetAll":      70003, // 等同于leLoadString
-	"leSaveStr":     70007, // 取出行文本编辑器缓冲区中内容，例：s = leSaveStr()
+	"leClear":       70001, // 清空行文本编辑器缓冲区
+	"leLoadStr":     70003, // 行文本编辑器缓冲区载入指定字符串内容，例：leLoadStr $textT "abc\nbbb\n结束"
+	"leSetAll":      70003, // 等同于leLoadStr
+	"leSaveStr":     70007, // 取出行文本编辑器缓冲区中内容，例：leSaveStr $result $s
 	"leGetAll":      70007, // 等同于leSaveStr
-	"leLoad":        70011, // 从文件中载入文本到行文本编辑器缓冲区中，例：err = leLoad(`c:\test.txt`)
+	"leLoad":        70011, // 从文件中载入文本到行文本编辑器缓冲区中，例：leLoad $result `c:\test.txt`
 	"leLoadFile":    70011, // 等同于leLoad
-	"leSave":        70017, // 将行文本编辑器缓冲区中内容保存到文件中，例：err = leSave(`c:\test.txt`)
+	"leSave":        70017, // 将行文本编辑器缓冲区中内容保存到文件中，例：leSave $result `c:\test.txt`
 	"leSaveFile":    70017, // 等同于leSave
-	"leLoadClip":    70021, // 从剪贴板中载入文本到行文本编辑器缓冲区中，例：err = leLoadClip()
-	"leSaveClip":    70023, // 将行文本编辑器缓冲区中内容保存到剪贴板中，例：err = leSaveClip()
-	"leInsert":      70025, // 行文本编辑器缓冲区中的指定位置前插入指定内容，例：err = leInsert(3， "abc")
-	"leInsertLine":  70027, // 行文本编辑器缓冲区中的指定位置前插入指定内容，例：err = leInsertLine(3， "abc")
-	"leAppend":      70029, // 行文本编辑器缓冲区中的指定位置后插入指定内容，例：err = leAppend(3， "abc")
-	"leAppendLine":  70031, // 行文本编辑器缓冲区中的指定位置后插入指定内容，例：err = leAppendLine(3， "abc")
-	"leSet":         70033, // 设定行文本编辑器缓冲区中的指定行为指定内容，例：err = leSet(3， "abc")
-	"leSetLine":     70035, // 设定行文本编辑器缓冲区中的指定行为指定内容，例：err = leSetLine(3， "abc")
-	"leSetLines":    70037, // 设定行文本编辑器缓冲区中指定范围的多行为指定内容，例：err = leSetLines(3, 5， "abc\nbbb")
-	"leRemove":      70039, // 删除行文本编辑器缓冲区中的指定行，例：err = leRemove(3)
-	"leRemoveLine":  70041, // 删除行文本编辑器缓冲区中的指定行，例：err = leRemoveLine(3)
-	"leRemoveLines": 70043, // 删除行文本编辑器缓冲区中指定范围的多行，例：err = leRemoveLines(1, 3)
-	"leViewAll":     70045, // 查看行文本编辑器缓冲区中的所有内容，例：allText = leViewAll()
-	"leView":        70047, // 查看行文本编辑器缓冲区中的指定行，例：lineText = leView(18)
-	"leSort":        70049, // 将行文本编辑器缓冲区中的行进行排序，唯一参数表示是否降序排序，例：errT = leSort(true)
-	"leEnc":         70051, // 将行文本编辑器缓冲区中的文本转换为UTF-8编码，如果不指定原始编码则默认为GB18030编码
+	"leLoadClip":    70021, // 从剪贴板中载入文本到行文本编辑器缓冲区中，例：leLoadClip $result
+	"leSaveClip":    70023, // 将行文本编辑器缓冲区中内容保存到剪贴板中，例：leSaveClip $result
+	"leLoadUrl":     70024, // 从网址URL载入文本到行文本编辑器缓冲区中，例：leLoadUrl $result `http://example.com/abc.txt`
+	"leInsert":      70025, // 行文本编辑器缓冲区中的指定位置前插入指定内容，例：leInsert $result 3 "abc"
+	"leInsertLine":  70025, // 等同于leInsert
+	"leAppend":      70029, // 行文本编辑器缓冲区中的最后追加指定内容，例：leAppendLine $result "abc"
+	"leAppendLine":  70031, // 等同于leAppend
+	"leSet":         70033, // 设定行文本编辑器缓冲区中的指定行为指定内容，例：leSet  $result 3 "abc"
+	"leSetLine":     70033, // 设定行文本编辑器缓冲区中的指定行为指定内容，例：leSetLine $result 3 "abc"
+	"leSetLines":    70037, // 设定行文本编辑器缓冲区中指定范围的多行为指定内容，例：leSetLines $result 3 5 "abc\nbbb"
+	"leRemove":      70039, // 删除行文本编辑器缓冲区中的指定行，例：leRemove $result 3
+	"leRemoveLine":  70039, // 等同于leRemove
+	"leRemoveLines": 70043, // 删除行文本编辑器缓冲区中指定范围的多行，例：leRemoveLines $result 1 3
+	"leViewAll":     70045, // 查看行文本编辑器缓冲区中的所有内容，例：leViewAll $textT
+	"leView":        70047, // 查看行文本编辑器缓冲区中的指定行，例：leView $lineText 18
+	"leSort":        70049, // 将行文本编辑器缓冲区中的行进行排序，唯一参数表示是否降序排序，例：leSort $result true
+	"leEnc":         70051, // 将行文本编辑器缓冲区中的文本转换为UTF-8编码，如果不指定原始编码则默认为GB18030编码，用法：leEnc $result gbk
+	"leLineEnd":     70061, // 读取或设置行文本编辑器缓冲区中行末字符（一般是\n或\r\n），不带参数是获取，带参数是设置
+	"leSilent":      70071, // 读取或设置行文本编辑器的静默模式（布尔值），不带参数是获取，带参数是设置
 
 	// end of commands/instructions 指令集末尾
 }
@@ -1970,7 +1979,7 @@ func (p *XieVM) EvalExpressionNoGroup(strA string, valuesA *map[string]interface
 
 		// valuesA[keyT] = p.Pop()
 
-		strA = "$pop"
+		strA = "$tmp"
 
 	}
 
@@ -2665,7 +2674,7 @@ func (p *XieVM) Load(codeA string) string {
 		}
 
 		p.CodeListM = append(p.CodeListM, v)
-		p.CodeSourceMapM[pointerT] = iFirstT
+		p.CodeSourceMapM[pointerT] = originCodeLenT + iFirstT
 		pointerT++
 	}
 
@@ -3379,6 +3388,7 @@ func (p *XieVM) ParamsToRefList(v *Instr, fromA int) []interface{} {
 }
 
 func (p *XieVM) ErrStrf(formatA string, argsA ...interface{}) string {
+	// tk.Pl("dbg: %v", tk.ToJSONX(p, "-sort"))
 	if p.VerboseM {
 		tk.Pl(fmt.Sprintf("TXERROR:(Line %v: %v) ", p.CodeSourceMapM[p.CodePointerM]+1, tk.LimitString(p.SourceM[p.CodeSourceMapM[p.CodePointerM]], 50))+formatA, argsA...)
 	}
@@ -3440,6 +3450,8 @@ func callGoFunc(funcA interface{}, thisA interface{}, argsA ...interface{}) inte
 }
 
 var leBufG []string
+var leLineEndG string = "\n"
+var leSilentG bool = false
 
 func leClear() {
 	leBufG = make([]string, 0, 100)
@@ -3458,7 +3470,7 @@ func leSaveString() string {
 		leClear()
 	}
 
-	return tk.JoinLines(leBufG)
+	return tk.JoinLines(leBufG, leLineEndG)
 }
 
 func leLoadFile(fileNameA string) error {
@@ -3478,6 +3490,23 @@ func leLoadFile(fileNameA string) error {
 	return nil
 }
 
+func leLoadUrl(urlA string) error {
+	if leBufG == nil {
+		leClear()
+	}
+
+	strT := tk.DownloadWebPageX(urlA)
+
+	if tk.IsErrStr(strT) {
+		return tk.ErrStrToErr(strT)
+	}
+
+	leBufG = tk.SplitLines(strT)
+	// leBufG, errT = tk.LoadStringListBuffered(fileNameA, false, false)
+
+	return nil
+}
+
 func leSaveFile(fileNameA string) error {
 	if leBufG == nil {
 		leClear()
@@ -3485,7 +3514,7 @@ func leSaveFile(fileNameA string) error {
 
 	var errT error
 
-	textT := tk.JoinLines(leBufG)
+	textT := tk.JoinLines(leBufG, leLineEndG)
 
 	if tk.IsErrStr(textT) {
 		return tk.Errf(tk.GetErrStr(textT))
@@ -3517,7 +3546,7 @@ func leSaveClip() error {
 		leClear()
 	}
 
-	textT := tk.JoinLines(leBufG)
+	textT := tk.JoinLines(leBufG, leLineEndG)
 
 	if tk.IsErrStr(textT) {
 		return tk.Errf(tk.GetErrStr(textT))
@@ -3536,7 +3565,7 @@ func leViewAll(argsA ...string) error {
 	}
 
 	if tk.IfSwitchExistsWhole(argsA, "-nl") {
-		textT := tk.JoinLines(leBufG)
+		textT := tk.JoinLines(leBufG, leLineEndG)
 
 		tk.Pln(textT)
 
@@ -3600,9 +3629,44 @@ func leConvertToUTF8(srcEncA ...string) error {
 		encT = srcEncA[0]
 	}
 
-	leBufG = tk.SplitLines(tk.ConvertStringToUTF8(tk.JoinLines(leBufG), encT))
+	leBufG = tk.SplitLines(tk.ConvertStringToUTF8(tk.JoinLines(leBufG, leLineEndG), encT))
 
 	return nil
+}
+
+func leLineEnd(lineEndA ...string) string {
+	if leBufG == nil {
+		leClear()
+	}
+
+	if leBufG == nil {
+		return tk.ErrStrf("buffer not initalized")
+	}
+
+	if len(lineEndA) > 0 {
+		leLineEndG = lineEndA[0]
+	} else {
+		return leLineEndG
+	}
+
+	return ""
+}
+
+func leSilent(silentA ...bool) bool {
+	if leBufG == nil {
+		leClear()
+	}
+
+	if leBufG == nil {
+		return false
+	}
+
+	if len(silentA) > 0 {
+		leSilentG = silentA[0]
+		return leSilentG
+	}
+
+	return leSilentG
 }
 
 func leGetLine(idxA int) string {
@@ -8053,6 +8117,65 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			}
 
 			p.SetVarInt(pr, sshT)
+		case "gui":
+			objT := p.GetVar("guiG")
+			p.SetVarInt(pr, objT)
+		case "quickDelegate":
+			if instrT.ParamLen < 2 {
+				return p.ErrStrf("参数不够")
+			}
+
+			v2 := tk.ToInt(p.GetVarValue(instrT.Params[v1p+1]))
+
+			var deleT tk.QuickDelegate
+
+			// same as fastCall
+			deleT = func(strA string) string {
+				pointerT := p.CodePointerM
+
+				p.Push(strA)
+
+				tmpPointerT := v2
+
+				for {
+					rs := p.RunLine(tmpPointerT)
+
+					nv, ok := rs.(int)
+
+					if ok {
+						tmpPointerT = nv
+						continue
+					}
+
+					nsv, ok := rs.(string)
+
+					if ok {
+						if tk.IsErrStr(nsv) {
+							// tmpRs := p.Pop()
+							p.CodePointerM = pointerT
+							return nsv
+						}
+
+						if nsv == "exit" { // 不应发生
+							tmpRs := p.Pop()
+							p.CodePointerM = pointerT
+							return tk.ToStr(tmpRs)
+						} else if nsv == "fr" {
+							break
+						}
+					}
+
+					tmpPointerT++
+				}
+
+				// return pointerT + 1
+
+				tmpRs := p.Pop()
+				p.CodePointerM = pointerT
+				return tk.ToStr(tmpRs)
+			}
+
+			p.SetVarInt(pr, deleT)
 		default:
 			return p.ErrStrf("未知对象")
 		}
@@ -8248,6 +8371,21 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 				p.SetVarInt(pr, fmt.Sprintf("未知方法: %v", v2))
 				return p.ErrStrf("未知方法: %v", v2)
 			}
+			return ""
+		case tk.TXDelegate:
+			// if instrT.ParamLen < 3 {
+			// 	return p.ErrStrf("参数不够")
+			// }
+
+			v1p := 2
+
+			v2 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
+			vs := p.ParamsToList(instrT, v1p+1)
+
+			rs := nv(v2, nil, vs...)
+
+			p.SetVarInt(pr, rs)
+
 			return ""
 		}
 
@@ -10000,19 +10138,14 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			return p.ErrStrf("参数不够")
 		}
 
-		pr := -5
-		v1p := 0
-
-		if instrT.ParamLen > 2 {
-			pr = instrT.Params[0].Ref
-			v1p = 1
-		}
+		pr := instrT.Params[0].Ref
+		v1p := 1
 
 		v1 := p.GetVarValue(instrT.Params[v1p])
-		p2 := instrT.Params[v1p+1].Ref
 
 		if tk.IsErrX(v1) {
 			if instrT.ParamLen > 2 {
+				p2 := instrT.Params[v1p+1].Ref
 				p.SetVarInt(p2, tk.GetErrStrX(v1))
 			}
 
@@ -10022,6 +10155,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		}
 
 		if instrT.ParamLen > 2 {
+			p2 := instrT.Params[v1p+1].Ref
 			p.SetVarInt(p2, "")
 		}
 
@@ -11221,7 +11355,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		pr := -5
 		v1p := 0
 
-		if instrT.ParamLen > 0 {
+		if instrT.ParamLen > 1 {
 			pr = instrT.Params[0].Ref
 			v1p = 1
 		}
@@ -11229,6 +11363,38 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
 
 		rsT := tk.EnsureMakeDirs(v1)
+
+		p.SetVarInt(pr, rsT)
+
+		return ""
+
+	case 22001: // getInput
+		if instrT.ParamLen < 2 {
+			return p.ErrStrf("参数不够")
+		}
+
+		pr := instrT.Params[0].Ref
+		v1p := 1
+
+		v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
+
+		rsT := tk.GetInputf(v1, p.ParamsToList(instrT, v1p+1)...)
+
+		p.SetVarInt(pr, rsT)
+
+		return ""
+
+	case 22003: // getPassword
+		if instrT.ParamLen < 2 {
+			return p.ErrStrf("参数不够")
+		}
+
+		pr := instrT.Params[0].Ref
+		v1p := 1
+
+		v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
+
+		rsT := tk.GetInputPasswordf(v1, p.ParamsToList(instrT, v1p+1)...)
 
 		p.SetVarInt(pr, rsT)
 
@@ -11906,9 +12072,9 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		return ""
 
 	case 70007: // leSaveStr/leGetAll
-		if instrT.ParamLen < 1 {
-			return p.ErrStrf("参数不够")
-		}
+		// if instrT.ParamLen < 1 {
+		// 	return p.ErrStrf("参数不够")
+		// }
 
 		pr := -5
 		// v1p := 0
@@ -11926,7 +12092,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 		return ""
 
-	case 70011: // leLoad
+	case 70011: // leLoad/leLoadFile
 		if instrT.ParamLen < 1 {
 			return p.ErrStrf("参数不够")
 		}
@@ -11942,27 +12108,6 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
 
 		rs := leLoadFile(v1)
-
-		p.SetVarInt(pr, rs)
-
-		return ""
-
-	case 70021: // leLoadClip
-		if instrT.ParamLen < 1 {
-			return p.ErrStrf("参数不够")
-		}
-
-		pr := -5
-		// v1p := 0
-
-		if instrT.ParamLen > 1 {
-			pr = instrT.Params[0].Ref
-			// v1p = 1
-		}
-
-		// v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
-
-		rs := leLoadClip()
 
 		p.SetVarInt(pr, rs)
 
@@ -11984,6 +12129,333 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
 
 		rs := leSaveFile(v1)
+
+		p.SetVarInt(pr, rs)
+
+		return ""
+
+	case 70021: // leLoadClip
+		// if instrT.ParamLen < 1 {
+		// 	return p.ErrStrf("参数不够")
+		// }
+
+		pr := -5
+		// v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0].Ref
+			// v1p = 1
+		}
+
+		// v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
+
+		rs := leLoadClip()
+
+		p.SetVarInt(pr, rs)
+
+		return ""
+
+	case 70023: // leSaveClip
+		// if instrT.ParamLen < 1 {
+		// 	return p.ErrStrf("参数不够")
+		// }
+
+		pr := -5
+		// v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0].Ref
+			// v1p = 1
+		}
+
+		rs := leSaveClip()
+
+		p.SetVarInt(pr, rs)
+
+		return ""
+
+	case 70024: // leLoadUrl
+		if instrT.ParamLen < 1 {
+			return p.ErrStrf("参数不够")
+		}
+
+		pr := -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0].Ref
+			v1p = 1
+		}
+
+		v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
+
+		rs := leLoadUrl(v1)
+
+		p.SetVarInt(pr, rs)
+
+		return ""
+
+	case 70025: // leInsert
+		if instrT.ParamLen < 2 {
+			return p.ErrStrf("参数不够")
+		}
+
+		pr := -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0].Ref
+			v1p = 1
+		}
+
+		v1 := tk.ToInt(p.GetVarValue(instrT.Params[v1p]))
+		v2 := tk.ToStr(p.GetVarValue(instrT.Params[v1p+1]))
+
+		rs := leInsertLine(v1, v2)
+
+		p.SetVarInt(pr, rs)
+
+		return ""
+
+	case 70029: // leAppend/leAppendLine
+		if instrT.ParamLen < 1 {
+			return p.ErrStrf("参数不够")
+		}
+
+		pr := -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0].Ref
+			v1p = 1
+		}
+
+		v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
+
+		rs := leAppendLine(v1)
+
+		p.SetVarInt(pr, rs)
+
+		return ""
+
+	case 70033: // leSet/leSetLine
+		if instrT.ParamLen < 2 {
+			return p.ErrStrf("参数不够")
+		}
+
+		pr := -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0].Ref
+			v1p = 1
+		}
+
+		v1 := tk.ToInt(p.GetVarValue(instrT.Params[v1p]))
+		v2 := tk.ToStr(p.GetVarValue(instrT.Params[v1p+1]))
+
+		rs := leSetLine(v1, v2)
+
+		p.SetVarInt(pr, rs)
+
+		return ""
+
+	case 70037: // leSetLines
+		if instrT.ParamLen < 3 {
+			return p.ErrStrf("参数不够")
+		}
+
+		pr := -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0].Ref
+			v1p = 1
+		}
+
+		v1 := tk.ToInt(p.GetVarValue(instrT.Params[v1p]))
+		v2 := tk.ToInt(p.GetVarValue(instrT.Params[v1p+1]))
+		v3 := tk.ToStr(p.GetVarValue(instrT.Params[v1p+2]))
+
+		rs := leSetLines(v1, v2, v3)
+
+		p.SetVarInt(pr, rs)
+
+		return ""
+
+	case 70039: // leRemove/leRemoveLine
+		if instrT.ParamLen < 1 {
+			return p.ErrStrf("参数不够")
+		}
+
+		pr := -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0].Ref
+			v1p = 1
+		}
+
+		v1 := tk.ToInt(p.GetVarValue(instrT.Params[v1p]))
+
+		rs := leRemoveLine(v1)
+
+		p.SetVarInt(pr, rs)
+
+		return ""
+
+	case 70043: // leRemoveLines
+		if instrT.ParamLen < 2 {
+			return p.ErrStrf("参数不够")
+		}
+
+		pr := -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0].Ref
+			v1p = 1
+		}
+
+		v1 := tk.ToInt(p.GetVarValue(instrT.Params[v1p]))
+		v2 := tk.ToInt(p.GetVarValue(instrT.Params[v1p+1]))
+
+		rs := leRemoveLines(v1, v2)
+
+		p.SetVarInt(pr, rs)
+
+		return ""
+
+	case 70045: // leViewAll
+		// if instrT.ParamLen < 1 {
+		// 	return p.ErrStrf("参数不够")
+		// }
+
+		pr := -5
+		v1p := 0
+
+		if instrT.ParamLen > 0 {
+			pr = instrT.Params[0].Ref
+			v1p = 1
+		}
+
+		vs := p.ParamsToStrs(instrT, v1p)
+
+		rs := leViewAll(vs...)
+
+		if tk.IsError(rs) {
+			if !leSilentG {
+				tk.Pl("内部行编辑器操作失败：%v", rs)
+			}
+		}
+
+		p.SetVarInt(pr, rs)
+
+		return ""
+
+	case 70047: // leView
+		if instrT.ParamLen < 1 {
+			return p.ErrStrf("参数不够")
+		}
+
+		pr := -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0].Ref
+			v1p = 1
+		}
+
+		v1 := tk.ToInt(p.GetVarValue(instrT.Params[v1p]))
+
+		rs := leViewLine(v1)
+
+		if tk.IsError(rs) {
+			if !leSilentG {
+				tk.Pl("内部行编辑器操作失败：%v", rs)
+			}
+		}
+
+		p.SetVarInt(pr, rs)
+
+		return ""
+
+	case 70049: // leSort
+		if instrT.ParamLen < 1 {
+			return p.ErrStrf("参数不够")
+		}
+
+		pr := -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0].Ref
+			v1p = 1
+		}
+
+		v1 := tk.ToBool(p.GetVarValue(instrT.Params[v1p]))
+
+		rs := leSort(v1)
+
+		p.SetVarInt(pr, rs)
+
+		return ""
+
+	case 70051: // leEnc
+		// if instrT.ParamLen < 1 {
+		// 	return p.ErrStrf("参数不够")
+		// }
+
+		pr := -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0].Ref
+			v1p = 1
+		}
+
+		vs := p.ParamsToStrs(instrT, v1p)
+
+		rs := leConvertToUTF8(vs...)
+
+		p.SetVarInt(pr, rs)
+
+		return ""
+
+	case 70061: // leLineEnd
+		// if instrT.ParamLen < 1 {
+		// 	return p.ErrStrf("参数不够")
+		// }
+
+		pr := instrT.Params[0].Ref
+		v1p := 1
+
+		if instrT.ParamLen > 1 {
+			v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
+			rs := leLineEnd(v1)
+			p.SetVarInt(pr, rs)
+
+			return ""
+		}
+
+		rs := leLineEnd()
+
+		p.SetVarInt(pr, rs)
+
+		return ""
+
+	case 70071: // leSilent
+
+		pr := instrT.Params[0].Ref
+		v1p := 1
+
+		if instrT.ParamLen < 2 {
+			p.SetVarInt(pr, leSilent())
+
+			return ""
+		}
+
+		rs := leSilent(tk.ToBool(p.GetVarValue(instrT.Params[v1p])))
 
 		p.SetVarInt(pr, rs)
 
@@ -12419,26 +12891,6 @@ func (p *XieVM) GoFunc(codeA string, argCountA int) string {
 // 		p.Push(paramT)
 
 // 		return ""
-// 	} else if cmdT == "getNowStr" {
-// 		p1, p2, _ := p.Get2Params(paramsT)
-
-// 		var timeStrT string
-
-// 		if p2 == "formal" {
-// 			timeStrT = tk.GetNowTimeStringFormal()
-// 		} else {
-// 			timeStrT = tk.GetNowTimeString()
-// 		}
-
-// 		if p1 == "" {
-// 			p.Push(timeStrT)
-// 		} else {
-// 			s1 := p.GetName(p1)
-
-// 			p.GetVars()[s1] = timeStrT
-// 		}
-
-// 		return ""
 // 	} else if cmdT == "now" {
 // 		p1, _ := p.Get1Param(paramsT)
 
@@ -12568,9 +13020,17 @@ func RunCode(codeA string, objA interface{}, optsA ...string) interface{} {
 		vmT.SetVar("全局参数", optsA)
 	}
 
-	if objA != nil {
-		vmT.SetVar("inputG", objA)
-		vmT.SetVar("全局输入", objA)
+	objT, ok := objA.(map[string]interface{})
+
+	if ok {
+		for k, v := range objT {
+			vmT.SetVar(k, v)
+		}
+	} else {
+		if objA != nil {
+			vmT.SetVar("inputG", objA)
+			vmT.SetVar("全局输入", objA)
+		}
 	}
 
 	lrs := vmT.Load(codeA)

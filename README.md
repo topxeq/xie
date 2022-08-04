@@ -22,7 +22,7 @@
 
 谢语言特点比较鲜明：
 
-- 语法形式追求极简，类似命令行，以追求解析的速度；
+- 语法形式追求极简，类似命令行（Shell脚本），以追求解析的速度；
 - 语法接近于汇编语言，包括一些语言的基础设施（例如堆栈等）和语法结构（条件分支与无条件跳转指令等）；
 - 提供很多封装好的、功能丰富的内置指令，因而又使得语言接近于高级语言；
 - 支持自定义函数；
@@ -886,8 +886,8 @@ assign $b #i-9
 // 本例要计算的表达式的数学表达是 a+((a-12.0)*abs(b))，其中abs表示取绝对值
 // 注意由于计算顺序问题，数学表达中需要把a-12.0加上括号以保证计算顺序一致
 // 如果括号里的内容以一个问号“?”开始，那么后面可以是一条指令
-// 该指令必须通过堆栈返回一个结果值继续参加表达式的运算，这样可以使得表达式中实现基本运算符之外的运算功能，例如转换数值类型等。
-eval $r `$a + ( $a - (?convert $push #f12.0 int) * (? abs $push $b) )`
+// 该指令必须通过$tmp变量返回一个结果值继续参加表达式的运算，这样可以使得表达式中实现基本运算符之外的运算功能，例如转换数值类型等。
+eval $r `$a + ( $a - (?convert $tmp #f12.0 int) * (? abs $b) )`
 
 // 输出变量r的值查看
 pln $r
@@ -907,7 +907,7 @@ pln 条件满足
 
 需要特别注意的是，谢语言中的表达式中，运算符是没有优先级之分的，因此一个表达式中是严格按照从左到右的顺序执行运算的，唯一的例外是括号，用圆括号可以改变运算的优先级，括号里的部分将被优先计算。另外，表达式中的值与运算符之间必须有空格分隔。也因为一般的表达式都存在空格，因此需要用反引号或双引号括起来。
 
-另外，如果括号里的内容以一个问号“?”开始，那么后面可以是一条指令，该指令必须通过堆栈返回一个结果值以便继续参加表达式的运算，这样可以使得表达式中实现基本运算符之外的运算功能，例如转换数值类型等。
+另外，如果括号里的内容以一个问号“?”开始，那么后面可以是一条指令，该指令必须通过$tmp变量返回一个结果值以便继续参加表达式的运算，这样可以使得表达式中实现基本运算符之外的运算功能，例如转换数值类型等。
 
 ifEval指令是专门配合表达式计算使用的条件跳转指令，它后面必须跟一个字符串类型的表达式，其计算结果必须是一个布尔类型的值，ifEval指令将根据其结果，确定是否要跳转到指定的行号。ifEval指令，简化了一般的if和ifNot质量较为复杂的条件处理语法结构。
 
@@ -934,7 +934,7 @@ assign $a "abc"
 
 // 表达式做参数
 // 注意“?”后面再加双引号或反引号括起表达式
-pl "[%v] test params: %v" ?"(?nowStr $push)" $a
+pl "[%v] test params: %v" ?"(?nowStr)" $a
 ```
 
 将输出：
@@ -943,7 +943,7 @@ pl "[%v] test params: %v" ?"(?nowStr $push)" $a
 [2022-05-17 14:30:59] test params: abc
 ```
 
-其中，pl指令的第二个参数即是以问号开头的表达式，而这个表达式用(?...)的方式又运行了获取当前时间字符串的指令nowStr。注意，表达式内的指令，一定要保证将结果值压栈（一般都是一个值）。
+其中，pl指令的第二个参数即是以问号开头的表达式，而这个表达式用(?...)的方式又运行了获取当前时间字符串的指令nowStr。注意，表达式内的指令，一定要保证将结果值存入全局变量$tmp（不可省略结果参数的指令，要确保结果参数是\$tmp）。
 
 
 &nbsp;
@@ -2534,7 +2534,7 @@ mt $rsT $bufT str
 plo $rsT
 
 // 直接用表达式来输出
-pln ?`(?mt $push $bufT str)`
+pln ?`(?mt $tmp $bufT str)`
 
 
 ```
@@ -2586,7 +2586,7 @@ pl t2-3000毫秒=%v ?`$t2 - 3000`
 
 pl t2+50000毫秒=%v ?`$t2 + 50000`
 
-pl 当前时间+50000毫秒=%v ?`(?now $push) + 50000`
+pl 当前时间+50000毫秒=%v ?`(?now) + 50000`
 
 pl t3-t2=%v(毫秒) ?`$t3 - $t2`
 
@@ -2907,6 +2907,7 @@ D:\tmp>xie -server -dir=scripts
 
 首先浏览器访问 http://127.0.0.1/xmsTmpl.html ，这将是访问一般的WEB服务，因为WEB目录默认与服务器根目录相同，所以将展示根目录下的xmsTmpl.html这个静态文件，也就是一个例子网页。
 
+![截图](http://xie.topget.org/example/xie/snap/snap1.jpg)
 ![截图](https://gitee.com/topxeq/xie/raw/master/cmd/xie/snap/snap1.jpg)
 
 可以看到，该网页文件中文字“请按按钮”后的“{{text1}}”标记，这是我们后面展示动态网页功能时所需要替换的标记。xmsTmpl.html文件的内容如下：
@@ -2974,6 +2975,7 @@ exit
 
 我们访问 http://127.0.0.1/xms/xmsIndex 这个网址（或者叫URL路径），将会看到如下结果：
 
+![截图](http://xie.topget.org/example/xie/snap/snap2.jpg)
 ![截图](https://gitee.com/topxeq/xie/raw/master/cmd/xie/snap/snap2.jpg)
 
 可以发现原来的标记确实被替换成了大写的字母A，验证了动态网页的效果。
@@ -3010,6 +3012,7 @@ exit TX_END_RESPONSE_XT
 
 这样，我们如果点击网页中的按钮1，会得到如下的alert弹框：
 
+![截图](http://xie.topget.org/example/xie/snap/snap4.jpg)
 ![截图](https://gitee.com/topxeq/xie/raw/master/cmd/xie/snap/snap4.jpg)
 
 这是因为网页xmsTmpl.html中，通过AJAX访问了 http://127.0.0.1:80/xms/xmsApi 这个服务，而我们的谢语言服务器会寻找到xmsApi.xie（自动加上了.xie文件名后缀）并执行，因此会输出我们希望的内容。
@@ -3401,7 +3404,7 @@ xie -server -port=:80 -sslPort=:443 -dir=/mnt/xms -webDir=/mnt/web -certDir=/mnt
 // 设置默认返回值为TX_END_RESPONSE_XT以避免多余的网页输出
 = $outG "TX_END_RESPONSE_XT"
 
-pl "[%v] %v params: %v" ?(?nowStr $push) $reqNameG $paraMapG
+pl "[%v] %v params: %v" ?(?nowStr) $reqNameG $paraMapG
 
 // 设定错误和提示页面的HTML，其中的TX_main_XT等标记将被替换为有意义的内容
 = $infoTmpl `
@@ -3856,7 +3859,7 @@ setRespHeader $responseG "Content-Type" "text/json; charset=utf-8"
 
 writeRespHeader $responseG #i200
 
-pl "[%v] %v params: %v" ?(?nowStr $push) $reqNameG $paraMapG
+pl "[%v] %v params: %v" ?(?nowStr) $reqNameG $paraMapG
 
 genResp $rs $requestG success test
 
@@ -3938,6 +3941,294 @@ result= 52
 
 &nbsp;
 
+#### 图形界面（GUI）编程
+
+谢语言支持方便的图形界面编程，通过 [Sciter](http://sciter.com) 等第三方库实现，Windows下只需要一个动态链接库文件（sciter.dll），Linux下的配置请参考[这里](https://www.jianshu.com/p/b184826b9de1)。通过下面基本说明和几个例子可以快速了解掌握。
+
+&nbsp;
+
+##### 谢语言GUI编程的基础
+
+谢语言主要通过第三方图形界面库Sciter来支持跨平台的GUI编程。以Windows系统下为例，除谢语言主程序文件外，只需要一个动态链接库文件（sciter.dll），即可完美支持图形界面编程。Sciter使用标准的HTML、CSS以及类似JavaScript的TiScript脚本语言，来实现图形界面的展示和操控，谢语言则负责后台逻辑的处理，两者之间可以互通，谢语言通过特定的接口方式可以调用TiScript中的函数传递数据并进行操作，反之亦然，TiScript也可以调用谢语言中的特定函数。基本熟悉网页编程的开发者都可以很方便地上手。
+
+谢语言使用GUI功能时，均需使用initGui命令来初始化环境，如果此时系统中没有Sciter的动态链接库文件，将会自动下载到主程序相同的路径下（也可以自行在谢语言官网下载后放到该位置）。谢语言中还有一个预置全局变量\$guiG，用于作为调用GUI功能的接口对象。
+
+下面我们通过一些例子逐步说明谢语言中GUI编程的方法。
+
+&nbsp;
+
+##### 简单的计算器
+
+我们直接通过一个代码例子（calculator.xie）来了解：
+
+```go
+// $guiG是预置的全局变量，作为GUI编程的接口对象
+// 一般的图形界面操作，都通过调用该对象的各种方法来实现
+// 所有GUI程序，都应该先调用guiG变量的init方法来进行图形界面环境的初始化
+// 此时，如果在Windows下，如果系统中没有安装图形界面库，
+// init方法将自动下载所需的动态链接库文件到主程序路径下
+// 然后再进行环境初始化
+mt $rs $guiG init
+
+// 定义用于界面展示的HTML网页代码，放在htmlT变量中
+// HTML和CSS代码都是标准的，脚本语言是TiScript，类似JavaScript
+// 本例中定义了一个文本输入框用于输入表达式算式
+// 以及“计算”和“关闭”两个按钮
+// 并定义了两个按钮对应的处理脚本函数
+// “确定”按钮将调用TiScript的eval函数来进行表达式计算
+// 然后将计算结果传递给谢语言代码（通过调用谢语言预定义的delegateDo函数）
+// “关闭”按钮将关闭整个窗口
+assign $htmlT `
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <title>计算器</title>
+</head>
+<body>
+	<div style="margin-top: 10px; margin-bottom: 10px;">
+		<span>请输入算式：</span>
+	</div>
+	<div style="margin-top: 10px; margin-bottom: 10px;">
+		<input id="mainInputID" type=text />
+	</div>
+	<div>
+		<button id="btnCal">计算</button>
+		<button id="btnClose">关闭</button>
+	</div>
+
+    <script type="text/tiscript">
+        $(#btnCal).on("click", function() {
+			var result = eval($(#mainInputID).value);
+
+			view.delegateDo(String.printf("%v", result));
+
+            $(#mainInputID).value = result;
+        });
+ 
+        $(#btnClose).on("click", function() {
+            view.close();
+        });
+ 
+    </script>
+</body>
+</html>
+`
+
+// 调用guiG的newWindow方法创建一个窗口
+// newWindow方法需要有三个参数，第一个是窗口标题
+// 第二个是字符串形式的值用于指定窗口大小，空字符串表示按默认区域
+// 如果使用类似“[200,300,600,400]”的字符串，则表明窗口位于屏幕坐标（200,300）处，宽高位600*400
+// 第三个参数为用于界面展示的字符串
+// 结果放入变量windowT中，这是一个特殊类型的对象(后面暂称为window对象)
+// 后面我们还将调用该对象的一些方法进行进一步的界面控制
+mt $windowT $guiG newWindow 计算器 "" $htmlT
+
+plo $windowT
+
+// 用new指令创建一个快速代理函数（quickDelegate）对象dele1
+// 谢语言中quickDelegate是最常用的代理函数对象
+// 它创建时需要指定一个快速函数，本例中通过标号deleFast1指明
+// 这样，当Sciter的网页中调用view对象的delegateDo函数时
+// 就将调用deleFast1标号处的快速函数代码
+new $dele1 quickDelegate :deleFast1
+
+// 调用window对象的setDelegate方法将其接口代理指定为dele1
+mt $rs $windowT setDelegate $dele1
+
+// 调用window对象的show方法，此时才会真正显示界面窗口
+// 并开始响应用户的操作
+mt $rs $windowT show
+
+plo $rs
+
+// 退出程序
+exit
+
+// 用于界面事件处理的快速函数
+// 约定该函数必须通过堆栈获取一个参数，并返回一个参数
+// 参数均为字符串类型
+// 如果传递复杂数据，常见的方法是传递JSON字符串
+// 此处该函数仅仅是将输入参数输出
+:deleFast1
+
+    pop $inputT
+
+    pl "计算结果为：%v" $inputT
+
+    // 函数返回前必须要压栈一个输出参数
+    // 此处因为实际上无需返回参数，因此随便压入一个无用的数值
+    push $inputT
+
+    fastRet
+    
+```
+
+代码展示了如何用谢语言实现一个简单的图形界面计算器，代码中有详细的解释，可以仔细阅读理解。TiScript整体接近于包含JQuery的JavaScript但略有不同（例如DOM对象的id可以不带引号括起等），具体的用法，可以去Sciter网站或者从谢语言官网下载“Windows版界面工具包”，其中含有详细的帮助文档；也可以通过看我们的示例快速了解。
+
+代码运行后，将得到类似下面的界面：
+
+![截图](http://xie.topget.org/example/xie/snap/snap5.png)
+![截图](https://gitee.com/topxeq/xie/raw/master/cmd/xie/snap/snap5.png)
+
+在输入框中输入算式，然后点击“计算”按钮，框中就会计算出结果，并且后台也得到了计算结果并将其输出。点击“关闭”按钮则窗口将关闭并执行后续代码（此例中是用exit指令退出了程序运行）。
+
+&nbsp;
+
+#### Linux系统中运行图形计算器代码
+
+谢语言的图形界面编程支持跨平台，上例中的图形界面计算器代码，无需改动就可以在Linux下运行，下面以Ubuntu为例进行说明：
+
+- 首先在[谢语言官网](http://xie.topget.org)下载Ubuntu下的谢语言压缩包（[xie.tar.gz](http://xie.topget.org/pub/xie.tar.gz)），解压后获得谢语言主程序xie，将其权限设置为可执行后将其放置在某个执行路径（PATH变量指明的）中；
+- 如果Ubuntu还没有安装GTK3图形环境，则通过 apt install libgtk-3-dev 命令安装该依赖项；
+- 此时应该可以运行谢语言主程序，可通过 xie -version 命令查看版本号，并验证谢语言已可顺利运行；
+- 到Sciter官网下载4.4.6.6版本的SDK压缩包，或在谢语言官网页面下载“界面工具包”中也有，解压后，将其中bin.lnx\x64中的所有文件复制出来拷贝到某个目录下，例如放到/tools目录下；
+- 然后进入到/tools目录下依次执行下面的命令：
+  ```shell
+  export LIBRARY_PATH=$PWD
+  echo $PWD >> libsciter.conf
+  sudo cp libsciter.conf /etc/ld.so.conf.d/
+  sudo ldconfig
+  ldconfig -p | grep sciter
+  ```
+
+至此，谢语言语言所需的图形界面环境已经配置好，可以用下面的命令行：
+
+```shell
+xie -example calculator.xie
+```
+
+即可运行在线的计算器例子程序。运行效果类似下图：
+
+![截图](http://xie.topget.org/example/xie/snap/snap6.png)
+![截图](https://gitee.com/topxeq/xie/raw/master/cmd/xie/snap/snap6.png)
+
+注意，如果中文显示有问题，请自行搜索如何在Ubuntu系统下安装中文字体，也有可能是环境变量LANG等的设置问题（应为en_US.UTF-8）。
+
+如果按上述步骤仍然无法运行，请确保Linux系统安装好了X11图形界面环境。另外，如果在云服务器或者虚拟机上运行，客户端如果在Windows上，建议在Windows下安装Xming，并运行起来，然后使用支持X11 Forwarding的SSH客户端（如Terminus或Bitvise SSH Client，两者均免费），并打开X11 Forwarding选项后，即可在Windows下运行Gox图形界面程序了，没有什么多余的配置，非常简单。也可以使用内置支持X11的终端软件（如WindTerm等）。
+
+&nbsp;
+
+#### Windows编译不带命令行窗口的谢语言主程序
+
+用谢语言在Windows系统下进行图形界面编程时，如果程序运行时不希望显示命令窗口（CMD），可以在编译谢语言源码（Go语言版）时加上-ldflags="-H windowsgui"的编译参数即可。
+
+如果谢语言主程序是加了-ldflags="-H windowsgui"的编译参数编译出来的，则通过其编译谢语言代码后的可执行程序，也将没有命令行窗口，结合GUI编程，完全可以制作出标准的图形界面程序。如何编译谢语言代码，可以参见后面文档中说明。
+
+&nbsp;
+
+#### 制作一个登录框
+
+本例继续介绍GUI编程，将实现一个常见的登录框，包含用户名和密码的输入框以及登录和关闭按钮，之间参看下面的代码（loginDialog.xie）：
+
+```go
+// 初始化GUI环境
+mt $rs $guiG init
+
+// 设定界面的HTML
+// 其中的moveToCenter函数，用于将窗口移动到屏幕正中并调整大小
+// 所有在TiScript与谢语言互通的函数都必须和moveToCenter函数这样
+// 接收一个字符串类型的输入参数，并输出一个字符串类型的输出参数
+// 如果想传递多于一个的数据，可以用JSON进行数据的封装
+// moveToCenter函数就接收一个包含两个参数（宽与高）的JSON字符串
+// 并输出一个表示屏幕宽高的字符串
+assign $htmlT `
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <title>请登录……</title>
+</head>
+<body >
+	<div style="margin-top: 10px; margin-bottom: 10px;">
+		<span>请输入用户名和密码登录……</span>
+	</div>
+	<div style="margin-top: 10px; margin-bottom: 10px;">
+		<label for="userNameID" >用户名： </label><input id="userNameID" type=text />
+	</div>
+	<div style="margin-top: 10px; margin-bottom: 10px;">
+		<label for="userNameID" >密码： </label><input id="passwordID" type=password />
+	</div>
+	<div>
+		<button id="btnLoginID">登录</button>
+		<button id="btnClose">关闭</button>
+	</div>
+
+    <script type="text/tiscript">
+        function moveToCenter(jsonA) {
+            var (w, h) = view.screenBox(#frame, #dimension);
+
+            var obj = JSON.parse(jsonA);
+
+            var w1n = obj.Width;
+            var h1n = obj.Height;
+
+            view.move((w-w1n)/2, (h-h1n)/2, w1n, h1n);
+
+            return String.printf("%v|%v", w, h);
+        }
+
+        $(#btnLoginID).on("click", function() {
+			var userNameT = $(#userNameID).value.trim();
+			var passwordT = $(#passwordID).value.trim();
+
+			view.delegateDo(JSON.stringify({"userName": userNameT, "password": passwordT}));
+			//view.close();
+        });
+ 
+        $(#btnClose).on("click", function() {
+            view.close();
+        });
+    </script>
+</body>
+</html>
+`
+
+// 新建窗口，第二个参数传入了JSON格式的表示左、上、宽、高的窗口位置与大小的字符串
+// 但实际上由于下面调用了TiScript中的moveToCenter函数，因此将会使这里定义的宽和高无效
+mt $windowT $guiG newWindow 测试 `[300,200,600,400]` $htmlT
+
+// 调用前面HTML代码中TiScript脚本内定义的moveToCenter函数，并传入表示宽与高的JSON字符串
+mt $rs $windowT call moveToCenter `{"Width":800, "Height":600}`
+
+// 输出moveToCenter函数的返回值
+plo $rs
+
+// 创建并设定与界面之间的快速代理对象
+new $dele1 quickDelegate :deleFast1
+mt $rs $windowT setDelegate $dele1
+
+// 运行图形界面
+mt $rs $windowT show
+
+plo $rs
+
+exit
+
+// 快速代理对象的代码
+:deleFast1
+
+    pop $inputT
+
+    pl "inputT: %v" $inputT
+
+    push "output1"
+
+    fastRet
+
+```
+
+运行效果如下图所示：
+
+![截图](http://xie.topget.org/example/xie/snap/snap7.png)
+![截图](https://gitee.com/topxeq/xie/raw/master/cmd/xie/snap/snap7.png)
+
+可以看出，moveToCenter函数返回的是一个非JSON格式的字符串，表示屏幕的宽与高的像素数，而点击登录按钮后，接口代理函数deleFast1将输出一个JSON格式的包含输入的用户名和密码的字符串，可以用于后续处理。
+
+&nbsp;
+
 #### 编译运行谢语言代码
 
 谢语言支持简单的编译运行，但仅相当于将主程序和代码打包成一个可执行文件，方便分发并起到简单加密代码的作用。例如要编译一个名为hello.xie的文件，用下面的命令：
@@ -3947,6 +4238,8 @@ xie -compile hello.xie -output=hello.exe
 ```
 
 执行后将在当前目录下生成hello.exe的可执行文件（Linux类似），如果不指定output参数，则默认生成可执行文件名为output.exe。
+
+如果谢语言主程序是加了-ldflags="-H windowsgui"的编译参数编译出来的，则通过其编译后的可执行程序，也将没有命令行窗口，结合GUI编程，完全可以制作出标准的图形界面程序。
 
 &nbsp;
 
@@ -4008,11 +4301,12 @@ xie -compile hello.xie -output=hello.exe
 
 *注：更多示例请参考cmd/xie/scripts目录*
 
-- [三元操作符 ?](https://gitee.com/topxeq/xie/blob/master/cmd/xie/scripts/operator3.xie)
-- [MD5编码](https://gitee.com/topxeq/xie/blob/master/cmd/xie/scripts/md5.xie)
-- [字节列表/数组的操作与16进制编解码](https://gitee.com/topxeq/xie/blob/master/cmd/xie/scripts/hex.xie)
-- [按二进制位计算](https://gitee.com/topxeq/xie/blob/master/cmd/xie/scripts/bitwise.xie)
-- [数据库操作（SQLite3为例）](https://gitee.com/topxeq/xie/blob/master/cmd/xie/scripts/sqlite.xie)
+- [三元操作符 ?](http://xie.topget.org/xc/c/xielang/example/operator3.xie)
+- [MD5编码](http://xie.topget.org/xc/c/xielang/example/md5.xie)
+- [命令行获取用户输入及密码输入](http://xie.topget.org/xc/c/xielang/example/input.xie)
+- [字节列表/数组的操作与16进制编解码](http://xie.topget.org/xc/c/xielang/example/hex.xie)
+- [按二进制位计算](http://xie.topget.org/xc/c/xielang/example/bitwise.xie)
+- [数据库操作（SQLite3为例）](http://xie.topget.org/xc/c/xielang/example/sqlite.xie)
 
 &nbsp;
 

@@ -1,0 +1,94 @@
+// 初始化GUI环境
+mt $rs $guiG init
+
+// 设定界面的HTML
+// 其中的moveToCenter函数，用于将窗口移动到屏幕正中并调整大小
+// 所有在TiScript与谢语言互通的函数都必须和moveToCenter函数这样
+// 接收一个字符串类型的输入参数，并输出一个字符串类型的输出参数
+// 如果想传递多于一个的数据，可以用JSON进行数据的封装
+// moveToCenter函数就接收一个包含两个参数（宽与高）的JSON字符串
+// 并输出一个表示屏幕宽高的字符串
+assign $htmlT `
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <title>请登录……</title>
+</head>
+<body >
+	<div style="margin-top: 10px; margin-bottom: 10px;">
+		<span>请输入用户名和密码登录……</span>
+	</div>
+	<div style="margin-top: 10px; margin-bottom: 10px;">
+		<label for="userNameID" >用户名： </label><input id="userNameID" type=text />
+	</div>
+	<div style="margin-top: 10px; margin-bottom: 10px;">
+		<label for="userNameID" >密码： </label><input id="passwordID" type=password />
+	</div>
+	<div>
+		<button id="btnLoginID">登录</button>
+		<button id="btnClose">关闭</button>
+	</div>
+
+    <script type="text/tiscript">
+        function moveToCenter(jsonA) {
+            var (w, h) = view.screenBox(#frame, #dimension);
+
+            var obj = JSON.parse(jsonA);
+
+            var w1n = obj.Width;
+            var h1n = obj.Height;
+
+            view.move((w-w1n)/2, (h-h1n)/2, w1n, h1n);
+
+            return String.printf("%v|%v", w, h);
+        }
+
+        $(#btnLoginID).on("click", function() {
+			var userNameT = $(#userNameID).value.trim();
+			var passwordT = $(#passwordID).value.trim();
+
+			view.delegateDo(JSON.stringify({"userName": userNameT, "password": passwordT}));
+			//view.close();
+        });
+ 
+        $(#btnClose).on("click", function() {
+            view.close();
+        });
+    </script>
+</body>
+</html>
+`
+
+// 新建窗口，第二个参数传入了JSON格式的表示左、上、宽、高的窗口位置与大小的字符串
+// 但实际上由于下面调用了TiScript中的moveToCenter函数，因此将会使这里定义的宽和高无效
+mt $windowT $guiG newWindow 测试 `[300,200,600,400]` $htmlT
+
+// 调用前面HTML代码中TiScript脚本内定义的moveToCenter函数，并传入表示宽与高的JSON字符串
+mt $rs $windowT call moveToCenter `{"Width":800, "Height":600}`
+
+// 输出moveToCenter函数的返回值
+plo $rs
+
+// 创建并设定与界面之间的快速代理对象
+new $dele1 quickDelegate :deleFast1
+mt $rs $windowT setDelegate $dele1
+
+// 运行图形界面
+mt $rs $windowT show
+
+plo $rs
+
+exit
+
+// 快速代理对象的代码
+:deleFast1
+
+    pop $inputT
+
+    pl "inputT: %v" $inputT
+
+    push "output1"
+
+    fastRet

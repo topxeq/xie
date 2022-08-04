@@ -32,6 +32,10 @@ func runInteractiveShell() int {
 	vmT.SetVar("argsG", os.Args)
 	vmT.SetVar("全局参数", os.Args)
 
+	var guiHandlerG tk.TXDelegate = guiHandler
+
+	vmT.SetVar("guiG", guiHandlerG)
+
 	for {
 		if following {
 			source += "\n"
@@ -536,7 +540,7 @@ func main() {
 			text1T := tk.Trim(`740404`)
 			text2T := tk.Trim(`690415`)
 			text3T := tk.Trim(`040626`)
-		
+
 			buf1, errT := tk.LoadBytesFromFileE(binNameT)
 			if errT == nil {
 				re := regexp.MustCompile(text1T + text2T + text3T + `(.*?) *` + text3T + text2T + text1T)
@@ -574,13 +578,13 @@ func main() {
 		if (!tk.EndsWith(filePathT, ".xie")) && (!tk.EndsWith(filePathT, ".谢")) {
 			filePathT += ".谢"
 		}
-		scriptT = tk.DownloadWebPageX("http://xie.topget.org/example/xie/" + tk.UrlEncode2(filePathT))
+		scriptT = tk.DownloadWebPageX("http://xie.topget.org/xc/t/c/xielang/example/" + tk.UrlEncode2(filePathT))
 
 	} else if ifExamT {
 		if (!tk.EndsWith(filePathT, ".xie")) && (!tk.EndsWith(filePathT, ".谢")) {
 			filePathT += ".xie"
 		}
-		scriptT = tk.DownloadWebPageX("http://xie.topget.org/example/xie/" + tk.UrlEncode2(filePathT))
+		scriptT = tk.DownloadWebPageX("http://xie.topget.org/xc/t/c/xielang/example/" + tk.UrlEncode2(filePathT))
 
 	} else if ifGoPathT {
 		if (!tk.EndsWith(filePathT, ".xie")) && (!tk.EndsWith(filePathT, ".谢")) {
@@ -720,7 +724,9 @@ func main() {
 
 	}
 
-	rs := xie.RunCode(scriptT, nil, os.Args...)
+	var guiHandlerG tk.TXDelegate = guiHandler
+
+	rs := xie.RunCode(scriptT, map[string]interface{}{"guiG": guiHandlerG}, os.Args...)
 	if rs != "TXERROR:no result" {
 		tk.Pl("%v", rs)
 	}

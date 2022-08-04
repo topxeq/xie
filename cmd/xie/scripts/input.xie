@@ -1,0 +1,7 @@
+getInput $userNameT 请输入用户名：
+
+getPassword $passwordT 请输入密码：
+
+pln "\n您输入的用户名是：" $userNameT
+
+pln 您输入的密码是： $passwordT

@@ -1,0 +1,21 @@
+plo $guiG
+
+mt $rs $guiG init
+
+isNil $rs
+
+ifNot $tmp :fail1
+
+mt $rs $guiG showInfo 提示 "今天是个好日子：%v！" ?(?nowStr)
+
+plo $rs
+
+exit
+
+:fail1
+    pl "初始化图形界面库失败：%v" $rs
+    exit
+
+:fail2
+    pl "调用方法失败：%v" $rs
+    exit

@@ -26,5 +26,5 @@ mt $rsT $bufT str
 plo $rsT
 
 // 直接用表达式来输出
-pln ?`(?mt $push $bufT str)`
+pln ?`(?mt $tmp $bufT str)`
 
