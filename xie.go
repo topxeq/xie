@@ -26,7 +26,9 @@ import (
 	"github.com/topxeq/tk"
 )
 
-var VersionG string = "0.3.1"
+var VersionG string = "0.3.2"
+
+var ShellModeG bool = false
 
 type UndefinedStruct struct {
 	int
@@ -684,13 +686,15 @@ var InstrNameSet map[string]int = map[string]int{
 	"leGetAll":      70007, // 等同于leSaveStr
 	"leLoad":        70011, // 从文件中载入文本到行文本编辑器缓冲区中，例：leLoad $result `c:\test.txt`
 	"leLoadFile":    70011, // 等同于leLoad
+	"leLoadClip":    70012, // 从剪贴板中载入文本到行文本编辑器缓冲区中，例：leLoadClip $result
+	"leLoadSSH":     70015, // 从SSH连接获取文本文件内容，用法：leLoadSSH 结果变量 服务器名 服务器端口 用户名 密码 远端文件路径
+	"leLoadUrl":     70016, // 从网址URL载入文本到行文本编辑器缓冲区中，例：leLoadUrl $result `http://example.com/abc.txt`
 	"leSave":        70017, // 将行文本编辑器缓冲区中内容保存到文件中，例：leSave $result `c:\test.txt`
 	"leSaveFile":    70017, // 等同于leSave
-	"leLoadClip":    70021, // 从剪贴板中载入文本到行文本编辑器缓冲区中，例：leLoadClip $result
 	"leSaveClip":    70023, // 将行文本编辑器缓冲区中内容保存到剪贴板中，例：leSaveClip $result
-	"leLoadUrl":     70024, // 从网址URL载入文本到行文本编辑器缓冲区中，例：leLoadUrl $result `http://example.com/abc.txt`
-	"leInsert":      70025, // 行文本编辑器缓冲区中的指定位置前插入指定内容，例：leInsert $result 3 "abc"
-	"leInsertLine":  70025, // 等同于leInsert
+	"leSaveSSH":     70025, // 将编辑缓冲区内容保存到SSH连接中，如果不带参数，将保存在之前获取内容的SSH连接中，用法：leSaveSSH 结果变量 服务器名 服务器端口 用户名 密码 远端文件路径。参数个数可以为0（默认$tmp为结果参数），为1则为结果参数，为5则为省略结果参数而包含服务器名等，为6则是包含结果参数及服务器信息
+	"leInsert":      70027, // 行文本编辑器缓冲区中的指定位置前插入指定内容，例：leInsert $result 3 "abc"
+	"leInsertLine":  70027, // 等同于leInsert
 	"leAppend":      70029, // 行文本编辑器缓冲区中的最后追加指定内容，例：leAppendLine $result "abc"
 	"leAppendLine":  70031, // 等同于leAppend
 	"leSet":         70033, // 设定行文本编辑器缓冲区中的指定行为指定内容，例：leSet  $result 3 "abc"
@@ -701,10 +705,13 @@ var InstrNameSet map[string]int = map[string]int{
 	"leRemoveLines": 70043, // 删除行文本编辑器缓冲区中指定范围的多行，例：leRemoveLines $result 1 3
 	"leViewAll":     70045, // 查看行文本编辑器缓冲区中的所有内容，例：leViewAll $textT
 	"leView":        70047, // 查看行文本编辑器缓冲区中的指定行，例：leView $lineText 18
+	"leViewLine":    70047,
 	"leSort":        70049, // 将行文本编辑器缓冲区中的行进行排序，唯一参数表示是否降序排序，例：leSort $result true
 	"leEnc":         70051, // 将行文本编辑器缓冲区中的文本转换为UTF-8编码，如果不指定原始编码则默认为GB18030编码，用法：leEnc $result gbk
 	"leLineEnd":     70061, // 读取或设置行文本编辑器缓冲区中行末字符（一般是\n或\r\n），不带参数是获取，带参数是设置
 	"leSilent":      70071, // 读取或设置行文本编辑器的静默模式（布尔值），不带参数是获取，带参数是设置
+	"leFind":        70081, // 在编辑缓冲区查找包含某字符串（可以是正则表达式）的行
+	"leReplace":     70083, // 在编辑缓冲区查找包含某字符串（可以是正则表达式）的行并替换相关内容
 
 	// end of commands/instructions 指令集末尾
 }
@@ -3451,7 +3458,12 @@ func callGoFunc(funcA interface{}, thisA interface{}, argsA ...interface{}) inte
 
 var leBufG []string
 var leLineEndG string = "\n"
-var leSilentG bool = false
+var leSilentG bool = true
+var leSSHInfoG map[string]string = map[string]string{}
+
+func SetLeVSilent(vA bool) {
+	leSilentG = vA
+}
 
 func leClear() {
 	leBufG = make([]string, 0, 100)
@@ -3482,6 +3494,12 @@ func leLoadFile(fileNameA string) error {
 
 	if errT != nil {
 		return errT
+	}
+
+	if strings.Contains(strT, "\r") {
+		leLineEndG = "\r\n"
+	} else {
+		leLineEndG = "\n"
 	}
 
 	leBufG = tk.SplitLines(strT)
@@ -3667,6 +3685,47 @@ func leSilent(silentA ...bool) bool {
 	}
 
 	return leSilentG
+}
+
+func leFind(regA string) []string {
+	if leBufG == nil {
+		leClear()
+	}
+
+	if leBufG == nil {
+		return nil
+	}
+
+	aryT := []string{}
+
+	for i, v := range leBufG {
+		if tk.RegContains(v, regA) {
+			aryT = append(aryT, fmt.Sprintf("%v: %v", i, v))
+		}
+	}
+
+	return aryT
+}
+
+func leReplace(regA string, replA string) []string {
+	if leBufG == nil {
+		leClear()
+	}
+
+	if leBufG == nil {
+		return nil
+	}
+
+	aryT := []string{}
+
+	for i, v := range leBufG {
+		if tk.RegContains(v, regA) {
+			leBufG[i] = tk.RegReplace(v, regA, replA)
+			aryT = append(aryT, fmt.Sprintf("%v: %v -> %v", i, v, leBufG[i]))
+		}
+	}
+
+	return aryT
 }
 
 func leGetLine(idxA int) string {
@@ -12113,6 +12172,99 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 		return ""
 
+	case 70012: // leLoadClip
+		// if instrT.ParamLen < 1 {
+		// 	return p.ErrStrf("参数不够")
+		// }
+
+		pr := -5
+		// v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0].Ref
+			// v1p = 1
+		}
+
+		// v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
+
+		rs := leLoadClip()
+
+		p.SetVarInt(pr, rs)
+
+		return ""
+
+	case 70015: // leLoadSSH
+		if instrT.ParamLen < 5 {
+			return p.ErrStrf("参数不够")
+		}
+
+		pr := -5
+		v1p := 0
+
+		if instrT.ParamLen > 5 {
+			pr = instrT.Params[0].Ref
+			v1p = 1
+		}
+
+		v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
+		v2 := tk.ToStr(p.GetVarValue(instrT.Params[v1p+1]))
+		v3 := tk.ToStr(p.GetVarValue(instrT.Params[v1p+2]))
+		v4 := tk.ToStr(p.GetVarValue(instrT.Params[v1p+3]))
+		v5 := tk.ToStr(p.GetVarValue(instrT.Params[v1p+4]))
+
+		sshT, errT := tk.NewSSHClient(v1, v2, v3, v4)
+
+		if errT != nil {
+			p.SetVarInt(pr, errT)
+			if !leSilentG {
+				tk.Pl("连接服务器失败：%v", errT)
+			}
+
+			return ""
+		}
+
+		defer sshT.Close()
+
+		basePathT, errT := tk.EnsureBasePath("xie")
+		if errT != nil {
+			p.SetVarInt(pr, errT)
+			if !leSilentG {
+				tk.Pl("谢语言根路径不存在")
+			}
+			return ""
+		}
+
+		tmpFileT := filepath.Join(basePathT, "leSSHTmp.txt")
+
+		errT = sshT.Download(v5, tmpFileT)
+
+		if errT != nil {
+			p.SetVarInt(pr, errT)
+			if !leSilentG {
+				tk.Pl("从服务器读取文件失败（%v）：%v", v5, errT)
+			}
+			return ""
+		}
+
+		leSSHInfoG["Host"] = v1
+		leSSHInfoG["Port"] = v2
+		leSSHInfoG["User"] = v3
+		leSSHInfoG["Password"] = v4
+		leSSHInfoG["Path"] = v5
+
+		errT = leLoadFile(tmpFileT)
+		if errT != nil {
+			p.SetVarInt(pr, errT)
+			if !leSilentG {
+				tk.Pl("加载文件失败（%v）：%v", tmpFileT, errT)
+			}
+			return ""
+		}
+
+		p.SetVarInt(pr, errT)
+
+		return ""
+
 	case 70017: // leSave/leSaveFile
 		if instrT.ParamLen < 1 {
 			return p.ErrStrf("参数不够")
@@ -12129,27 +12281,6 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
 
 		rs := leSaveFile(v1)
-
-		p.SetVarInt(pr, rs)
-
-		return ""
-
-	case 70021: // leLoadClip
-		// if instrT.ParamLen < 1 {
-		// 	return p.ErrStrf("参数不够")
-		// }
-
-		pr := -5
-		// v1p := 0
-
-		if instrT.ParamLen > 1 {
-			pr = instrT.Params[0].Ref
-			// v1p = 1
-		}
-
-		// v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
-
-		rs := leLoadClip()
 
 		p.SetVarInt(pr, rs)
 
@@ -12173,8 +12304,83 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		p.SetVarInt(pr, rs)
 
 		return ""
+	case 70025: // leSaveSSH
+		if instrT.ParamLen != 0 && instrT.ParamLen != 1 && instrT.ParamLen != 5 && instrT.ParamLen != 6 {
+			return p.ErrStrf("参数不够")
+		}
 
-	case 70024: // leLoadUrl
+		pr := -5
+		v1p := 0
+
+		if instrT.ParamLen == 1 || instrT.ParamLen == 6 {
+			pr = instrT.Params[0].Ref
+			v1p = 1
+		}
+
+		var v1, v2, v3, v4, v5 string
+
+		if instrT.ParamLen < 2 {
+			v1 = tk.SafelyGetStringForKeyWithDefault(leSSHInfoG, "Host")
+			v2 = tk.SafelyGetStringForKeyWithDefault(leSSHInfoG, "Port")
+			v3 = tk.SafelyGetStringForKeyWithDefault(leSSHInfoG, "User")
+			v4 = tk.SafelyGetStringForKeyWithDefault(leSSHInfoG, "Password")
+			v5 = tk.SafelyGetStringForKeyWithDefault(leSSHInfoG, "Path")
+		} else {
+			v1 = tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
+			v2 = tk.ToStr(p.GetVarValue(instrT.Params[v1p+1]))
+			v3 = tk.ToStr(p.GetVarValue(instrT.Params[v1p+2]))
+			v4 = tk.ToStr(p.GetVarValue(instrT.Params[v1p+3]))
+			v5 = tk.ToStr(p.GetVarValue(instrT.Params[v1p+4]))
+		}
+
+		sshT, errT := tk.NewSSHClient(v1, v2, v3, v4)
+
+		if errT != nil {
+			p.SetVarInt(pr, errT)
+			if !leSilentG {
+				tk.Pl("连接服务器失败：%v", errT)
+			}
+			return ""
+		}
+
+		defer sshT.Close()
+
+		basePathT, errT := tk.EnsureBasePath("xie")
+		if errT != nil {
+			p.SetVarInt(pr, errT)
+			if !leSilentG {
+				tk.Pl("谢语言根路径不存在")
+			}
+			return ""
+		}
+
+		tmpFileT := filepath.Join(basePathT, "leSSHTmp.txt")
+
+		errT = leSaveFile(tmpFileT)
+		if errT != nil {
+			p.SetVarInt(pr, errT)
+			if !leSilentG {
+				tk.Pl("保存临时文件失败：%v", errT)
+			}
+			return ""
+		}
+
+		errT = sshT.Upload(tmpFileT, v5)
+
+		if errT != nil {
+			p.SetVarInt(pr, errT)
+			if !leSilentG {
+				tk.Pl("保存文件到服务器失败（%v）：%v", v5, errT)
+			}
+
+			return ""
+		}
+
+		p.SetVarInt(pr, errT)
+
+		return ""
+
+	case 70016: // leLoadUrl
 		if instrT.ParamLen < 1 {
 			return p.ErrStrf("参数不够")
 		}
@@ -12195,7 +12401,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 		return ""
 
-	case 70025: // leInsert
+	case 70027: // leInsert
 		if instrT.ParamLen < 2 {
 			return p.ErrStrf("参数不够")
 		}
@@ -12203,7 +12409,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		pr := -5
 		v1p := 0
 
-		if instrT.ParamLen > 1 {
+		if instrT.ParamLen > 2 {
 			pr = instrT.Params[0].Ref
 			v1p = 1
 		}
@@ -12246,7 +12452,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		pr := -5
 		v1p := 0
 
-		if instrT.ParamLen > 1 {
+		if instrT.ParamLen > 2 {
 			pr = instrT.Params[0].Ref
 			v1p = 1
 		}
@@ -12268,7 +12474,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		pr := -5
 		v1p := 0
 
-		if instrT.ParamLen > 1 {
+		if instrT.ParamLen > 3 {
 			pr = instrT.Params[0].Ref
 			v1p = 1
 		}
@@ -12312,7 +12518,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		pr := -5
 		v1p := 0
 
-		if instrT.ParamLen > 1 {
+		if instrT.ParamLen > 2 {
 			pr = instrT.Params[0].Ref
 			v1p = 1
 		}
@@ -12353,7 +12559,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 		return ""
 
-	case 70047: // leView
+	case 70047: // leView/leViewLine
 		if instrT.ParamLen < 1 {
 			return p.ErrStrf("参数不够")
 		}
@@ -12456,6 +12662,64 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		}
 
 		rs := leSilent(tk.ToBool(p.GetVarValue(instrT.Params[v1p])))
+
+		p.SetVarInt(pr, rs)
+
+		return ""
+
+	case 70081: // leFind
+		if instrT.ParamLen < 1 {
+			return p.ErrStrf("参数不够")
+		}
+
+		pr := -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0].Ref
+			v1p = 1
+		}
+
+		rs := leFind(tk.ToStr(p.GetVarValue(instrT.Params[v1p])))
+
+		if rs != nil {
+			if !leSilentG {
+				for _, v := range rs {
+					tk.Pl("%v", v)
+				}
+			}
+		}
+
+		p.SetVarInt(pr, rs)
+
+		return ""
+
+	case 70083: // leReplace
+		if instrT.ParamLen < 2 {
+			return p.ErrStrf("参数不够")
+		}
+
+		pr := -5
+		v1p := 0
+
+		if instrT.ParamLen > 2 {
+			pr = instrT.Params[0].Ref
+			v1p = 1
+		}
+
+		v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
+		v2 := tk.ToStr(p.GetVarValue(instrT.Params[v1p+1]))
+
+		rs := leReplace(v1, v2)
+
+		if rs != nil {
+			if !leSilentG {
+				for _, v := range rs {
+					tk.Pl("%v", v)
+				}
+				tk.Pl("共替换 %v 处", len(rs))
+			}
+		}
 
 		p.SetVarInt(pr, rs)
 

@@ -23,6 +23,9 @@ import (
 )
 
 func runInteractiveShell() int {
+	xie.ShellModeG = true
+	xie.SetLeVSilent(true)
+
 	var following bool
 	var source string
 	scanner := bufio.NewScanner(os.Stdin)
