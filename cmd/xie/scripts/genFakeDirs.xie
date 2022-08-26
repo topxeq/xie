@@ -1,0 +1,55 @@
+// 复制一套路径（包含子目录，但不包含文件）
+// 用法示例：xie genFakeDirs.xie -dir=d:\tmpx\Windows\system32 -from=c:\Windows\system32
+// 执行后，将在d:\tmpx\Windows\system32目录下，复制c:\Windows\system32下所有目录结构，但不包含任何文件
+// 执行前，d:\tmpx\Windows\system32可以及其上级目录都可以不存在
+
+// 获取目标路径，默认为“.”（即当前目录）
+getSwitch $baseT $argsG -dir= "."
+
+// 获取源路径，默认为空
+getSwitch $fromT $argsG -from= ""
+
+// 如果源路径不为空则继续执行，否则终止
+if ?`($fromT <> "")` :next1
+    pln `复制源路径为空`
+    exit
+
+:next1
+pln 目标路径： $baseT , 源路径： $fromT
+
+// 获取源目录下所有目录（不包含文件，包含所有层级的子目录）
+getFileList $listT $fromT -recursive -dirOnly -compact
+
+// pln $listT
+
+// 遍历所有目录
+range $listT :range1
+
+
+:next2
+
+exit
+
+// 遍历体代码
+:range1
+    pop $idxT
+    pop $v
+
+    // 获取每个目录的绝对路径
+    getMapItem $fnT $v Abs
+
+    // 根据源根路径获取其相对路径
+    extractPathRel $relT $fnT $fromT
+
+    // 再将目标路径与相对路径组合成新的要创建的路径
+    joinPath $newAbsT $baseT $relT
+
+    pl "[%v] %v -> %v" $idxT $fnT $newAbsT
+
+    // 创建新的路径（如果上级路径不存在，会保证同时创建上级路径，包括多级上级路径的情况）
+    ensureMakeDirs $rs $newAbsT
+
+    // 检查创建结果，如果有错误则输出并退出
+    checkErrX $rs
+
+    continue

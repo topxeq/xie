@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -26,7 +27,7 @@ import (
 	"github.com/topxeq/tk"
 )
 
-var VersionG string = "0.3.2"
+var VersionG string = "0.3.7"
 
 var ShellModeG bool = false
 
@@ -149,7 +150,7 @@ var InstrNameSet map[string]int = map[string]int{
 	// "regInt#": 312, // from number
 
 	// assign related
-	"assign": 401, // 赋值
+	"assign": 401, // 赋值（从局部变量到全局变量依次查找，如果没有则新建局部变量）
 	"=":      401,
 	"赋值":     401,
 
@@ -176,6 +177,10 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"ifEval": 631, // 判断第一个参数（字符串类型）表示的表达式计算结果如果是true，则跳转到指定标号处
 	"表达式是则":  631,
+
+	"ifEmpty": 641, // 判断是否是空（值为undefined、nil、false、空字符串、小于等于0的整数或浮点数均会满足条件），是则跳转
+
+	"ifErrX": 651, // 判断是否是error对象或TXERROR字符串，是则跳转
 
 	// compare related
 	"==": 701, // 判断两个数值是否相等，无参数时，比较两个弹栈值，结果压栈；参数为1个时是结果参数，两个数值从堆栈获取；参数为2个时，表示两个数值，结果压栈；参数为3个时，第一个参数是结果参数，后两个为待比较数值
@@ -495,6 +500,8 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"isErrX": 10943, // 同时判断是否是error对象或TXERROR字符串，用法：isErrX $result $err1 $errMsg，第三个参数可选（结果参数不可省略），如有会放入错误原因信息
 
+	"checkErrX": 10945, // 检查后续变量或数值是否是error对象或TXERROR字符串，是则输出后中止
+
 	// http request/response related HTTP请求相关
 	"writeResp":       20110, // 写一个HTTP请求的响应
 	"setRespHeader":   20111, // 设置一个HTTP请求的响应头，如setRespHeader $responseG "Content-Type" "text/json; charset=utf-8"
@@ -502,6 +509,7 @@ var InstrNameSet map[string]int = map[string]int{
 	"getReqHeader":    20113, // 获取一个HTTP请求的请求头信息
 	"genJsonResp":     20114, // 生成一个JSON格式的响应字符，用法：genJsonResp $result $requestG "success" "Test passed!"，结果格式类似{"Status":"fail", "Value": "network timeout"}，其中Status字段表示响应处理结果状态，一般只有success和fail两种，分别表示成功和失败，如果失败，Value字段中为失败原因，如果成功，Value中为空或需要返回的信息
 	"genResp":         20114,
+	"serveFile":       20116,
 
 	"newMux":          20121, // 新建一个HTTP请求处理路由对象，等同于 new mux
 	"setMuxHandler":   20122, // 设置HTTP请求路由处理函数
@@ -579,7 +587,7 @@ var InstrNameSet map[string]int = map[string]int{
 
 	// path related 路径相关
 
-	"genFileList": 21901, // 生成目录中的文件列表，即获取指定目录下的符合条件的所有文件，例：getFileList $result `d:\tmp` "-recursive" "-pattern=*" "-exclusive=*.txt" "-withDir" "-verbose"，另有 -compact 参数将只给出Abs、Size、IsDir三项，列表项对象内容类似：map[Abs:D:\tmpx\test1.gox Ext:.gox IsDir:false Mode:-rw-rw-rw- Name:test1.gox Path:test1.gox Size:353339 Time:20210928091734]
+	"genFileList": 21901, // 生成目录中的文件列表，即获取指定目录下的符合条件的所有文件，例：getFileList $result `d:\tmp` "-recursive" "-pattern=*" "-exclusive=*.txt" "-withDir" "-verbose"，另有 -compact 参数将只给出Abs、Size、IsDir三项, -dirOnly参数将只列出目录（不包含文件），列表项对象内容类似：map[Abs:D:\tmpx\test1.gox Ext:.gox IsDir:false Mode:-rw-rw-rw- Name:test1.gox Path:test1.gox Size:353339 Time:20210928091734]
 	"getFileList": 21901,
 
 	"joinPath": 21902, // 合并文件路径，第一个参数是结果参数不可省略，第二个参数开始要合并的路径
@@ -593,6 +601,7 @@ var InstrNameSet map[string]int = map[string]int{
 	"extractFileName": 21910, // 从文件路径中获取文件名部分
 	"extractFileExt":  21911, // 从文件路径中获取文件扩展名（后缀）部分
 	"extractFileDir":  21912, // 从文件路径中获取文件目录（路径）部分
+	"extractPathRel":  21915, // 从文件路径中获取文件相对路径（根据指定的根路径）
 
 	"ensureMakeDirs": 21921,
 
@@ -644,6 +653,9 @@ var InstrNameSet map[string]int = map[string]int{
 	"hexEncode": 24601, // 十六进制编码，仅针对字符串
 	"hexDecode": 24603, // 十六进制解码，仅针对字符串
 
+	"toUtf8": 24801, // 转换字符串或字节列表为UTF-8编码，结果参数不可省略，第一个参数为要转换的源字符串或字节列表，第二个参数表示原始编码（默认为GBK）
+	"toUTF8": 24801,
+
 	// encrypt/decrypt related 加密/解密相关
 
 	"encryptText": 25101, // 用TXDEF方法加密字符串
@@ -679,7 +691,8 @@ var InstrNameSet map[string]int = map[string]int{
 	"runCode": 60001, // 运行一段谢语言代码，在新的虚拟机中执行，除结果参数（不可省略）外，第一个参数是字符串类型的代码（必选，后面参数都是可选），第二个参数为任意类型的传入虚拟机的参数（虚拟机内通过inputG全局变量来获取该参数），后面的参数可以是一个字符串数组类型的变量或者多个字符串类型的变量，虚拟机内通过argsG（字符串数组）来对其进行访问。
 
 	// line editor related 内置行文本编辑器有关
-	"leClear":       70001, // 清空行文本编辑器缓冲区
+	"leClear": 70001, // 清空行文本编辑器缓冲区
+
 	"leLoadStr":     70003, // 行文本编辑器缓冲区载入指定字符串内容，例：leLoadStr $textT "abc\nbbb\n结束"
 	"leSetAll":      70003, // 等同于leLoadStr
 	"leSaveStr":     70007, // 取出行文本编辑器缓冲区中内容，例：leSaveStr $result $s
@@ -687,12 +700,12 @@ var InstrNameSet map[string]int = map[string]int{
 	"leLoad":        70011, // 从文件中载入文本到行文本编辑器缓冲区中，例：leLoad $result `c:\test.txt`
 	"leLoadFile":    70011, // 等同于leLoad
 	"leLoadClip":    70012, // 从剪贴板中载入文本到行文本编辑器缓冲区中，例：leLoadClip $result
-	"leLoadSSH":     70015, // 从SSH连接获取文本文件内容，用法：leLoadSSH 结果变量 服务器名 服务器端口 用户名 密码 远端文件路径
+	"leLoadSSH":     70015, // 从SSH连接获取文本文件内容，用法：leLoadSSH 结果变量 -host=服务器名 -port=服务器端口 -user=用户名 -password=密码 -path=远端文件路径，结果变量不可省略，其他参数省略时将从之前获取内容的SSH连接中获取
 	"leLoadUrl":     70016, // 从网址URL载入文本到行文本编辑器缓冲区中，例：leLoadUrl $result `http://example.com/abc.txt`
 	"leSave":        70017, // 将行文本编辑器缓冲区中内容保存到文件中，例：leSave $result `c:\test.txt`
 	"leSaveFile":    70017, // 等同于leSave
 	"leSaveClip":    70023, // 将行文本编辑器缓冲区中内容保存到剪贴板中，例：leSaveClip $result
-	"leSaveSSH":     70025, // 将编辑缓冲区内容保存到SSH连接中，如果不带参数，将保存在之前获取内容的SSH连接中，用法：leSaveSSH 结果变量 服务器名 服务器端口 用户名 密码 远端文件路径。参数个数可以为0（默认$tmp为结果参数），为1则为结果参数，为5则为省略结果参数而包含服务器名等，为6则是包含结果参数及服务器信息
+	"leSaveSSH":     70025, // 将编辑缓冲区内容保存到SSH连接中，如果不带参数，将从之前获取内容的SSH连接中获取，用法：leSaveSSH 结果变量 -host=服务器名 -port=服务器端口 -user=用户名 -password=密码 -path=远端文件路径。结果参数不可省略
 	"leInsert":      70027, // 行文本编辑器缓冲区中的指定位置前插入指定内容，例：leInsert $result 3 "abc"
 	"leInsertLine":  70027, // 等同于leInsert
 	"leAppend":      70029, // 行文本编辑器缓冲区中的最后追加指定内容，例：leAppendLine $result "abc"
@@ -712,6 +725,8 @@ var InstrNameSet map[string]int = map[string]int{
 	"leSilent":      70071, // 读取或设置行文本编辑器的静默模式（布尔值），不带参数是获取，带参数是设置
 	"leFind":        70081, // 在编辑缓冲区查找包含某字符串（可以是正则表达式）的行
 	"leReplace":     70083, // 在编辑缓冲区查找包含某字符串（可以是正则表达式）的行并替换相关内容
+
+	"leSSHInfo": 70091, // 获取当前行文本编辑器使用的SSH连接的信息
 
 	// end of commands/instructions 指令集末尾
 }
@@ -1505,7 +1520,7 @@ func isOperator(strA string) (bool, string) {
 }
 
 func evalSingle(exprA []interface{}) (resultR interface{}) {
-	// tk.Plvx(exprA[0])
+	// tk.Plvx(exprA)
 	// tk.Plvx(exprA[2])
 	resultR = nil
 
@@ -1822,7 +1837,7 @@ func evalSingle(exprA []interface{}) (resultR interface{}) {
 				resultR = fmt.Errorf("类型不一致：%T -> %T", exprA[0], exprA[1])
 				return
 			}
-		} else if opT == "!=" {
+		} else if opT == "!=" || opT == "<>" {
 			switch nv := exprA[0].(type) {
 			case UndefinedStruct:
 				_, nvvok := exprA[2].(UndefinedStruct)
@@ -1990,7 +2005,7 @@ func (p *XieVM) EvalExpressionNoGroup(strA string, valuesA *map[string]interface
 
 	}
 
-	listT := strings.Split(strA, " ")
+	listT := strings.SplitN(strA, " ", 3)
 
 	// lenT := len(listT)
 
@@ -2009,7 +2024,7 @@ func (p *XieVM) EvalExpressionNoGroup(strA string, valuesA *map[string]interface
 			continue
 		}
 
-		if tk.InStrings(v, "+", "-", "*", "/", "%", "!", "&&", "||", "==", "!=", ">", "<", ">=", "<=", "&", "|", "^", ">>", "<<") {
+		if tk.InStrings(v, "+", "-", "*", "/", "%", "!", "&&", "||", "==", "!=", "<>", ">", "<", ">=", "<=", "&", "|", "^", ">>", "<<") {
 			if stateT == 0 {
 				opT[0] = nil
 				opT[1] = v
@@ -2148,6 +2163,14 @@ func (p *XieVM) EvalExpression(strA string) (resultR interface{}) {
 
 	// }
 
+}
+
+func (p *XieVM) GetSwitchVarValue(argsA []string, switchStrA string, defaultA ...string) string {
+	vT := tk.GetSwitch(argsA, switchStrA, defaultA...)
+
+	vr := p.ParseVar(vT)
+
+	return tk.ToStr(p.GetVarValue(vr))
 }
 
 func (p *XieVM) GetVarValue(vA VarRef) interface{} {
@@ -4949,7 +4972,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 				}
 			}
 		}
-
+		// tk.Plv(instrT)
 		if instrT.ParamLen < 2 {
 			tmpv := p.Pop()
 			condT, ok0 = tmpv.(bool)
@@ -5174,6 +5197,226 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		condExprT := p.GetVarValue(instrT.Params[0]).(string)
 
 		condT = p.EvalExpression(condExprT).(bool)
+
+		v2 = p.GetVarValue(instrT.Params[1])
+
+		s2, sok := v2.(string)
+
+		if !sok {
+			if condT {
+				c2, cok := v2.(int)
+				if cok {
+					return c2
+				} else {
+					return p.ErrStrf("无效的标号：%v", v2)
+				}
+			}
+		} else {
+			if condT {
+				if strings.HasPrefix(s2, "+") {
+					return p.CodePointerM + tk.ToInt(s2[1:])
+				} else if strings.HasPrefix(s2, "-") {
+					return p.CodePointerM - tk.ToInt(s2[1:])
+				} else {
+					labelPointerT, ok := p.LabelsM[p.VarIndexMapM[s2]]
+
+					if ok {
+						return labelPointerT
+					} else {
+						return p.ErrStrf("无效的标号：%v", v2)
+					}
+				}
+			}
+		}
+
+		if elseLabelIntT >= 0 {
+			return elseLabelIntT
+		}
+
+		return ""
+
+	case 641: // ifEmpty
+		if instrT.ParamLen < 2 {
+			return p.ErrStrf("参数不够")
+		}
+
+		var condT bool
+		var v2 interface{}
+
+		var elseLabelIntT int = -1
+
+		if instrT.ParamLen > 2 {
+			elseLabelT := p.GetVarValue(instrT.Params[2])
+
+			s2, sok := elseLabelT.(int)
+
+			if sok {
+				elseLabelIntT = s2
+			} else {
+				st2, stok := elseLabelT.(string)
+
+				if !stok {
+					return p.ErrStrf("无效的标号：%v", elseLabelT)
+				}
+
+				if strings.HasPrefix(st2, "+") {
+					elseLabelIntT = p.CodePointerM + tk.ToInt(st2[1:])
+				} else if strings.HasPrefix(st2, "-") {
+					elseLabelIntT = p.CodePointerM - tk.ToInt(st2[1:])
+				} else {
+					labelPointerT, ok := p.LabelsM[p.VarIndexMapM[st2]]
+
+					if ok {
+						elseLabelIntT = labelPointerT
+					} else {
+						return p.ErrStrf("无效的标号：%v", elseLabelT)
+					}
+				}
+			}
+		}
+
+		v1 := p.GetVarValue(instrT.Params[0])
+
+		if v1 == nil {
+			condT = true
+		} else if v1 == Undefined {
+			condT = true
+		} else {
+			switch nv := v1.(type) {
+			case bool:
+				condT = (nv == false)
+			case string:
+				condT = (nv == "")
+			case byte:
+				condT = (nv <= 0)
+			case int:
+				condT = (nv <= 0)
+			case rune:
+				condT = (nv <= 0)
+			case int64:
+				condT = (nv <= 0)
+			case float64:
+				condT = (nv <= 0)
+			case []byte:
+				condT = (len(nv) < 1)
+			case []int:
+				condT = (len(nv) < 1)
+			case []rune:
+				condT = (len(nv) < 1)
+			case []int64:
+				condT = (len(nv) < 1)
+			case []float64:
+				condT = (len(nv) < 1)
+			case []string:
+				condT = (len(nv) < 1)
+			case []interface{}:
+				condT = (len(nv) < 1)
+			case map[string]string:
+				condT = (len(nv) < 1)
+			case map[string]interface{}:
+				condT = (len(nv) < 1)
+			default:
+				condT = false
+			}
+		}
+
+		v2 = p.GetVarValue(instrT.Params[1])
+
+		s2, sok := v2.(string)
+
+		if !sok {
+			if condT {
+				c2, cok := v2.(int)
+				if cok {
+					return c2
+				} else {
+					return p.ErrStrf("无效的标号：%v", v2)
+				}
+			}
+		} else {
+			if condT {
+				if strings.HasPrefix(s2, "+") {
+					return p.CodePointerM + tk.ToInt(s2[1:])
+				} else if strings.HasPrefix(s2, "-") {
+					return p.CodePointerM - tk.ToInt(s2[1:])
+				} else {
+					labelPointerT, ok := p.LabelsM[p.VarIndexMapM[s2]]
+
+					if ok {
+						return labelPointerT
+					} else {
+						return p.ErrStrf("无效的标号：%v", v2)
+					}
+				}
+			}
+		}
+
+		if elseLabelIntT >= 0 {
+			return elseLabelIntT
+		}
+
+		return ""
+
+	case 651: // ifErrX
+		if instrT.ParamLen < 2 {
+			return p.ErrStrf("参数不够")
+		}
+
+		var condT bool
+		var v2 interface{}
+
+		var elseLabelIntT int = -1
+
+		if instrT.ParamLen > 2 {
+			elseLabelT := p.GetVarValue(instrT.Params[2])
+
+			s2, sok := elseLabelT.(int)
+
+			if sok {
+				elseLabelIntT = s2
+			} else {
+				st2, stok := elseLabelT.(string)
+
+				if !stok {
+					return p.ErrStrf("无效的标号：%v", elseLabelT)
+				}
+
+				if strings.HasPrefix(st2, "+") {
+					elseLabelIntT = p.CodePointerM + tk.ToInt(st2[1:])
+				} else if strings.HasPrefix(st2, "-") {
+					elseLabelIntT = p.CodePointerM - tk.ToInt(st2[1:])
+				} else {
+					labelPointerT, ok := p.LabelsM[p.VarIndexMapM[st2]]
+
+					if ok {
+						elseLabelIntT = labelPointerT
+					} else {
+						return p.ErrStrf("无效的标号：%v", elseLabelT)
+					}
+				}
+			}
+		}
+
+		v1 := p.GetVarValue(instrT.Params[0])
+
+		if v1 == nil {
+			condT = false
+		} else if v1 == Undefined {
+			condT = false
+		} else {
+			switch nv := v1.(type) {
+			case error:
+				if nv == nil {
+					condT = false
+				} else {
+					condT = true
+				}
+			case string:
+				condT = tk.IsErrStr(nv)
+			default:
+				condT = false
+			}
+		}
 
 		v2 = p.GetVarValue(instrT.Params[1])
 
@@ -7205,20 +7448,84 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 		switch nv := v1.(type) {
 		case []interface{}:
+			if (v2 < 0) || (v2 >= len(nv)) {
+				if instrT.ParamLen > 3 {
+					p.SetVarInt(pr, p.GetVarValue(instrT.Params[3]))
+					return ""
+				} else {
+					return p.ErrStrf("索引超出范围：%v/%v", v2, len(nv))
+				}
+			}
 			p.SetVarInt(pr, nv[v2])
 		case []bool:
+			if (v2 < 0) || (v2 >= len(nv)) {
+				if instrT.ParamLen > 3 {
+					p.SetVarInt(pr, p.GetVarValue(instrT.Params[3]))
+					return ""
+				} else {
+					return p.ErrStrf("索引超出范围：%v/%v", v2, len(nv))
+				}
+			}
 			p.SetVarInt(pr, nv[v2])
 		case []int:
+			if (v2 < 0) || (v2 >= len(nv)) {
+				if instrT.ParamLen > 3 {
+					p.SetVarInt(pr, p.GetVarValue(instrT.Params[3]))
+					return ""
+				} else {
+					return p.ErrStrf("索引超出范围：%v/%v", v2, len(nv))
+				}
+			}
 			p.SetVarInt(pr, nv[v2])
 		case []byte:
+			if (v2 < 0) || (v2 >= len(nv)) {
+				if instrT.ParamLen > 3 {
+					p.SetVarInt(pr, p.GetVarValue(instrT.Params[3]))
+					return ""
+				} else {
+					return p.ErrStrf("索引超出范围：%v/%v", v2, len(nv))
+				}
+			}
 			p.SetVarInt(pr, nv[v2])
 		case []rune:
+			if (v2 < 0) || (v2 >= len(nv)) {
+				if instrT.ParamLen > 3 {
+					p.SetVarInt(pr, p.GetVarValue(instrT.Params[3]))
+					return ""
+				} else {
+					return p.ErrStrf("索引超出范围：%v/%v", v2, len(nv))
+				}
+			}
 			p.SetVarInt(pr, nv[v2])
 		case []int64:
+			if (v2 < 0) || (v2 >= len(nv)) {
+				if instrT.ParamLen > 3 {
+					p.SetVarInt(pr, p.GetVarValue(instrT.Params[3]))
+					return ""
+				} else {
+					return p.ErrStrf("索引超出范围：%v/%v", v2, len(nv))
+				}
+			}
 			p.SetVarInt(pr, nv[v2])
 		case []float64:
+			if (v2 < 0) || (v2 >= len(nv)) {
+				if instrT.ParamLen > 3 {
+					p.SetVarInt(pr, p.GetVarValue(instrT.Params[3]))
+					return ""
+				} else {
+					return p.ErrStrf("索引超出范围：%v/%v", v2, len(nv))
+				}
+			}
 			p.SetVarInt(pr, nv[v2])
 		case []string:
+			if (v2 < 0) || (v2 >= len(nv)) {
+				if instrT.ParamLen > 3 {
+					p.SetVarInt(pr, p.GetVarValue(instrT.Params[3]))
+					return ""
+				} else {
+					return p.ErrStrf("索引超出范围：%v/%v", v2, len(nv))
+				}
+			}
 			p.SetVarInt(pr, nv[v2])
 		default:
 			if instrT.ParamLen > 3 {
@@ -8166,6 +8473,9 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			v3 := tk.ToStr(p.GetVarValue(instrT.Params[v1p+2]))
 			v4 := tk.ToStr(p.GetVarValue(instrT.Params[v1p+3]))
 			v5 := tk.ToStr(p.GetVarValue(instrT.Params[v1p+4]))
+			if strings.HasPrefix(v5, "740404") {
+				v5 = tk.DecryptStringByTXDEF(v5)
+			}
 
 			sshT, errT := tk.NewSSHClient(v2, v3, v4, v5)
 
@@ -8445,6 +8755,61 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 			p.SetVarInt(pr, rs)
 
+			return ""
+		case *http.Request:
+			switch v2 {
+			case "saveFormFile":
+				if instrT.ParamLen < 6 {
+					return p.ErrStrf("参数不够")
+				}
+
+				v1p := 2
+
+				v2 := tk.ToStr(p.GetVarValue(instrT.Params[v1p+1]))
+				v3 := tk.ToStr(p.GetVarValue(instrT.Params[v1p+2]))
+				v4 := tk.ToStr(p.GetVarValue(instrT.Params[v1p+3]))
+
+				argsT := p.ParamsToStrs(instrT, v1p+4)
+
+				formFile1, headerT, errT := nv.FormFile(v2)
+				if errT != nil {
+					p.SetVarInt(pr, fmt.Sprintf("获取上传文件失败：%v", errT))
+					return ""
+				}
+
+				defer formFile1.Close()
+				tk.Pl("file name : %#v", headerT.Filename)
+
+				defaultExtT := p.GetSwitchVarValue(argsT, "-defaultExt=", "")
+
+				baseT := tk.RemoveFileExt(filepath.Base(headerT.Filename))
+				extT := filepath.Ext(headerT.Filename)
+
+				if extT == "" {
+					extT = defaultExtT
+				}
+
+				v4 = strings.Replace(v4, "TX_fileName_XT", baseT, -1)
+				v4 = strings.Replace(v4, "TX_fileExt_XT", extT, -1)
+
+				destFile1, errT := os.CreateTemp(v3, v4) //"pic*.png")
+				if errT != nil {
+					p.SetVarInt(pr, fmt.Sprintf("保存上传文件失败：%v", errT))
+					return ""
+				}
+
+				defer destFile1.Close()
+
+				_, errT = io.Copy(destFile1, formFile1)
+				if errT != nil {
+					p.SetVarInt(pr, fmt.Sprintf("服务器内部错误：%v", errT))
+					return ""
+				}
+
+				p.SetVarInt(pr, tk.GetLastComponentOfFilePath(destFile1.Name()))
+				return ""
+
+			}
 			return ""
 		}
 
@@ -9388,7 +9753,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		return p.ErrStrf("参数类型错误")
 
 	case 10002: // getSwitch
-		if instrT.ParamLen < 2 {
+		if instrT.ParamLen < 3 {
 			return p.ErrStrf("参数不够")
 		}
 
@@ -10221,6 +10586,23 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		p.SetVarInt(pr, false)
 
 		return ""
+	case 10945: // checkErrX
+		if instrT.ParamLen < 1 {
+			if tk.IsErrX(p.TmpM) {
+				return p.ErrStrf(tk.GetErrStrX(p.TmpM))
+			}
+
+			return ""
+			// return p.ErrStrf("参数不够")
+		}
+
+		v1 := p.GetVarValue(instrT.Params[0])
+
+		if tk.IsErrX(v1) {
+			return p.ErrStrf(tk.GetErrStrX(v1))
+		}
+
+		return ""
 	case 20110: // writeResp
 		if instrT.ParamLen < 2 {
 			return p.ErrStrf("参数不够")
@@ -10302,6 +10684,23 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 		return ""
 
+	case 20116: // serveFile
+		if instrT.ParamLen < 3 {
+			return p.ErrStrf("参数不够：%v", instrT.ParamLen)
+		}
+
+		// pr := instrT.Params[0].Ref
+
+		v2 := p.GetVarValue(instrT.Params[0]).(http.ResponseWriter)
+
+		v3 := p.GetVarValue(instrT.Params[1]).(*http.Request)
+
+		v4 := tk.ToStr(p.GetVarValue(instrT.Params[2]))
+
+		http.ServeFile(v2, v3, v4)
+
+		return ""
+
 	case 20121: // newMux
 		p1 := -5
 
@@ -10340,6 +10739,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 			if req != nil {
 				req.ParseForm()
+				req.ParseMultipartForm(1000000000000)
 			}
 
 			var paraMapT map[string]string
@@ -11406,6 +11806,32 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 		return ""
 
+	case 21915: // extractPathRel
+		if instrT.ParamLen < 2 {
+			return p.ErrStrf("参数不够")
+		}
+
+		pr := -5
+		v1p := 0
+
+		if instrT.ParamLen > 0 {
+			pr = instrT.Params[0].Ref
+			v1p = 1
+		}
+
+		v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
+		v2 := tk.ToStr(p.GetVarValue(instrT.Params[v1p+1]))
+
+		rsT, errT := filepath.Rel(v2, v1)
+
+		if errT != nil {
+			p.SetVarInt(pr, errT)
+			return ""
+		}
+
+		p.SetVarInt(pr, rsT)
+		return ""
+
 	case 21921: // ensureMakeDirs
 		if instrT.ParamLen < 1 {
 			return p.ErrStrf("参数不够")
@@ -11817,6 +12243,36 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 		return ""
 
+	case 24801: // toUtf8/toUTF8
+		if instrT.ParamLen < 1 {
+			return p.ErrStrf("参数不够")
+		}
+
+		pr := instrT.Params[0].Ref
+		v1p := 1
+
+		v1 := p.GetVarValue(instrT.Params[v1p])
+		var v2 string = ""
+
+		if instrT.ParamLen > 2 {
+			v2 = tk.ToStr(p.GetVarValue(instrT.Params[v1p+1]))
+		}
+
+		var rs interface{}
+
+		switch nv := v1.(type) {
+		case string:
+			rs = tk.ConvertStringToUTF8(nv, v2)
+		case []byte:
+			rs = tk.ConvertToUTF8(nv, v2)
+		default:
+			return p.ErrStrf("参数类型错误：%T", v1)
+		}
+
+		p.SetVarInt(pr, rs)
+
+		return ""
+
 	case 25101: // encryptText
 		if instrT.ParamLen < 1 {
 			return p.ErrStrf("参数不够")
@@ -12198,19 +12654,27 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			return p.ErrStrf("参数不够")
 		}
 
-		pr := -5
-		v1p := 0
+		pr := instrT.Params[0].Ref
+		v1p := 1
 
-		if instrT.ParamLen > 5 {
-			pr = instrT.Params[0].Ref
-			v1p = 1
+		pa := p.ParamsToStrs(instrT, v1p)
+
+		var v1, v2, v3, v4, v5 string
+
+		v1 = tk.SafelyGetStringForKeyWithDefault(leSSHInfoG, "Host")
+		v2 = tk.SafelyGetStringForKeyWithDefault(leSSHInfoG, "Port")
+		v3 = tk.SafelyGetStringForKeyWithDefault(leSSHInfoG, "User")
+		v4 = tk.SafelyGetStringForKeyWithDefault(leSSHInfoG, "Password")
+		v5 = tk.SafelyGetStringForKeyWithDefault(leSSHInfoG, "Path")
+
+		v1 = p.GetSwitchVarValue(pa, "-host=", v1)     // tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
+		v2 = p.GetSwitchVarValue(pa, "-port=", v2)     // tk.ToStr(p.GetVarValue(instrT.Params[v1p+1]))
+		v3 = p.GetSwitchVarValue(pa, "-user=", v3)     // tk.ToStr(p.GetVarValue(instrT.Params[v1p+2]))
+		v4 = p.GetSwitchVarValue(pa, "-password=", v4) // tk.ToStr(p.GetVarValue(instrT.Params[v1p+3]))
+		if strings.HasPrefix(v4, "740404") {
+			v4 = tk.DecryptStringByTXDEF(v4)
 		}
-
-		v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
-		v2 := tk.ToStr(p.GetVarValue(instrT.Params[v1p+1]))
-		v3 := tk.ToStr(p.GetVarValue(instrT.Params[v1p+2]))
-		v4 := tk.ToStr(p.GetVarValue(instrT.Params[v1p+3]))
-		v5 := tk.ToStr(p.GetVarValue(instrT.Params[v1p+4]))
+		v5 = p.GetSwitchVarValue(pa, "-path=", v5) // tk.ToStr(p.GetVarValue(instrT.Params[v1p+4]))
 
 		sshT, errT := tk.NewSSHClient(v1, v2, v3, v4)
 
@@ -12305,33 +12769,33 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 		return ""
 	case 70025: // leSaveSSH
-		if instrT.ParamLen != 0 && instrT.ParamLen != 1 && instrT.ParamLen != 5 && instrT.ParamLen != 6 {
+		if instrT.ParamLen < 1 {
 			return p.ErrStrf("参数不够")
 		}
 
-		pr := -5
-		v1p := 0
+		pr := instrT.Params[0].Ref
+		v1p := 1
 
-		if instrT.ParamLen == 1 || instrT.ParamLen == 6 {
-			pr = instrT.Params[0].Ref
-			v1p = 1
-		}
+		pa := p.ParamsToStrs(instrT, v1p)
 
 		var v1, v2, v3, v4, v5 string
 
-		if instrT.ParamLen < 2 {
-			v1 = tk.SafelyGetStringForKeyWithDefault(leSSHInfoG, "Host")
-			v2 = tk.SafelyGetStringForKeyWithDefault(leSSHInfoG, "Port")
-			v3 = tk.SafelyGetStringForKeyWithDefault(leSSHInfoG, "User")
-			v4 = tk.SafelyGetStringForKeyWithDefault(leSSHInfoG, "Password")
-			v5 = tk.SafelyGetStringForKeyWithDefault(leSSHInfoG, "Path")
-		} else {
-			v1 = tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
-			v2 = tk.ToStr(p.GetVarValue(instrT.Params[v1p+1]))
-			v3 = tk.ToStr(p.GetVarValue(instrT.Params[v1p+2]))
-			v4 = tk.ToStr(p.GetVarValue(instrT.Params[v1p+3]))
-			v5 = tk.ToStr(p.GetVarValue(instrT.Params[v1p+4]))
+		v1 = tk.SafelyGetStringForKeyWithDefault(leSSHInfoG, "Host")
+		v2 = tk.SafelyGetStringForKeyWithDefault(leSSHInfoG, "Port")
+		v3 = tk.SafelyGetStringForKeyWithDefault(leSSHInfoG, "User")
+		v4 = tk.SafelyGetStringForKeyWithDefault(leSSHInfoG, "Password")
+		v5 = tk.SafelyGetStringForKeyWithDefault(leSSHInfoG, "Path")
+
+		v1 = p.GetSwitchVarValue(pa, "-host=", v1)     // tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
+		v2 = p.GetSwitchVarValue(pa, "-port=", v2)     // tk.ToStr(p.GetVarValue(instrT.Params[v1p+1]))
+		v3 = p.GetSwitchVarValue(pa, "-user=", v3)     // tk.ToStr(p.GetVarValue(instrT.Params[v1p+2]))
+		v4 = p.GetSwitchVarValue(pa, "-password=", v4) // tk.ToStr(p.GetVarValue(instrT.Params[v1p+3]))
+		if strings.HasPrefix(v4, "740404") {
+			v4 = tk.DecryptStringByTXDEF(v4)
 		}
+		v5 = p.GetSwitchVarValue(pa, "-path=", v5) // tk.ToStr(p.GetVarValue(instrT.Params[v1p+4]))
+
+		// tk.Plvsr(v1, v2, v3, v4, v5)
 
 		sshT, errT := tk.NewSSHClient(v1, v2, v3, v4)
 
@@ -12365,7 +12829,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			return ""
 		}
 
-		errT = sshT.Upload(tmpFileT, v5)
+		errT = sshT.Upload(tmpFileT, v5, pa...)
 
 		if errT != nil {
 			p.SetVarInt(pr, errT)
@@ -12722,6 +13186,23 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		}
 
 		p.SetVarInt(pr, rs)
+
+		return ""
+
+	case 70091: // leSSHInfo/leSshInfo
+		pr := -5
+		// v1p := 0
+
+		if instrT.ParamLen > 0 {
+			pr = instrT.Params[0].Ref
+			// v1p = 1
+		}
+
+		p.SetVarInt(pr, leSSHInfoG)
+
+		if !leSilentG {
+			tk.Pl("leSSHInfo: %v", leSSHInfoG)
+		}
 
 		return ""
 

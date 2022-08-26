@@ -4304,6 +4304,7 @@ xie -compile hello.xie -output=hello.exe
 - [三元操作符 ?](http://xie.topget.org/xc/c/xielang/example/operator3.xie)
 - [MD5编码](http://xie.topget.org/xc/c/xielang/example/md5.xie)
 - [命令行获取用户输入及密码输入](http://xie.topget.org/xc/c/xielang/example/input.xie)
+- [复制目录结构](http://xie.topget.org/xc/c/xielang/example/genFakeDirs.xie)
 - [字节列表/数组的操作与16进制编解码](http://xie.topget.org/xc/c/xielang/example/hex.xie)
 - [按二进制位计算](http://xie.topget.org/xc/c/xielang/example/bitwise.xie)
 - [数据库操作（SQLite3为例）](http://xie.topget.org/xc/c/xielang/example/sqlite.xie)

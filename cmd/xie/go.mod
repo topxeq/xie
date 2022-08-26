@@ -11,9 +11,6 @@ require (
 	github.com/topxeq/dlgs v0.0.0-20220223083937-4d3036aff547
 	github.com/topxeq/go-sciter v0.0.0-20211221081058-795e1f32ae3d
 	github.com/topxeq/tk v1.0.1
-)
-
-require (
 	github.com/aarzilli/sandblast v0.0.0-20151220083925-43f8fb998d06 // indirect
 	github.com/alecthomas/chroma v0.10.0 // indirect
 	github.com/andybalholm/brotli v1.0.4 // indirect
@@ -52,7 +49,7 @@ require (
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/ssor/bom v0.0.0-20170718123548-6386211fdfcf // indirect
 	github.com/topxeq/gods v0.0.0-20220125023913-b5718bb0c704 // indirect
-	github.com/topxeq/goph v0.0.0-20211220083015-7bb0167a87df // indirect
+	github.com/topxeq/goph v0.0.0 // indirect
 	github.com/topxeq/mahonia v0.0.0-20190828060648-12b0599ddd1a // indirect
 	github.com/topxeq/regexpx v0.0.0-20200814082553-4bffc7d07029 // indirect
 	github.com/topxeq/socks v0.0.0-20200812112322-24acb126b5f3 // indirect
@@ -73,5 +70,6 @@ require (
 )
 
 replace github.com/topxeq/tk v1.0.1 => ../../../../../github.com/topxeq/tk
+replace github.com/topxeq/goph v0.0.0 => ../../../../../github.com/topxeq/goph
 
 replace gitee.com/topxeq/xie v0.0.0 => ../..
