@@ -4,8 +4,10 @@ newMux $muxT
 // 设置处理路由“/static/”后的URL为静态资源服务
 // 第3个参数是对应的本地文件路径
 // 例如：访问 http://127.0.0.1:8080/static/basic.xie
-// 而当前目录是c:\tmp，那么实际上将获得c:\scripts\basic.xie
+// 而当前目录是c:\tmp，那么实际上将获得c:\tmp\scripts\basic.xie
 setMuxStaticDir $muxT "/static/" "./scripts" 
+
+setMuxStaticDir $muxT "/" "." 
 
 pln 启动服务器……
 

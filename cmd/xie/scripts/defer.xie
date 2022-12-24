@@ -1,0 +1,19 @@
+defer pl "main defer: %v" test1
+
+defer pl "main defer: %v" test2
+
+pln 1
+
+call :func1
+
+pln func1 return
+
+exit
+
+:func1
+    defer pl "sub defer: %v" test1
+
+    pln sub1
+
+    ret
+

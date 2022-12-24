@@ -1,0 +1,34 @@
+archiveFilesToZip $r1 `d:\tmpx\t3.zip` `d:\tmpx\test.txt` -overwrite
+
+pl "archive result: %v" $r1
+
+extractFilesFromZip $r2 `d:\tmpx\t3.zip` `d:\tmpx\t3unzip`
+
+pl "unarchive result: %v" $r2
+
+# new $z zip
+
+# plos $z
+
+# plv *z
+
+# mbSet $r $z OverwriteExisting #btrue
+
+# plv *z
+
+# # exit
+
+# createFile $f `d:\tmpx\t3.zip` -return
+
+# ifErrX $f +1 :next1
+#     fatalf `failed to create file: %v` $f
+
+# :next1
+
+# mt $r1 $f Name
+
+# plo $r1
+
+# closeFile $r $f
+
+# pln close: $r

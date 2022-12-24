@@ -1,0 +1,16 @@
+// 截取屏幕，编码为PNG格式图片数据，然后直接以二进制形式保存为图片文件
+
+captureScreen $imgT 100 100 640 480
+
+new $bufT bytesBuf
+
+pngEncode $errT $bufT $imgT
+
+plvsr $bufT $errT
+
+saveBytes $errT $bufT `c:\c.png`
+
+ifErr $errT +1 +2
+    fatalf `failed to save png file: %v` $errT
+
+pln "successfully capture the screen area, file saved to c:\\c.png"

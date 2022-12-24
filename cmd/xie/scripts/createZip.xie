@@ -1,0 +1,33 @@
+getSwitch $zipFileT $argsG -zip= ""
+
+ifEmpty $zipFileT +1 :next1a
+    fatalf "empty dest zip file path"
+
+:next1a
+getSwitch $rs $argsG -files= ""
+
+pl rs=%v $rs
+
+ifEmpty $rs +1 :next1
+    fatalf "empty files"
+
+:next1
+pl rs=%v $rs
+fromJSON $aryT $rs
+
+ifErrX $aryT +1 :next2
+    fatalf "invalid files: %v" $aryT
+
+:next2
+
+switchExists $overwriteT $argsG -overwrite
+
+if $overwriteT +1 +3
+    archiveFilesToZip $r1 $zipFileT $aryT -overwrite
+    goto :next3
+    archiveFilesToZip $r1 $zipFileT $aryT
+
+:next3
+
+
+pl "archive result: %v" $r1

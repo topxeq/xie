@@ -1,18 +1,28 @@
-// -build nogui
+//go:build !linux
+// +build !linux
+
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 
 	"github.com/topxeq/dlgs"
-	"github.com/topxeq/go-sciter"
-	"github.com/topxeq/go-sciter/window"
+	"github.com/topxeq/xie"
+
+	// "github.com/topxeq/go-sciter"
+	// "github.com/topxeq/go-sciter/window"
+	"github.com/sciter-sdk/go-sciter"
+	"github.com/sciter-sdk/go-sciter/window"
 	"github.com/topxeq/tk"
+
+	"github.com/kbinani/screenshot"
 )
 
-func guiHandler(actionA string, dataA interface{}, paramsA ...interface{}) interface{} {
+func guiHandler(actionA string, objA interface{}, dataA interface{}, paramsA ...interface{}) interface{} {
 	switch actionA {
 	case "init":
 		rs := initGUI()
@@ -37,11 +47,46 @@ func guiHandler(actionA string, dataA interface{}, paramsA ...interface{}) inter
 			return fmt.Errorf("参数不够")
 		}
 		return getConfirmGUI(tk.ToStr(paramsA[0]), tk.ToStr(paramsA[1]), paramsA[2:]...)
+	case "getActiveDisplayCount":
+		return screenshot.NumActiveDisplays()
+	case "getScreenResolution":
+		var paraArgsT []string = []string{}
 
+		for i := 0; i < len(paramsA); i++ {
+			paraArgsT = append(paraArgsT, tk.ToStr(paramsA[i]))
+		}
+
+		pT := objA.(*xie.XieVM)
+
+		formatT := pT.GetSwitchVarValue(paraArgsT, "-format=", "")
+
+		idxStrT := pT.GetSwitchVarValue(paraArgsT, "-index=", "0")
+
+		idxT := tk.StrToInt(idxStrT, 0)
+
+		rectT := screenshot.GetDisplayBounds(idxT)
+
+		if formatT == "" {
+			return []interface{}{rectT.Max.X, rectT.Max.Y}
+		} else if formatT == "raw" || formatT == "rect" {
+			return rectT
+		} else if formatT == "json" {
+			return tk.ToJSONX(rectT, "-sort")
+		}
+
+		return []interface{}{rectT.Max.X, rectT.Max.Y}
 	case "newWindow":
-		if len(paramsA) < 2 {
+		if len(paramsA) < 3 {
 			return fmt.Errorf("参数不够")
 		}
+
+		var paraArgsT []string = []string{}
+
+		for i := 3; i < len(paramsA); i++ {
+			paraArgsT = append(paraArgsT, tk.ToStr(paramsA[i]))
+		}
+
+		fromFileT := tk.IfSwitchExistsWhole(paraArgsT, "-fromFile")
 
 		titleT := tk.ToStr(paramsA[0])
 
@@ -91,11 +136,34 @@ func guiHandler(actionA string, dataA interface{}, paramsA ...interface{}) inter
 
 		htmlT := tk.ToStr(paramsA[2])
 
-		w.LoadHtml(htmlT, "")
+		baseUrlT := tk.GetSwitch(paraArgsT, "-baseUrl=", "")
+
+		tk.Pln(fromFileT, htmlT, baseUrlT, tk.PathToURI("."))
+
+		if fromFileT {
+			htmlNewT, errT := filepath.Abs(htmlT)
+			if errT == nil {
+				htmlT = htmlNewT
+			}
+
+			errT = w.LoadFile(htmlT)
+
+			if tk.IsErrX(errT) {
+				return fmt.Errorf("从文件（%v）创建窗口失败：%v", htmlT, errT)
+			}
+		} else {
+			htmlT := tk.ToStr(paramsA[2])
+
+			if baseUrlT == "." {
+				baseUrlT = tk.PathToURI(".") + "/basic.html"
+			}
+
+			w.LoadHtml(htmlT, baseUrlT)
+		}
 
 		var handlerT tk.TXDelegate
 
-		handlerT = func(actionA string, dataA interface{}, paramsA ...interface{}) interface{} {
+		handlerT = func(actionA string, objA interface{}, dataA interface{}, paramsA ...interface{}) interface{} {
 			switch actionA {
 			case "show":
 				w.Show()
@@ -105,8 +173,8 @@ func guiHandler(actionA string, dataA interface{}, paramsA ...interface{}) inter
 				var deleT tk.QuickDelegate = paramsA[0].(tk.QuickDelegate)
 
 				w.DefineFunction("delegateDo", func(args ...*sciter.Value) *sciter.Value {
-					// args是TIScript中调用setResult函数时传入的参数
-					// 可以是多个，Gox中按位置索引进行访问
+					// args是SciterJS中调用谢语言函数时传入的参数
+					// 可以是多个，谢语言中按位置索引进行访问
 					strT := args[0].String()
 
 					rsT := deleT(strT)
@@ -117,12 +185,19 @@ func guiHandler(actionA string, dataA interface{}, paramsA ...interface{}) inter
 
 				return nil
 			case "call":
-				if len(paramsA) < 1 {
+				len1T := len(paramsA)
+				if len1T < 1 {
 					return fmt.Errorf("参数不够")
 				}
 
-				if len(paramsA) > 1 {
-					rsT, errT := w.Call(tk.ToStr(paramsA[0]), sciter.NewValue(tk.ToStr(paramsA[1])))
+				if len1T > 1 {
+					aryT := make([]*sciter.Value, 0, 10)
+
+					for i := 1; i < len1T; i++ {
+						aryT = append(aryT, sciter.NewValue(paramsA[i]))
+					}
+
+					rsT, errT := w.Call(tk.ToStr(paramsA[0]), aryT...)
 
 					if errT != nil {
 						return fmt.Errorf("调用方法时发生错误：%v", errT)
@@ -167,18 +242,28 @@ func initGUI() error {
 	} else {
 		_, errT := exec.LookPath("sciter.dll")
 
-		if errT != nil {
-			tk.Pl("Initialzing GUI environment...")
-			rs := tk.DownloadFile("http://xie.topget.org/pub/sciter.dll", applicationPathT, "sciter.dll")
+		// tk.Pln("LookPath", errT)
 
-			if tk.IsErrorString(rs) {
-				return fmt.Errorf("Failed to initialze GUI environment.")
+		if errors.Is(errT, exec.ErrDot) {
+			errT = nil
+		}
+
+		if errT != nil {
+			if tk.IfFileExists("sciter.dll") || tk.IfFileExists(filepath.Join(applicationPathT, "sciter.dll")) {
+
+			} else {
+				tk.Pl("初始化WEB图形界面环境……")
+				rs := tk.DownloadFile("http://xie.topget.org/pub/sciter.dll", applicationPathT, "sciter.dll")
+
+				if tk.IsErrorString(rs) {
+					return fmt.Errorf("初始化图形界面编程环境失败")
+				}
 			}
 		}
 	}
 
 	// dialog.Do_init()
-	window.Do_init()
+	// window.Do_init()
 
 	return nil
 }

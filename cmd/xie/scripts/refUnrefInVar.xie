@@ -1,0 +1,17 @@
+new $a int
+
+assignRef $a 7
+
+plo $a
+
+plo *a
+
+var $b int #i8
+
+plo &b
+
+= $c &b
+
+plo $c
+
+plo *c

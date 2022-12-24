@@ -1,0 +1,290 @@
+// 本例是谢语言利用嵌入式浏览器进行图形界面编程的例子
+// 基本原理是：利用谢语言启动一个“命令服务器”
+// 使用约定好的协议来接收图形界面（也即是嵌入式浏览器xiewbr.exe）发送的请求
+// 并作出相应的动作，然后返回一定的返回值
+// 嵌入式浏览器支持通过命令行参数指定两者之间通讯的端口、图形窗口的大小及是否最大化等状态
+// 因此可以在谢语言启动命令服务器后启动该浏览器
+// 从而实现完整的图形界面功能
+// 注意本方式只适用于Windows系统，一般需要Windows 10以上
+// Windows 10以上一般支持IE11控件，能够较好地支持常见的HTML/CSS/JavaScript混合编程
+// 大部分界面通过HTML/CSS/JavaScript实现，一部分业务逻辑也可以通过JavaScript实现，实现不了的则通过网络通讯通过谢语言代码实现
+// 命令服务器同时可以支持静态文件和其他复杂的路由请求，可以用于支持外挂js脚本等场景
+
+// 初始化Web图形界面环境
+// 如果谢语言主程序目录下不存在xiewbr.exe
+// 将从官网下载该程序用于支持Web图形界面功能
+initWebGuiW
+
+// 获取一个随机的可用端口用于命令服务器与图形界面通信
+getRandomPort $portT
+
+// 新建一个路由处理器用于处理图形界面发往命令服务器的请求
+newMux $muxT
+
+// 变量text1中保存了用于主页面展示的脚本，由于反引号不能嵌套
+// 因此此时暂用~~~代替反引号，后面需要用strReplace指令将其替换回来
+= $text1 `
+setRespHeader $responseG "Content-Type" "text/html; charset=utf-8"
+writeRespHeader $responseG 200
+
+writeResp $responseG ~~~
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<script src="/statics?file=js/jquery.min.js"></script>
+<script src="/statics/js/polyfill.min.js"></script>
+<script src="/statics/js/fetch.umd.js"></script>
+<script src="/statics/js/test.js"></script>
+<link rel="stylesheet" href="/statics/css/notie.min.css">
+<script src="/statics/js/notie.min.js"></script>
+<title></title>
+<script>
+	window.onload = function() {
+		external.showInfo("信息提示", "页面已加载完毕");
+	}
+
+	function test() {
+		$.ajax({
+			url: "/api",
+			dataType: 'json',
+			type: 'POST',
+			data: { 
+				req: "test", 
+				name: 'Tom'
+			},
+			success: function (data) {
+				if (data.Status == 'success') {
+					external.showInfo("请求执行成功", data.Value);
+				} else {
+					external.showError("请求执行失败", data.Value);
+				}
+			},
+			error: function (response) {
+				external.showError("请求失败", JSON.stringify(response));
+			}
+		});
+	}
+
+	function test2() {
+		external.showInfo("长度", len([1,"a", true]));
+	}
+
+	function test3() {
+		notie.input({
+			text: '请任意输入一个密码',
+			submitText: '确认',
+			cancelText: '取消',
+			cancelCallback: function (value) {
+				notie.alert({ type: 3, text: '点击了取消' });
+			},
+			submitCallback: function (value) {
+				$.ajax({
+					url: "/api",
+					dataType: 'json',
+					type: 'POST',
+					data: { 
+						req: "test", 
+						name: value
+					},
+					success: function (data) {
+						if (data.Status == 'success') {
+							notie.alert({ type: 1, text: '请求执行成功：' + data.Value })
+						} else {
+							notie.alert({ type: 3, text: '请求执行失败：' + data.Value })
+						}
+
+					},
+					error: function (response) {
+						notie.alert({ type: 3, text: JSON.stringify(response)});
+					}
+				});
+
+			},
+			value: '',
+			type: 'password',
+			placeholder: ''
+		})
+
+	}
+
+	function getRandomStr() {
+		var c = document.getElementById('countID').value;
+
+		$.ajax({
+			url: "/api",
+			dataType: 'json',
+			type: 'POST',
+			data: { 
+				req: "getRandomStr", 
+				count: c
+			},
+			success: function (data) {
+				if (data.Status == 'success') {
+					external.showInfo("请求执行成功", data.Value);
+				} else {
+					external.showError("请求执行失败", data.Value);
+				}
+			},
+			error: function (response) {
+				external.showError("请求失败", JSON.stringify(response));
+			}
+		});
+	}
+
+	function getBrowserInfoClick() {
+		var UserAgent = navigator.userAgent.toLowerCase();
+		external.showInfo("浏览器信息", JSON.stringify({"UserAgent": UserAgent, "Version": external.getBrowserVersion()}))
+	}
+</script>
+</head>
+<body>
+<div id="div1">
+	<button onclick="javascript:test();">test</button>
+	&nbsp;
+	<button onclick="javascript:test2();">test2</button>
+	&nbsp;
+	<button onclick="javascript:test3();">test3</button>
+</div>
+
+<div id="div2" style="margin-top: 3.0em;">
+	<input id="countID" type="text" value="" placeholder="请输入字符串位数">
+	<button onclick="javascript:getRandomStr();">生成随机字符串</button>
+	<button onclick="javascript:getBrowserInfoClick();">浏览器信息</button>
+</div>
+</body>
+</html>
+~~~
+
+assign $outG  "TX_END_RESPONSE_XT"
+
+`
+
+// 将~~~替换为反引号
+strReplace $text1 $text1 ~~~ $backQuoteG
+
+// 设置根路径（也就是图形界面的主页面）的处理脚本为变量text1中定义的字符串
+// 参数123暂时用不到，是随便填写的
+setMuxHandler $muxT "/" #i123 $text1
+
+// 设置路径/statics的处理，默认是返回1.x版本的jquery.min.js
+// 以便于一般的JQuery引用，避免从互联网现引入JQuery库
+setMuxHandler $muxT "/statics/" 0 `
+
+pln $paraMapG
+
+pln $reqNameG
+
+getMapItem $fileT $paraMapG file ""
+
+ifEmpty $fileT +1 :next1
+	strSplit $listT $reqNameG "/statics/"
+	len $lenT $listT 
+	dec $lenT
+	getArrayItem $fileT $listT $lenT ""
+
+:next1
+pln file: $fileT
+getResource $fcT $fileT
+
+getMimeType $mimeTypeT $fileT
+spr $mimeTypeT "%v; charset=utf-8" $mimeTypeT
+
+setRespHeader $responseG "Content-Type" $mimeTypeT
+writeRespHeader $responseG 200
+
+writeResp $responseG $fcT
+
+assign $outG  "TX_END_RESPONSE_XT"
+
+`
+
+// 设置处理路由“/api”的处理函数（变量text2中的代码）
+// 第4个参数是字符串类型的处理函数代码
+// 将以新的虚拟机运行
+// 虚拟机内将默认有4个全局变量：
+// requestG 表示http请求对象
+// responseG 表示http响应对象
+// paraMapG 表示http请求传入的query参数或post参数
+// inputG 是调用setMuxHandler指令传入的第3个参数的值
+
+= $text2 `
+
+// 输出参考信息
+pln "/api" $paraMapG
+
+getMapItem $reqT $paraMapG "req" ""
+
+// 拼装输出的信息字符串
+// spr类似于其他语言中的sprintf函数
+spr $strT "[%v] 请求名: %v，请求参数： %v，inputG：%v" ?(?nowStr) $reqT $paraMapG $inputG
+
+// 设置输出的http响应头中的键值对
+setRespHeader $responseG "Content-Type" "text/json; charset=utf-8"
+
+// 设置输出http响应的状态值为200（表示成功，即HTTP_OK）
+writeRespHeader $responseG 200
+
+// 准备一个映射对象用于拼装返回结果的JSON字符串
+var $resMapT map
+
+setMapItem $resMapT "Status" "success"
+setMapItem $resMapT "Value" $strT
+
+// 如果请求中参数req为getRandomStr
+// 将调用谢语言中的getRandomStr指令生成一个随机字符串
+// 随机字符串的长度由count参数指定，默认是8
+== $cond1 $reqT getRandomStr
+
+getMapItem $countT $paraMapG "count" "8"
+
+strTrim $countT $countT
+
+pln count: $countT
+
+ifEmpty $countT +1 +2
+	= $countT "8"
+
+// 反引号都暂时要用三个波浪号替代
+if $cond1 +1 +3
+	getRandomStr $strT ?~~~(?spr $tmp -min=%v $countT)~~~ ?~~~(?spr $tmp -max=%v $countT)~~~
+	setMapItem $resMapT "Value" $strT
+
+// 转换为JSON
+toJson $jsonStrT $resMapT
+
+// 写http响应内容，即前面拼装并转换的变量jsonStrT中的JSON字符串
+writeResp $responseG $jsonStrT
+
+// 设置函数返回值为TX_END_RESPONSE_XT
+// 此时响应将中止输出，否则将会把该返回值输出到响应中
+assign $outG  "TX_END_RESPONSE_XT"
+
+`
+
+strReplace $text2 $text2 ~~~ $backQuoteG
+
+setMuxHandler $muxT "/api" #i123 $text2
+
+pl 启动服务器（端口：%v）…… $portT
+
+// 在变量portT指定的端口上启动http服务器
+// 指定路由处理器为muxT
+// 结果放入变量resultT中
+// 由于加上-go参数，将以线程方式启动该服务器
+startHttpServer $resultT $portT $muxT -go
+
+// 获取谢语言主程序所在的目录
+getAppDir $appDirT
+
+// 拼装嵌入式浏览器的路径
+joinPath $xiePathT $appDirT "xiewbr.exe"
+
+// 调用嵌入式浏览器xiewbr，并等待其执行结束后退出
+// xiewbr可使用-url参数指定访问的URL
+// 用-title参数指定窗口标题
+systemCmd $rs $xiePathT ?`(?spr $tmp "-url=http://127.0.0.1:%v" $portT)` "-title=测试Web界面"
+
+

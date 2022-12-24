@@ -1,0 +1,35 @@
+// 本例使用随机落点法来计算Pi（π）值
+// 该算法的说明可参看[这里](https://www.jianshu.com/p/11c4b7dfdd62)
+
+// 初始化随机数种子
+randomize
+
+// 将计数器变量inCircleCount赋为整数0
+= $inCircleCount 0
+
+// 将循环数量count设置为10000
+= $count 10000
+
+// 循环10000次来计算Pi
+// 对于整数，将从第一个参数开始每次加1进行循环，直至大于等于第二个数字
+// 因为本例是从0循环到9999，即循环10000次
+range #i0 $count :range1
+
+// 循环完毕后，根据公式计算出Pi值
+eval $pi `#f4.0 * (?convert $inCircleCount float) / (?convert $count float)`
+
+pl `Pi=%v` $pi
+
+exit
+
+// 循环体代码
+// 每次循环产生一个随机坐标（x,y）
+// 如果该坐标落在圆内，则将计数器inCircleCount加1
+:range1
+    getRandomFloat $x
+    getRandomFloat $y
+
+    ifEval `(($x * $x) + ($y * $y)) < #f1.0` +1 +2
+        inc $inCircleCount
+
+    continue

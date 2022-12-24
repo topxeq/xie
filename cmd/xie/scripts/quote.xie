@@ -2,13 +2,21 @@ assign $u `M\u00fcn\tTAB\nchen \u0096 \r\n\"c:\\test.txt\"`
 
 plv $u
 
-unquote $u
+unquote $u1 $u
 
-pln $peek
+pln $u1
 
-quote
+quote $q1 $u1
 
 // debug
 
-pln $pop
+pln $q1
+
+= $s1 `abc 12\n3 "大家好"`
+
+pln s1= $s1
+
+= $pln @`"恢复\n很\t快"`
+
+= $pln "abc 12\n3 \u0022大家好\u0022"
 

@@ -1,0 +1,20 @@
+getInput $text1 "请输入要加密的字符串：" 
+
+pl "原字符串为 %v" $text1
+
+// encryptText指令用同样的密钥，结果一般是不一样的，但都可以解码还原回原有内容
+encryptText $enc1 $text1 "请替换为自己的密钥字符串"
+
+pl "第一次加密后的字符串为 %v" $enc1
+
+encryptText $enc2 $text1 "请替换为自己的密钥字符串"
+
+pl "第二次加密后的字符串为 %v" $enc2
+
+decryptText $dec1 $enc1 "请替换为自己的密钥字符串"
+
+pl "第一次加密字符串解密后的字符串为 %v" $dec1
+
+decryptText $dec2 $enc2 "请替换为自己的密钥字符串"
+
+pl "第二次加密字符串解密后的字符串为 %v" $dec2

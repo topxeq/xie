@@ -1,0 +1,226 @@
+initWebGuiW
+
+getRandomPort $portT
+
+newMux $muxT
+
+= $text1 `
+setRespHeader $responseG "Content-Type" "text/html; charset=utf-8"
+writeRespHeader $responseG 200
+
+writeResp $responseG ~~~
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<script src="/statics/js/jquery.min.js"></script>
+<script src="/statics/js/polyfill.min.js"></script>
+<script src="/statics/js/fetch.umd.js"></script>
+<link rel="stylesheet" type="text/css" href="/statics/css/tabulator.min.css">
+<script src="/statics/js/tabulator.min.js"></script>
+<title></title>
+<script>
+	window.onload = function() {
+//		external.showInfo("信息提示", "页面已加载完毕");
+	}
+
+	var tableG;
+
+	function getData() {
+		$.ajax({
+			url: "/api",
+			dataType: 'json',
+			type: 'POST',
+			data: { 
+				req: "getData", 
+			},
+			success: function (data) {
+				if (data.Status == 'success') {
+					var objT = JSON.parse(data.Value);
+					external.showInfo("请求执行成功", JSON.stringify(objT));
+
+					tableG = new Tabulator("#div2", {
+						height:205,
+						layout:"fitColumns",
+						columns:[ 
+							{title:"姓名", field:"姓名", width:150},
+							{title:"年龄", field:"年龄", hozAlign:"right"},
+						],
+						rowClick:function(e, row) {
+							external.showInfo("信息", "第 " + row.getPosition() + " 行被点击");
+						},
+					});
+
+					tableG.setData(objT);
+
+					var tabledata = [
+						{id:1, name:"Oli Bob", age:"12", col:"red", dob:""},
+						{id:2, name:"Mary May", age:"1", col:"blue", dob:"14/05/1982"},
+						{id:3, name:"Christine Lobowski", age:"42", col:"green", dob:"22/05/1982"},
+						{id:4, name:"Brendon Philips", age:"125", col:"orange", dob:"01/08/1980"},
+						{id:5, name:"Margret Marmajuke", age:"16", col:"yellow", dob:"31/01/1999"},
+					];
+
+					var table = new Tabulator("#div3", {
+						height:205, // set height of table (in CSS or here), this enables the Virtual DOM and improves render speed dramatically (can be any valid css height value)
+						data:tabledata, //assign data to table
+						layout:"fitColumns", //fit columns to width of table (optional)
+						columns:[ //Define Table Columns
+							{title:"Name", field:"name", width:150},
+							{title:"Age", field:"age", hozAlign:"left", formatter:"progress"},
+							{title:"Favourite Color", field:"col"},
+							{title:"Date Of Birth", field:"dob", sorter:"date", hozAlign:"center"},
+						],
+						rowClick:function(e, row){ //trigger an alert message when the row is clicked
+							alert("Row " + row.getData().id + " Clicked!!!!");
+						},
+					});
+				} else {
+					external.showError("请求执行失败", data.Value);
+				}
+			},
+			error: function (response) {
+				external.showError("请求失败", JSON.stringify(response));
+			}
+		});
+	}
+
+</script>
+</head>
+<body>
+<div id="div1">
+	<button onclick="javascript:getData();">载入数据</button>
+</div>
+
+<div id="div2" style="margin-top: 3.0em;">
+</div>
+<div id="div3" style="margin-top: 3.0em;">
+</div>
+</body>
+</html>
+~~~
+
+assign $outG  "TX_END_RESPONSE_XT"
+
+`
+
+// 将~~~替换为反引号
+strReplace $text1 $text1 ~~~ $backQuoteG
+
+// 设置根路径（也就是图形界面的主页面）的处理脚本为变量text1中定义的字符串
+// 参数123暂时用不到，是随便填写的
+setMuxHandler $muxT "/" #i123 $text1
+
+// 设置路径/statics的处理，默认是返回1.x版本的jquery.min.js
+// 以便于一般的JQuery引用，避免从互联网现引入JQuery库
+setMuxHandler $muxT "/statics/" 0 `
+pln $paraMapG
+
+pln $reqNameG
+
+getMapItem $fileT $paraMapG file ""
+
+ifEmpty $fileT +1 :next1
+	strSplit $listT $reqNameG "/statics/"
+	len $lenT $listT 
+	dec $lenT
+	getArrayItem $fileT $listT $lenT ""
+
+:next1
+pln file: $fileT
+getResource $fcT $fileT
+
+len $pln $fcT
+
+getMimeType $mimeTypeT $fileT
+spr $mimeTypeT "%v; charset=utf-8" $mimeTypeT
+
+setRespHeader $responseG "Content-Type" $mimeTypeT
+writeRespHeader $responseG 200
+
+writeResp $responseG $fcT
+
+assign $outG  "TX_END_RESPONSE_XT"
+
+`
+
+// 设置处理路由“/api”的处理函数（变量text2中的代码）
+// 第4个参数是字符串类型的处理函数代码
+// 将以新的虚拟机运行
+// 虚拟机内将默认有4个全局变量：
+// requestG 表示http请求对象
+// responseG 表示http响应对象
+// paraMapG 表示http请求传入的query参数或post参数
+// inputG 是调用setMuxHandler指令传入的第3个参数的值
+
+= $text2 `
+
+// 输出参考信息
+pln "/api" $paraMapG
+
+getMapItem $reqT $paraMapG "req" ""
+
+// 拼装输出的信息字符串
+// spr类似于其他语言中的sprintf函数
+spr $strT "[%v] 请求名: %v，请求参数： %v，inputG：%v" ?(?nowStr) $reqT $paraMapG $inputG
+
+// 设置输出的http响应头中的键值对
+setRespHeader $responseG "Content-Type" "text/json; charset=utf-8"
+
+// 设置输出http响应的状态值为200（表示成功，即HTTP_OK）
+writeRespHeader $responseG 200
+
+// 准备一个映射对象用于拼装返回结果的JSON字符串
+var $resMapT map
+
+setMapItem $resMapT "Status" "success"
+setMapItem $resMapT "Value" $strT
+
+// 如果请求中参数req为getRandomStr
+// 将调用谢语言中的getRandomStr指令生成一个随机字符串
+// 随机字符串的长度由count参数指定，默认是8
+== $cond1 $reqT getData
+
+// 反引号都暂时要用三个波浪号替代
+if $cond1 +1 +3
+	= $strT ~~~[{"姓名": "张三", "年龄": 23}, {"姓名": "李四", "年龄": 19}]~~~
+	setMapItem $resMapT "Value" $strT
+
+// 转换为JSON
+toJson $jsonStrT $resMapT
+
+// 写http响应内容，即前面拼装并转换的变量jsonStrT中的JSON字符串
+writeResp $responseG $jsonStrT
+
+// 设置函数返回值为TX_END_RESPONSE_XT
+// 此时响应将中止输出，否则将会把该返回值输出到响应中
+assign $outG  "TX_END_RESPONSE_XT"
+
+`
+
+strReplace $text2 $text2 ~~~ $backQuoteG
+
+setMuxHandler $muxT "/api" #i123 $text2
+
+pl 启动服务器（端口：%v）…… $portT
+
+// 在变量portT指定的端口上启动http服务器
+// 指定路由处理器为muxT
+// 结果放入变量resultT中
+// 由于加上-go参数，将以线程方式启动该服务器
+startHttpServer $resultT $portT $muxT -go
+
+// 获取谢语言主程序所在的目录
+getAppDir $appDirT
+
+// 拼装嵌入式浏览器的路径
+joinPath $xiePathT $appDirT "xiebr.exe"
+
+// 调用嵌入式浏览器xiebr，并等待其执行结束后退出
+// xiebr可使用-port参数指定端口
+// 用-title参数指定窗口标题
+systemCmd $rs $xiePathT ?`(?spr $tmp "-port=%v" $portT)` "-title=测试Web界面"
+
+

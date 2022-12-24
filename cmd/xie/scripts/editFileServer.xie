@@ -1,0 +1,658 @@
+// 本例实现一个分享文本文件供别人使用网页编辑修改该文件的方法
+// 用法：使用类似下述命令行启动一个WEB服务器
+// xie -example editFileServer.xie -file=d:\tmpx\test.txt -port=1080 -password=abc123
+// 其中参数file是指定要编辑的文件路径，port是指定WEB服务器的端口，password是登录的口令密码
+// 假设该电脑的IP地址为192.168.101.33，则用浏览器访问http://192.168.101.33:1080/edit
+// 然后输入指定的密码即可进行查看、编辑和保存
+// 端口默认是8080，密码默认是verynice
+// 文件保存时会先自动备份
+// 文件名为*或加-allowChangeFile开关参数时，可以指定任意文件名载入或保存（存在风险，慎用）
+// 注：文本文件只支持utf-8编码
+
+// 从命令行获取指定的密码
+getSwitch $passRightT $argsG -password= "verynice"
+
+// 对密码进行Base64编码
+base64 $b63passT $passRightT
+
+// 将密码存入全局变量供各个路由处理函数调用
+quickSetSharedMapItem globalPass $b63passT
+
+// 从命令行获取指定的文件路径（可以是相对路径）
+getSwitch $fileNameT $argsG -file= ""
+
+// 不允许文件路径为空
+ifEmpty $fileNameT +1 :next1
+    fatalf "没有指定要编辑的文件名"
+
+:next1
+
+if `$fileNameT == "*"` :next2
+
+// 不允许文件不存在
+fileExists $fileNameT
+
+if $tmp :next2 +1
+    fatalf "文件%v不存在" $fileNameT
+
+:next2
+
+// 从命令行获取是否允许新存文件的开关
+ifSwitchExists $allowChangeFileT $argsG -allowChangeFile
+
+ifEqual $fileNameT "*" +1 +2
+    = $allowChangeFileT #btrue
+
+quickSetSharedMapItem allowChangeFile $allowChangeFileT
+
+// 从命令行获取指定的启动WEB服务器的端口
+getSwitch $portT $argsG -port= "8080"
+
+add $portT ":" $portT
+
+pl "端口：%v" $portT
+
+// 新建一个路由处理器
+newMux $muxT
+
+// /login路由使用的处理函数 
+= $codeText1 `
+plNow "请求名: %v，请求参数： %v，inputG：%v" $reqNameG $paraMapG $inputG
+
+assign $outG  "TX_END_RESPONSE_XT"
+setRespHeader $responseG "Content-Type" "text/json; charset=utf-8"
+writeRespHeader $responseG 200
+
+var $resMapT map
+
+getMapItem $passT $paraMapG p ""
+
+ifEmpty $passT +1 :nexti3
+    setMapItem $resMapT "Status" "fail"
+    setMapItem $resMapT "Value" "密码不能为空"
+    toJson $jsonStrT $resMapT
+    writeResp $responseG $jsonStrT
+
+    exit
+
+:nexti3
+
+if @~~~$passT != $inputG~~~ +1 :nexti6
+    setMapItem $resMapT "Status" "fail"
+    setMapItem $resMapT "Value" "密码不正确"
+    toJson $jsonStrT $resMapT
+    writeResp $responseG $jsonStrT
+
+    exit
+
+:nexti6
+encryptText $encT $inputG
+
+setMapItem $resMapT "Status" "success"
+setMapItem $resMapT "Value" $encT
+toJson $jsonStrT $resMapT
+writeResp $responseG $jsonStrT
+
+exit
+
+`
+
+// 由于反引号括起的代码中不允许再有反引号，因此其中都用三个波浪号代替
+// 因此使用前应再替换回来
+strReplace $codeText1 $codeText1 ~~~ $backQuoteG
+
+// 设置/login路由使用的处理函数 
+setMuxHandler $muxT "/login" $b63passT $codeText1
+
+// 设置/load路由使用的处理函数（载入该文件）
+setMuxHandler $muxT "/load" $fileNameT `
+
+assign $outG  "TX_END_RESPONSE_XT"
+
+plNow "请求名: %v，请求参数： %v，inputG：%v" $reqNameG $paraMapG $inputG
+
+quickGetSharedMapItem $globalPassT globalPass ""
+
+getMapItem $tokenT $paraMapG txtoken ""
+
+decryptText $decT $tokenT
+
+if "$decT != $globalPassT" +1 :nexti5
+    setRespHeader $responseG "Content-Type" "text/json; charset=utf-8"
+    writeRespHeader $responseG 200
+
+    spr $strT "鉴权失败：%v" $decT
+
+    var $resMapT map
+    setMapItem $resMapT "Status" "fail"
+    setMapItem $resMapT "Value" $strT
+
+    toJson $jsonStrT $resMapT
+    writeResp $responseG $jsonStrT
+
+    exit
+
+:nexti5
+
+getMapItem $fnT $paraMapG file $inputG
+
+ifEqual $fnT "*" +1 +3
+    = $fcT ""
+    goto +2
+
+loadText $fcT $fnT
+    
+ifErrX $fcT +1 :nexti1
+
+    setRespHeader $responseG "Content-Type" "text/json; charset=utf-8"
+    writeRespHeader $responseG 200
+
+    spr $strT "载入对象失败：%v" $fcT
+
+    var $resMapT map
+    setMapItem $resMapT "Status" "fail"
+    setMapItem $resMapT "Value" $strT
+
+    toJson $jsonStrT $resMapT
+    writeResp $responseG $jsonStrT
+
+    exit
+
+
+:nexti1
+
+// 设置输出的http响应头中的键值对
+setRespHeader $responseG "Content-Type" "text/json; charset=utf-8"
+
+// 设置输出http响应的状态值为200（表示成功，即HTTP_OK）
+writeRespHeader $responseG 200
+
+// 准备一个映射对象用于拼装返回结果的JSON字符串
+var $resMapT map
+
+setMapItem $resMapT "Status" "success"
+setMapItem $resMapT "Value" $fcT
+
+// 转换为JSON
+toJson $jsonStrT $resMapT
+
+// 写http响应内容，即前面拼装并转换的变量jsonStrT中的JSON字符串
+writeResp $responseG $jsonStrT
+
+`
+
+// 设置/save路由使用的处理函数（用于保存该文本文件）
+setMuxHandler $muxT "/save" $fileNameT `
+
+plNow "请求名: %v，请求参数： %v，inputG：%v" $reqNameG $paraMapG $inputG
+
+assign $outG  "TX_END_RESPONSE_XT"
+setRespHeader $responseG "Content-Type" "text/json; charset=utf-8"
+writeRespHeader $responseG 200
+
+quickGetSharedMapItem $globalPassT globalPass ""
+
+getMapItem $tokenT $paraMapG txtoken ""
+
+decryptText $decT $tokenT
+
+var $resMapT map
+
+if "$decT != $globalPassT" +1 :nexti5
+    spr $strT "鉴权失败：%v" $decT
+
+    setMapItem $resMapT "Status" "fail"
+    setMapItem $resMapT "Value" $strT
+
+    toJson $jsonStrT $resMapT
+    writeResp $responseG $jsonStrT
+
+    exit
+
+:nexti5
+
+getMapItem $fnT $paraMapG file $inputG
+
+ifEqual $fnT "*" +1 :nexti9
+    setMapItem $resMapT "Status" "fail"
+    setMapItem $resMapT "Value" "保存对象名未指定"
+    toJson $jsonStrT $resMapT
+    writeResp $responseG $jsonStrT
+
+    exit
+
+:nexti9
+
+getMapItem $contentT $paraMapG content #e内容参数不存在
+
+ifErrX $contentT +1 :nexti2
+    spr $strT "%v" $contentT
+
+    setMapItem $resMapT "Status" "fail"
+    setMapItem $resMapT "Value" $strT
+    toJson $jsonStrT $resMapT
+    writeResp $responseG $jsonStrT
+
+    exit
+
+
+:nexti2
+
+quickGetSharedMapItem $allowChangeFileL allowChangeFile #bfalse
+
+if $allowChangeFileL +1 :nextii16
+
+    fileExists $fiT $fnT
+
+    ifNot $fiT :nexti7
+
+:nextii16
+
+nowStrCompact $nowTimeT 
+genRandomStr $ranStrT -min=3 -max=3 -noUpper -noDigit
+quickEval $fn1 "$fnT + .bac + $nowTimeT + $ranStrT + .bac"
+
+renameFile $orT $fnT $fn1
+
+ifErrX $orT +1 :nexti7
+    spr $strT "备份源文件失败：%v" $orT
+
+    setMapItem $resMapT "Status" "fail"
+    setMapItem $resMapT "Value" $strT
+    toJson $jsonStrT $resMapT
+    writeResp $responseG $jsonStrT
+
+    exit
+
+:nexti7
+
+saveText $orT $contentT $fnT
+
+ifErrX $orT +1 :nexti8
+    spr $strT "保存内容失败：%v" $orT
+
+    setMapItem $resMapT "Status" "fail"
+    setMapItem $resMapT "Value" $strT
+    toJson $jsonStrT $resMapT
+    writeResp $responseG $jsonStrT
+
+    exit
+
+:nexti8
+
+var $resMapT map
+
+setMapItem $resMapT "Status" "success"
+setMapItem $resMapT "Value" ""
+
+toJson $jsonStrT $resMapT
+
+writeResp $responseG $jsonStrT
+
+assign $outG  "TX_END_RESPONSE_XT"
+
+`
+
+// 设置路径/statics的处理，一般用于方便在网页中引用JavaScript库或CSS文件
+setMuxHandler $muxT "/statics/" 0 `
+
+getMapItem $fileT $paraMapG file ""
+
+ifEmpty $fileT +1 :next1
+	strSplit $listT $reqNameG "/statics/"
+	len $lenT $listT 
+	dec $lenT
+	getArrayItem $fileT $listT $lenT ""
+
+:next1
+getResource $fcT $fileT
+
+getMimeType $mimeTypeT $fileT
+spr $mimeTypeT "%v; charset=utf-8" $mimeTypeT
+
+setRespHeader $responseG "Content-Type" $mimeTypeT
+writeRespHeader $responseG 200
+
+writeResp $responseG $fcT
+
+assign $outG  "TX_END_RESPONSE_XT"
+
+`
+
+// /edit路由使用的处理函数
+= $text1 `
+setRespHeader $responseG "Content-Type" "text/html; charset=utf-8"
+writeRespHeader $responseG 200
+
+writeResp $responseG ~~~
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>编辑对象</title>
+
+    <script type="text/javascript" src="/statics/js/jquery.min.js"></script>
+    <script src="/statics/js/sweetalert2.all.min.js"></script>
+
+    <link rel="stylesheet" href="/statics/css/codemirror.css">
+    <script src="/statics/js/codemirror.js"></script>
+    <script src="/statics/js/mode/go/go.js"></script>
+    <script src="/statics/js/simple-copy.min.js"></script>
+
+    <style>
+        .CodeMirror {
+            border: 1px solid #eee;
+            height: auto;
+    //        font-size: 1.5em;
+        }
+    
+    </style>
+    <script>
+        var txtokenG = "";
+
+        var myCodeMirrorG;
+
+        function promptx(textA) {
+            Swal.fire({
+                title: '请输入口令',
+                input: 'password',
+                // inputLabel: '口令：',
+                inputValue: '',
+                showCancelButton: false,
+                inputValidator: (value) => {
+                    if (!value) {
+                        return '口令不能为空'
+                    }
+                },
+                preConfirm: (dataA) => {
+                    return dataA;
+                }
+            });
+        }
+
+        function infox(titleA, msgA, typeA) {
+            if (!titleA) {
+                titleA = "提示";
+                msgA = "";
+                typeA = "success";
+            } else if (!msgA) {
+                msgA = titleA;
+                titleA = "提示";
+            } else if (!typeA) {
+                typeA = "success";
+            }
+
+            if (typeof(msgA) != "string") {
+                msgA = msgA.toString();
+            }
+
+            Swal.fire({title: titleA, text: msgA, icon: typeA});
+        }
+
+        function alertx(titleA, msgA, typeA) {
+            if (!titleA) {
+                titleA = "提示";
+                msgA = "";
+                typeA = "success";
+            } else if (!msgA) {
+                msgA = titleA;
+                titleA = "错误提示";
+            } else if (!typeA) {
+                typeA = "error";
+            }
+
+            if (typeof(msgA) != "string") {
+                msgA = msgA.toString();
+            }
+
+            Swal.fire({title: titleA, text: msgA, icon: typeA});
+        }
+
+        function copyIt() {
+            //SimpleCopy.copy("#codeEditID");
+            var codeT = myCodeMirrorG.getValue();
+
+            SimpleCopy.data(codeT);
+
+            infox("复制完毕");
+        }
+
+        function loadCode() {
+            $.ajax({
+                url: "/load",
+                dataType: 'json',
+                type: 'POST',
+                async: false,
+                data: { 
+                    file: $("#objNameID").val().trim(), 
+                    txtoken: txtokenG, 
+                },
+                success: function (data) {
+                    if (data.Status == 'success') {
+                        myCodeMirrorG.setValue(data.Value);
+
+                        $("#objNameTitleID").html($("#objNameID").val().trim());
+                    } else {
+                        alertx(data.Value)
+                    }
+
+                },
+                error: function (response) {
+                    alertx(JSON.stringify(response));
+                }
+            });
+
+        }
+
+        function loadIt() {
+            loadCode();
+        }
+
+        function saveIt() {
+            if (!confirm("是否确定要保存？")) {
+                return;
+            }
+            
+            var codeT = myCodeMirrorG.getValue();
+            $.ajax({
+                url: "/save",
+                dataType: 'json',
+                type: 'POST',
+                async: false,
+                data: { 
+                    file: $("#objNameID").val().trim(), 
+                    content: codeT, 
+                    txtoken: txtokenG, 
+                },
+                success: function (data) {
+                    if (data.Status == 'success') {
+                        // $("#codeEditID").val(data.Value);
+                        infox("已保存");
+                    } else {
+                        alertx(data.Value)
+                    }
+
+                },
+                error: function (response) {
+                    alertx(JSON.stringify(response));
+                }
+            });
+        }
+
+        document.addEventListener( 'DOMContentLoaded',  async function () {
+            myCodeMirrorG = CodeMirror.fromTextArea(document.getElementById("codeEditID"), {
+                lineNumbers: true,
+                lineWrapping: true,
+                viewportMargin: Infinity,
+                mode: "go"
+            });
+
+            //myCodeMirrorG.setValue("");
+
+            // myCodeMirrorG.setSize("100%", "25em")
+
+            //myCodeMirrorG.setValue(data);
+
+            $("#codeEditID")[0].dispatchEvent(new Event('input'));
+
+            document.onkeydown = function(e) {
+                if (e.ctrlKey) {
+                    if (e.keyCode == 83) {
+                        console.log("ctrl-s");
+                        saveIt();
+                        // e.stopPropagation(); 
+                        e.preventDefault(); 
+                        e.returnValue = false;
+
+                        return false;
+                    }
+
+                    return true;
+                } 
+
+                return true;
+            };  
+
+            var passT = await Swal.fire({
+                title: '请输入口令',
+                input: 'password',
+                inputValue: '',
+                showCancelButton: false,
+                inputValidator: (value) => {
+                    if (!value) {
+                        return '口令不能为空'
+                    }
+                }
+            });
+
+            passT = passT.value;
+
+            // console.log("passT", passT);
+
+            $.ajax({
+                url: "/login",
+                dataType: 'json',
+                type: 'POST',
+                async: true,
+                data: { 
+                    u: "", 
+                    p: btoa(passT), 
+                },
+                success: function (data) {
+                    if (data.Status == 'success') {
+                        var tokenT = data.Value;
+                        // console.log($("#tokenInputID"), $("#tokenInputID").val(),tokenT);
+                        $("#tokenInputID").val(tokenT);
+
+                        txtokenG = tokenT;
+
+                        loadCode();
+
+                    } else {
+                        alertx(data.Value)
+                    }
+
+                },
+                error: function (response) {
+                    alertx(JSON.stringify(response));
+                }
+            });
+
+        });
+
+    </script>
+</head>
+
+<body>
+    <div class="example container-fluid">
+        <div class="grid">
+            <div class="row" style="margin-bottom: 0.0em;">
+                <div class="cell">
+                    <div data-role="appbar" data-expand-point="md" style="background-color: #CC3300; color: #F5F5F5; padding: 5px;">
+                        <span style="font-size: 1.2em;" class="p-2">编辑对象</span>
+                        &nbsp;
+                        <input id="objNameID" type="text" placeholder="输入对象名称" {{.TX_objNameDisabled_XT}} value="{{.TX_objName_XT}}" style="font-size: 1.1em; color: #EEEEEE; width: 50em; border: 0; background:url(0) no-repeat;">
+                    </div>
+                </div>
+            </div>
+            <div class="row" style="margin-top: 1.0em;">
+                <div class="cell">
+                    <div id="mainAreaID">
+                        <div>
+                            <p>
+                                &nbsp;<button class="button" onclick="javascript:loadIt();">&nbsp;载入</button>
+                                
+                                &nbsp;<button class="button" onclick="javascript:saveIt();">&nbsp;保存</button>
+                        
+                                &nbsp;<button class="button" onclick="javascript:copyIt();">&nbsp;复制</button>
+                        
+                            </p>
+
+                            <hr>
+                        
+                            <div id="mainDivID" style="margin-top: 2.0em;">
+                                <div id="main" style="width: 80%; margin: 1.0em auto; height: 100%; text-align: left; v-align:middle; font-size: 1.5em;">
+                                    <textarea id="codeEditID" name="codeEditID" style="width: 100%;"></textarea>
+                                </div>
+                                                    
+                            </div>
+                        
+                         
+                            <div class="divFooter" style="margin-top: 2.0em;"></div>
+                        </div>
+                    </div>    
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div style="display: none;">
+        <input id="tokenInputID" style="display: none;" value="{{.TX_txtoken_XT}}" />
+    </div>
+</body>
+
+</html>
+
+~~~
+
+assign $outG  "TX_END_RESPONSE_XT"
+`
+
+// 将~~~替换为反引号
+strReplace $text1 $text1 ~~~ $backQuoteG
+
+strReplace $text1 $text1 {{.TX_objName_XT}} $fileNameT
+
+if $allowChangeFileT +1 +3
+    strReplace $text1 $text1 {{.TX_objNameDisabled_XT}} ""
+    goto +2
+
+    strReplace $text1 $text1 {{.TX_objNameDisabled_XT}} disabled
+
+# extractFileName $nameOnlyT $fileNameT
+
+# htmlEncode $nameOnlyT $nameOnlyT
+
+# strReplace $text1 $text1 `-----` $nameOnlyT
+
+// 设置/edit路由使用的处理函数（用于显示首页的HTML）
+setMuxHandler $muxT "/edit" $fileNameT $text1
+
+
+pln 启动服务器……
+
+// 在指定端口上启动http服务器
+// 指定路由处理器为muxT
+// 结果放入变量resultT中
+// 由于startHttpServer如果执行成功是阻塞的
+// 因此resultT只有失败或被Ctrl-C中断时才会有值
+startHttpServer $resultT $portT $muxT
+
+ifErrX $resultT +1 :nextn
+    fatalf "服务器启动失败：%v" $resultT
+
+:nextn
+exit

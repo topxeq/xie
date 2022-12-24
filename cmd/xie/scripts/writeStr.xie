@@ -1,0 +1,26 @@
+// writeStr指令用于向可追加的对象追加字符串
+
+// 用openFile打开一个文件以便追加文本，如果文件不存在时自动创建一个新的
+openFile $f1 `d:\tmpx\testOpenFile1.txt` -append -create -perm=0777
+
+checkErrX $f1
+
+writeStr $rs $f1 追加文本-------
+
+checkErrX $rs
+
+pl "共写入%v个字节" $rs
+
+closeFile $f1
+
+loadText $rs `d:\tmpx\testOpenFile1.txt`
+pl "文件内容：%v" $rs
+
+// 对于字符串，writeStr返回值比较特殊，是添加（连接）后的字符串，并且原字符串不做变化
+= $s1 abc123测试字符串
+
+writeStr $s1 $s1 追加字符串-------
+
+pl "当前字符串内容为：%v" $s1
+
+

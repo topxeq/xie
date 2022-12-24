@@ -1,0 +1,20 @@
+// 用openFile打开一个文件以便追加文本，如果文件不存在会报错
+// 加上 -create参数可以在文件不存在时自动创建一个新的
+openFile $f1 `d:\tmpx\testOpenFile1.txt` -append -perm=0777
+
+checkErrX $f1
+
+mt $rs $f1 WriteString 追加文本-------
+
+getArrayItem $countT $rs 0
+getArrayItem $errT $rs 1
+
+checkErrX $errT
+
+pl "共写入%v个字节" $countT
+
+closeFile $f1
+
+loadText $rs `d:\tmpx\testOpenFile1.txt`
+pl "文件内容：%v" $rs
+

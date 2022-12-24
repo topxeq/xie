@@ -1,0 +1,37 @@
+// 本例演示如何加密数据和解密数据
+// 注意即使用同样密钥，加密后的数据也可能是不同的
+// 这是为了更高的安全性，但解密后应该都可以正常还原
+// 例子中多次将二进制数据存文件和从文件中读取
+// 是为了演示直接操作二进制数据和用文件操作二进制数据
+
+// 新建一个字节数组，内容为三个字节，分别为2，5，8
+var $bl1 byteList 2 5 8
+
+pl "原始数据为：%#v" $bl1
+
+// 保存这个字节数组到文件中
+saveBytes $result1 $bl1 `c:\b1.bin`
+
+// 从文件中载入字节数组
+loadBytes $f1 `c:\b1.bin`
+
+pl "从文件中载入的数据为：%#v" $f1
+
+// 加密字节数组
+encryptData $enc1 $f1 "请替换为自己的密钥字符串"
+
+saveBytes $result1 $enc1 `c:\b2.bin`
+
+loadBytes $f2 `c:\b2.bin`
+
+pl "从文件中载入的加密数据为：%#v" $f2
+
+// 解密字节数组
+decryptData $dec1 $f2 "请替换为自己的密钥字符串"
+
+saveBytes $result1 $dec1 `c:\b3.bin`
+
+loadBytes $f3 `c:\b3.bin`
+
+pl "从文件中载入的解密数据为：%#v" $f3
+

@@ -1,11 +1,29 @@
+// 调用字符串的内置成员方法
 assign $str1 "  asdjfskdfn_ "
 
 method $result $str1 trimSpace
 
 pln $result
 
+// 调用整数的成员方法
+// toStr对任意类型都有效
 assign $c1 #i688
 
 mt $r $c1 toStr
 
 pln $r
+
+// 调用某对象的成员方法
+// strings.Builder对象参考https://pkg.go.dev/strings#Builder
+new $sbT strings.Builder prefix:
+
+mt $drop $sbT WriteString abc123
+mt $drop $sbT WriteString " - nice!"
+
+mt $result $sbT String
+
+pln result= $result
+
+
+
+

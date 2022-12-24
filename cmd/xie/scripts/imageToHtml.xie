@@ -1,0 +1,21 @@
+// capture current screen area, convert to Base64 data, then save to HTML page
+// 截取当前屏幕区域，截图转换为Base64格式的数据，然后写入HTML网页中
+
+captureScreen $imgT 100 100 640 480
+
+new $bufT bytesBuf
+
+pngEncode $errT $bufT $imgT
+
+// plvsr $bufT $errT
+
+base64Encode $bs1 $bufT
+
+spr $htmlT `<html><body><img src="data:image/png;base64,%v"></body></html>` $bs1
+
+saveText $errT $htmlT `c:\image1.html`
+
+ifErr $errT +1 +2
+    fatalf `failed to save html file: %v` $errT
+
+pln "successfully capture the screen area, html file saved to c:\\image1.html"

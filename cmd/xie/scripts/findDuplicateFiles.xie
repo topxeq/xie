@@ -1,0 +1,53 @@
+// 本例是在指定目录下查找大小完全一样的文件
+
+getSwitch $dirT $argsG -dir= "."
+
+ifEmpty $dirT +1 +2
+
+fatalf "empty dir"
+
+getFileList $listT $dirT -recursive
+
+len $lenT $listT
+
+range $listT :loop1
+
+pl "\n%v files total" $lenT
+
+exit
+
+:loop1
+    pop $idxT
+    pop $v
+
+    # pl "[%v] %v" $idxT $v
+
+    getMapItem $size1 $v Size
+
+    add $idx2T $idxT #i1
+
+    range $idx2T $lenT :loop2
+
+    continue
+
+    :loop2
+        pop $j
+        pop $jvi
+
+        getArrayItem $jv $listT $jvi
+        getMapItem $size2 $jv Size
+
+        # pl "inner[%v]: %v" $j $jv
+
+        # pl "size1: %v, size2: %v" $size1 $size2
+        == $size1 $size2
+
+        # getMapItem $tmp1 $v Abs ""
+        # pln tmp1 $tmp1
+        # exit
+
+        ifNot $tmp :next1
+            pl "same size(%v): %v -> %v" $size1 ?`?getMapItem $tmp $v Abs ""` ?`?getMapItem $tmp $jv Abs ""`
+
+        :next1
+        continue

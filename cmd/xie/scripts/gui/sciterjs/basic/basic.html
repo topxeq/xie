@@ -1,0 +1,62 @@
+<html window-resizable="true" window-frame="extended">
+
+<head>
+	<title>Hello</title>
+	<meta charset="utf-8">	
+
+	<script type="text/javascript" src="http://wl.topget.org/js/zepto.min.js"></script>
+
+	<script>
+		function drawIt() {
+			var e = document.getElementById("textAreaID");
+			e.value = "123";
+
+			var c = document.getElementById("myCanvas");
+			var ctx = c.getContext("2d");
+			ctx.fillStyle = "#FF0000";
+			ctx.fillRect(0, 0, 150, 75);
+		}
+
+        // document.addEventListener('DOMContentLoaded', function() {
+        //     console.log("123");
+
+   		// 	var buttonT = document.getElementById("button1");
+
+		// 	buttonT.addEventListener("click", drawIt);
+
+        // }, false);
+		$(function() {
+			var buttonT = document.getElementById("button1");
+			buttonT.addEventListener("click", () => {
+				var e = document.getElementById("textAreaID");
+				e.value = "abc123";
+
+				var c = document.getElementById("myCanvas");
+				var ctx = c.getContext("2d");
+				ctx.fillStyle = "#000000";
+				ctx.fillRect(0, 0, 150, 75);
+
+			});
+		});
+
+	</script>
+</head>
+
+<body>
+	<h1>World!</h1>
+	<button id="button1" onclick="javascript:drawIt();">画图</button>
+	<button role=window-close>close</button>
+	<textarea id="textAreaID"></textarea>
+	<div id="example-table"></div>
+	<script>
+		var e = document.getElementById("textAreaID");
+		e.value = "abc";
+
+	</script>
+
+	<canvas id="myCanvas" width="200" height="100" style="border:1px solid #000000;">
+	</canvas>
+
+</body>
+
+</html>

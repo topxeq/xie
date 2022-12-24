@@ -1,0 +1,18 @@
+// 用openFile创建一个新文件
+openFile $f1 `d:\tmpx\testOpenFile1.txt` -create -perm=0777
+
+checkErrX $f1
+
+defer closeFile $f1
+
+mt $rs $f1 WriteString testabc123测试
+
+getArrayItem $countT $rs 0
+getArrayItem $errT $rs 1
+
+checkErrX $errT
+
+pl "共写入%v个字节" $countT
+
+
+

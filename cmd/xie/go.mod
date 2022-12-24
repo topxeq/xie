@@ -1,16 +1,20 @@
-module gitee.com/topxeq/xie/cmd/xie
+module github.com/topxeq/xie/cmd/xie
 
 go 1.17
 
 require (
-	gitee.com/topxeq/xie v0.0.0
 	github.com/denisenkom/go-mssqldb v0.12.0
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/godror/godror v0.33.0
+	github.com/kbinani/screenshot v0.0.0-20210720154843-7d3a670d8329
 	github.com/mattn/go-sqlite3 v1.14.6
+	github.com/sciter-sdk/go-sciter v0.5.1-0.20210426171118-f5212dff3ad8
 	github.com/topxeq/dlgs v0.0.0-20220223083937-4d3036aff547
-	github.com/topxeq/go-sciter v0.0.0-20211221081058-795e1f32ae3d
 	github.com/topxeq/tk v1.0.1
+	github.com/topxeq/xie v0.0.0
+)
+
+require (
 	github.com/aarzilli/sandblast v0.0.0-20151220083925-43f8fb998d06 // indirect
 	github.com/alecthomas/chroma v0.10.0 // indirect
 	github.com/andybalholm/brotli v1.0.4 // indirect
@@ -22,6 +26,7 @@ require (
 	github.com/dlclark/regexp2 v1.4.0 // indirect
 	github.com/dsnet/compress v0.0.2-0.20210315054119-f66993602bf5 // indirect
 	github.com/eiannone/keyboard v0.0.0-20200508000154-caf4b762e807 // indirect
+	github.com/gen2brain/shm v0.0.0-20200228170931-49f9650110c5 // indirect
 	github.com/go-logfmt/logfmt v0.5.1 // indirect
 	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/godror/knownpb v0.1.0 // indirect
@@ -31,6 +36,7 @@ require (
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/gopherjs/gopherjs v1.17.2 // indirect
 	github.com/jaytaylor/html2text v0.0.0-20211105163654-bc68cce691ba // indirect
+	github.com/jezek/xgb v0.0.0-20210312150743-0e0f116e1240 // indirect
 	github.com/jhillyerd/enmime v0.9.3 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.14.4 // indirect
@@ -48,8 +54,9 @@ require (
 	github.com/pkg/sftp v1.13.4 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/ssor/bom v0.0.0-20170718123548-6386211fdfcf // indirect
+	github.com/stretchr/testify v1.7.2 // indirect
 	github.com/topxeq/gods v0.0.0-20220125023913-b5718bb0c704 // indirect
-	github.com/topxeq/goph v0.0.0 // indirect
+	github.com/topxeq/goph v0.0.0-20220826070657-60e7e124b635 // indirect
 	github.com/topxeq/mahonia v0.0.0-20190828060648-12b0599ddd1a // indirect
 	github.com/topxeq/regexpx v0.0.0-20200814082553-4bffc7d07029 // indirect
 	github.com/topxeq/socks v0.0.0-20200812112322-24acb126b5f3 // indirect
@@ -63,13 +70,16 @@ require (
 	github.com/yuin/goldmark-highlighting v0.0.0-20220208100518-594be1970594 // indirect
 	golang.org/x/crypto v0.0.0-20220214200702-86341886e292 // indirect
 	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd // indirect
-	golang.org/x/sys v0.0.0-20220224003255-dbe011f71a99 // indirect
+	golang.org/x/sys v0.0.0-20220412211240-33da011f77ad // indirect
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
 )
 
 replace github.com/topxeq/tk v1.0.1 => ../../../../../github.com/topxeq/tk
-replace github.com/topxeq/goph v0.0.0 => ../../../../../github.com/topxeq/goph
 
-replace gitee.com/topxeq/xie v0.0.0 => ../..
+//replace github.com/topxeq/goph v0.0.0 => ../../../../../github.com/topxeq/goph
+
+replace github.com/topxeq/xie v0.0.0 => ../..
+
+//replace github.com/sciter-sdk/go-sciter v0.5.1-0.20210426171118-f5212dff3ad8 => github.com/wj008/go-sciter v1.0.12

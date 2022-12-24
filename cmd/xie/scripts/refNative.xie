@@ -1,0 +1,21 @@
+assign $c1 #i12
+
+plo $c1
+
+new $p1 int
+
+sscanf "1024" "%d" $p1
+
+plv $p1
+unref $v1 $p1
+
+add $vr $v1 #i6
+pln 2
+
+ref
+
+assignRef $p1 $vr
+
+unref $v1
+
+plv $tmp

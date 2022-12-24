@@ -1,0 +1,87 @@
+clearSharedMap
+
+setSharedMapItem $result key1 #i15
+
+callFunc 0 `
+    getSharedMapItem $c key1
+
+    pln func1-c -> $c
+
+    push #i16
+
+    goFunc 1 ~~~
+        pop $tmpi
+
+        getSharedMapItem $d key1
+
+        add $result1 $tmpi $d
+
+        pln result1= $result1
+    ~~~
+
+    push #i3
+
+    goFunc 1 ~~~
+        pop $tmpi2
+
+        getSharedMapItem $d2 key1
+
+        add $result2 $tmpi2 $d2
+
+        pln result2= $result2
+    ~~~
+
+ 
+`
+
+sleep 1.0
+
+// 第二种方法
+
+clearSharedMap
+
+setSharedMapItem $result key1 #i15
+
+callFunc 0 `
+    getSharedMapItem $c key1
+
+    pln func2-c -> $c
+
+    push #i16
+
+    goFunc 1 ~~~
+        pop $tmpi
+
+        readLockSharedMap
+
+        quickGetSharedMapItem $d key1
+
+        readUnlockSharedMap
+
+        add $result1 $tmpi $d
+
+        pln result1= $result1
+    ~~~
+
+    push #i3
+
+    goFunc 1 ~~~
+        pop $tmpi2
+
+        lockSharedMap
+
+        quickGetSharedMapItem $d2 key1
+
+        unlockSharedMap
+
+        add $result2 $tmpi2 $d2
+
+        pln result2= $result2
+    ~~~
+
+ 
+`
+
+sleep 1.0
+
+exit

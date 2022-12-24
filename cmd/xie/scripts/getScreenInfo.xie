@@ -1,0 +1,35 @@
+// 获取所有活跃屏幕的分辨率信息（编号为0的是主屏幕）
+
+getActiveDisplayCount $screenCountT
+
+pln "active screen count:" $screenCountT
+
+range #i0 $screenCountT :range1
+
+exit
+
+:range1
+    pop $idxT
+    pop $v
+
+    getScreenResolution $srT 
+
+    getArrayItem $widthT $srT 0
+    getArrayItem $heightT $srT 1
+
+    pl "default display: width = %v, height = %v" $widthT $heightT
+
+    getScreenResolution $rectT -index=$v -format=rect
+
+    pl "rect of display %v: %v" $v $rectT
+
+    mb $widthT $rectT Max X
+    mb $heightT $rectT Max Y
+
+    pl "resolution of display %v: %v x %v" $v $widthT $heightT
+
+    getScreenResolution $jsonT -index=$v -format=json
+
+    pl "JSON: %v" $jsonT
+
+    continue

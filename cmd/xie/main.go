@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"path"
@@ -12,8 +13,8 @@ import (
 	"regexp"
 	"strings"
 
-	"gitee.com/topxeq/xie"
 	"github.com/topxeq/tk"
+	"github.com/topxeq/xie"
 
 	_ "github.com/denisenkom/go-mssqldb"
 	_ "github.com/godror/godror"
@@ -22,7 +23,34 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+func test() {
+	// fontPaths := findfont.List()
+	// for _, path := range fontPaths {
+	// 	// fmt.Println(path)
+	// 	//楷体:simkai.ttf
+	// 	//黑体:simhei.ttf
+	// 	if strings.Contains(path, "simhei.ttf") {
+	// 		os.Setenv("FYNE_FONT", path)
+	// 		break
+	// 	}
+	// }
+
+	// a := app.New()
+	// w := a.NewWindow("Hello今天")
+
+	// hello := widget.NewLabel("Hello Fyne我们!")
+	// w.SetContent(container.NewVBox(
+	// 	hello,
+	// 	widget.NewButton("Hi!", func() {
+	// 		hello.SetText("Welcome大家 :)")
+	// 	}),
+	// ))
+
+	// w.ShowAndRun()
+}
+
 func runInteractiveShell() int {
+	tk.Pl("谢语言（Xielang）版本%v", xie.VersionG)
 	xie.ShellModeG = true
 	xie.SetLeVSilent(true)
 
@@ -30,7 +58,7 @@ func runInteractiveShell() int {
 	var source string
 	scanner := bufio.NewScanner(os.Stdin)
 
-	vmT := xie.NewXie()
+	vmT := xie.NewXie(nil)
 
 	vmT.SetVar("argsG", os.Args)
 	vmT.SetVar("全局参数", os.Args)
@@ -111,6 +139,8 @@ var basePathG = "."
 var webPathG = "."
 var certPathG = "."
 var verboseG = false
+var verbosePlusG = false
+var scriptPathG = ""
 
 var staticFS http.Handler = nil
 
@@ -282,7 +312,7 @@ func doXms(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	vmT := xie.NewXie()
+	vmT := xie.NewXie(nil)
 
 	vmT.SetVar("paraMapG", paraMapT)
 	vmT.SetVar("requestG", req)
@@ -414,7 +444,7 @@ func doXmsContent(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	vmT := xie.NewXie()
+	vmT := xie.NewXie(nil)
 
 	vmT.SetVar("paraMapG", paraMapT)
 	vmT.SetVar("requestG", req)
@@ -509,26 +539,37 @@ func RunServer() {
 func main() {
 
 	// tk.Pln(os.Args[1])
+	argsT := os.Args
 
-	if tk.IfSwitchExistsWhole(os.Args, "-version") {
+	if tk.IfSwitchExistsWhole(argsT, "-test") {
+		test()
+		return
+	}
+
+	if tk.IfSwitchExistsWhole(argsT, "-version") {
 		tk.Pl("谢语言 版本%v", xie.VersionG)
 		return
 	}
 
-	verboseG = tk.IfSwitchExistsWhole(os.Args, "-verbose")
+	verboseG = tk.IfSwitchExistsWhole(argsT, "-verbose")
 
-	if tk.IfSwitchExistsWhole(os.Args, "-server") {
+	verbosePlusG = tk.IfSwitchExistsWhole(argsT, "-vv")
+
+	if tk.IfSwitchExistsWhole(argsT, "-server") {
 		RunServer()
 		return
 	}
 
-	ifExampleT := tk.IfSwitchExistsWhole(os.Args, "-example")
-	ifExamT := tk.IfSwitchExistsWhole(os.Args, "-exam")
-	ifGoPathT := tk.IfSwitchExistsWhole(os.Args, "-gopath")
-	ifCloudT := tk.IfSwitchExistsWhole(os.Args, "-cloud")
-	ifLocalT := tk.IfSwitchExistsWhole(os.Args, "-local")
-	ifViewT := tk.IfSwitchExistsWhole(os.Args, "-view")
-	ifCompileT := tk.IfSwitchExistsWhole(os.Args, "-compile")
+	ifExampleT := tk.IfSwitchExistsWhole(argsT, "-example")
+	ifExamT := tk.IfSwitchExistsWhole(argsT, "-exam")
+	ifGoPathT := tk.IfSwitchExistsWhole(argsT, "-gopath")
+	ifCloudT := tk.IfSwitchExistsWhole(argsT, "-cloud")
+	ifRemoteT := tk.IfSwitchExistsWhole(argsT, "-remote")
+	ifClipT := tk.IfSwitchExistsWhole(argsT, "-clip")
+	ifLocalT := tk.IfSwitchExistsWhole(argsT, "-local")
+	ifViewT := tk.IfSwitchExistsWhole(argsT, "-view")
+	ifCompileT := tk.IfSwitchExistsWhole(argsT, "-compile")
+	ifPipeT := tk.IfSwitchExistsWhole(argsT, "-pipe")
 
 	ifInExeT := false
 	inExeCodeT := ""
@@ -565,7 +606,35 @@ func main() {
 		}
 	}
 
-	if !ifInExeT && len(os.Args) < 2 {
+	if !ifInExeT && len(tk.GetAllParameters(argsT)) < 2 {
+		// if tk.IsErrX(scriptT) {
+		fileListT := tk.GetFileList(".", "-pattern=auto*.xie", "-sort=asc", "-sortKey=Name")
+
+		// tk.Pln(fileListT)
+		// }
+
+		var guiHandlerG tk.TXDelegate = guiHandler
+
+		if len(fileListT) > 0 {
+			for i, v := range fileListT {
+
+				fcT := tk.LoadStringFromFile(v["Path"])
+
+				if tk.IsErrX(fcT) {
+					tk.Pl("载入自动脚本([%v] %v)失败：%v", i, v["Path"], tk.GetErrStrX(fcT))
+					return
+				}
+
+				scriptPathG = "."
+
+				rs := xie.RunCode(fcT, map[string]interface{}{"guiG": guiHandlerG, "scriptPathG": scriptPathG}, nil, argsT...)
+				if rs != "TXERROR:no result" {
+					tk.Pl("%v", rs)
+				}
+			}
+
+			return
+		}
 
 		runInteractiveShell()
 
@@ -575,7 +644,7 @@ func main() {
 
 	var scriptT string = ""
 
-	filePathT := tk.GetParameterByIndexWithDefaultValue(os.Args, 1, "")
+	filePathT := tk.GetParameterByIndexWithDefaultValue(argsT, 1, "")
 
 	if ifInExeT && inExeCodeT != "" {
 		scriptT = inExeCodeT
@@ -583,22 +652,45 @@ func main() {
 		if (!tk.EndsWith(filePathT, ".xie")) && (!tk.EndsWith(filePathT, ".谢")) {
 			filePathT += ".谢"
 		}
-		scriptT = tk.DownloadWebPageX("http://xie.topget.org/xc/t/c/xielang/example/" + tk.UrlEncode2(filePathT))
+
+		pathT := "http://xie.topget.org/xc/t/c/xielang/example/" + tk.UrlEncode2(filePathT)
+		scriptT = tk.DownloadWebPageX(pathT)
+		scriptPathG = pathT
 
 	} else if ifExamT {
 		if (!tk.EndsWith(filePathT, ".xie")) && (!tk.EndsWith(filePathT, ".谢")) {
 			filePathT += ".xie"
 		}
-		scriptT = tk.DownloadWebPageX("http://xie.topget.org/xc/t/c/xielang/example/" + tk.UrlEncode2(filePathT))
+
+		pathT := "http://xie.topget.org/xc/t/c/xielang/example/" + tk.UrlEncode2(filePathT)
+		scriptT = tk.DownloadWebPageX(pathT)
+		scriptPathG = pathT
 
 	} else if ifGoPathT {
 		if (!tk.EndsWith(filePathT, ".xie")) && (!tk.EndsWith(filePathT, ".谢")) {
 			filePathT += ".xie"
 		}
 
-		filePathT = filepath.Join(tk.GetEnv("GOPATH"), "src", "gitee.com", "topxeq", "xie", "cmd", "xie", "scripts", filePathT)
+		filePathT = filepath.Join(tk.GetEnv("GOPATH"), "src", "github.com", "topxeq", "xie", "cmd", "xie", "scripts", filePathT)
 		// tk.Pl(filePathT)
 		scriptT = tk.LoadStringFromFile(filePathT)
+		scriptPathG = filePathT
+
+	} else if ifPipeT {
+		// fmt.Println("pipe")
+		bufT := bufio.NewReader(os.Stdin)
+
+		b, err := io.ReadAll(bufT)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// Prints the data in buffer
+		// fmt.Println("s1T", string(b))
+
+		filePathT = "#PIPE"
+
+		scriptT = string(b)
 
 	} else if ifCloudT {
 		if (!tk.EndsWith(filePathT, ".xie")) && (!tk.EndsWith(filePathT, ".谢")) {
@@ -617,6 +709,8 @@ func main() {
 			if !tk.IsErrorString(cfgStrT) {
 				scriptT = tk.DownloadPageUTF8(cfgStrT+filePathT, nil, "", 30)
 
+				scriptPathG = cfgStrT + filePathT
+
 				gotT = true
 			}
 
@@ -624,7 +718,16 @@ func main() {
 
 		if !gotT {
 			scriptT = tk.DownloadPageUTF8(scriptT, nil, "", 30)
+			scriptPathG = scriptT
 		}
+
+	} else if ifRemoteT {
+		scriptPathG = scriptT
+		scriptT = tk.DownloadPageUTF8(scriptT, nil, "", 30)
+
+	} else if ifClipT {
+		scriptPathG = "clip"
+		scriptT = tk.GetClipText()
 
 	} else if ifLocalT {
 		if (!tk.EndsWith(filePathT, ".xie")) && (!tk.EndsWith(filePathT, ".谢")) {
@@ -647,11 +750,12 @@ func main() {
 		// 	tk.Pl("Try to load script from %v", filepath.Join(localPathT, scriptT))
 		// }
 
-		scriptPathT := filepath.Join(cfgStrT, filePathT)
+		scriptPathG = filepath.Join(cfgStrT, filePathT)
 
-		scriptT = tk.LoadStringFromFile(scriptPathT)
+		scriptT = tk.LoadStringFromFile(scriptPathG)
 	} else if strings.HasPrefix(filePathT, "http") {
 		rsT := tk.DownloadWebPageX(filePathT)
+		scriptPathG = filePathT
 
 		if tk.IsErrStr(rsT) {
 			scriptT = ""
@@ -660,6 +764,7 @@ func main() {
 		}
 	} else {
 		scriptT = tk.LoadStringFromFile(filePathT)
+		scriptPathG = filePathT
 	}
 
 	if ifViewT {
@@ -668,7 +773,7 @@ func main() {
 		return
 	}
 
-	if tk.IfSwitchExists(os.Args, "-dotest") {
+	if tk.IfSwitchExists(argsT, "-dotest") {
 		tk.Pl("codeG: %v", codeG)
 		return
 	}
@@ -678,7 +783,7 @@ func main() {
 
 		tk.CheckError(errT)
 
-		outputT := tk.Trim(tk.GetSwitch(os.Args, "-output=", "output.exe"))
+		outputT := tk.Trim(tk.GetSwitch(argsT, "-output=", "output.exe"))
 
 		if scriptT == "" {
 			tk.Fatalf("代码为空")
@@ -729,9 +834,23 @@ func main() {
 
 	}
 
+	if strings.HasPrefix(scriptT, "//TXDEF#") {
+		scriptT = tk.TKX.DecryptStringByTXDEF(scriptT)
+
+		if tk.IsErrStrX(scriptT) {
+			tk.Fatalf("无效的代码")
+		}
+	}
+
+	if tk.IsErrX(scriptT) {
+		fileListT := tk.GetFileList(".", "-pattern=auto*.xie")
+
+		tk.Pln(fileListT)
+	}
+
 	var guiHandlerG tk.TXDelegate = guiHandler
 
-	rs := xie.RunCode(scriptT, map[string]interface{}{"guiG": guiHandlerG}, os.Args...)
+	rs := xie.RunCode(scriptT, map[string]interface{}{"guiG": guiHandlerG, "scriptPathG": scriptPathG}, nil, argsT...)
 	if rs != "TXERROR:no result" {
 		tk.Pl("%v", rs)
 	}

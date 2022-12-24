@@ -1,0 +1,13 @@
+new $p1 point
+
+plv $p1
+
+mbSet $result $p1 X #i3
+
+plv $p1
+
+mb $x1 $p1 X
+mb $y1 $p1 Y
+
+pl "X=%v, Y=%v" $x1 $y1
+
