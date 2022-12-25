@@ -6,7 +6,7 @@ require (
 	github.com/kbinani/screenshot v0.0.0-20210720154843-7d3a670d8329
 	github.com/mholt/archiver/v3 v3.5.1
 	github.com/topxeq/goph v0.0.0-20220826070657-60e7e124b635
-	github.com/topxeq/sqltk v0.0.0-20220228051745-2503a98a4e47
+	github.com/topxeq/sqltk v0.0.0-20221225082143-d6266faebd41
 	github.com/topxeq/tk v1.0.1
 )
 

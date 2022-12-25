@@ -17,7 +17,9 @@ import (
 	"github.com/topxeq/xie"
 
 	_ "github.com/denisenkom/go-mssqldb"
+
 	_ "github.com/godror/godror"
+	_ "github.com/sijms/go-ora/v2"
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/mattn/go-sqlite3"
@@ -50,7 +52,7 @@ func test() {
 }
 
 func runInteractiveShell() int {
-	tk.Pl("谢语言（Xielang）版本%v", xie.VersionG)
+	tk.Pl(`谢语言（Xielang）版本（ver.） %v`, xie.VersionG)
 	xie.ShellModeG = true
 	xie.SetLeVSilent(true)
 

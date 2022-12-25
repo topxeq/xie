@@ -267,12 +267,14 @@ var InstrNameSet map[string]int = map[string]int{
 	// operator related
 	"inc": 801, // 将某个整数变量的值加1，省略参数的话将操作弹栈值
 	"加一":  801,
+	"++":  801,
 
 	// "inc$": 802,
 	// "inc*": 803,
 
 	"dec": 810, // 将某个整数变量的值减1，省略参数的话将操作弹栈值
 	"减一":  810,
+	"--":  810,
 
 	// "dec$": 811,
 
@@ -375,6 +377,7 @@ var InstrNameSet map[string]int = map[string]int{
 	"getItem":      1123, // 从数组中取项，结果参数不可省略，之后第一个参数为数组对象，第2个为要获取第几项（从0开始），第3个参数可省略，为取不到项时的默认值，省略时返回undefined
 	"getArrayItem": 1123,
 	"取项":           1123,
+	"[]":           1123,
 
 	"setItem":      1124, // 修改数组中某一项的值
 	"setArrayItem": 1124,
@@ -410,6 +413,7 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"getMapItem": 1320, // 获取指定序号的映射项，用法：getMapItem $result $map1 #i2，获取map1中的序号为2的项（即第3项），放入结果变量result中，如果有第4个参数则为默认值（没有找到映射项时使用的值），省略时将是undefined（可与全局内置变量$undefined比较）
 	"取映射项":       1320,
+	"{}":         1320,
 
 	"rangeMap": 1340, // 遍历映射
 	"遍历映射":     1340,
@@ -450,7 +454,8 @@ var InstrNameSet map[string]int = map[string]int{
 	"strSplit": 1530, // 按指定分割字符串分割字符串，结果参数不可省略，用法示例：strSplit $result $str1 "," 3，其中第3个参数可选（即可省略），表示结果列表最多的项数（例如为3时，将只按逗号分割成3个字符串的列表，后面的逗号将忽略；省略或为-1时将分割出全部）
 	"分割字符串":    1530,
 
-	"strReplace": 1540, // 字符串替换，用法示例：strReplace $result $str1 $find $replacement
+	"strReplace":   1540, // 字符串替换，用法示例：strReplace $result $str1 $find $replacement
+	"strReplaceIn": 1543, // 字符串替换，可同时替换多个子串，用法示例：strReplace $result $str1 $find1 $replacement1 $find2 $replacement2
 
 	"trim":    1550, // 字符串首尾去空白
 	"strTrim": 1550,
@@ -483,6 +488,8 @@ var InstrNameSet map[string]int = map[string]int{
 
 	// binary related 二进制数据相关
 	"bytesToData": 1601,
+	"dataToBytes": 1603,
+	"bytesToHex":  1605,
 
 	// time related 时间相关
 	"now":  1910, // 获取当前时间
@@ -4551,7 +4558,7 @@ func (p *XieVM) Debug() {
 func help(wordA string) {
 	switch wordA {
 	case "":
-		tk.Pln(`谢语言（Xielang）版本` + VersionG + `
+		tk.Pln(`谢语言版本（Xielang ver.）` + VersionG + `
 
 用法：
 
@@ -5971,6 +5978,8 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		case *byte:
 			p.SetVarInt(pr, *nv)
 		case *int:
+			p.SetVarInt(pr, *nv)
+		case *uint64:
 			p.SetVarInt(pr, *nv)
 		case *rune:
 			p.SetVarInt(pr, *nv)
@@ -9749,7 +9758,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 				return p.ErrStrf("序号超出范围：%v/%v", v2, len(nv))
 			}
 
-			if v3 >= len(nv) {
+			if v3 > len(nv) {
 				return p.ErrStrf("序号超出范围：%v/%v", v3, len(nv))
 			}
 
@@ -9775,7 +9784,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 				return p.ErrStrf("序号超出范围：%v/%v", v2, len(nv))
 			}
 
-			if v3 >= len(nv) {
+			if v3 > len(nv) {
 				return p.ErrStrf("序号超出范围：%v/%v", v3, len(nv))
 			}
 
@@ -9801,7 +9810,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 				return p.ErrStrf("序号超出范围：%v/%v", v2, len(nv))
 			}
 
-			if v3 >= len(nv) {
+			if v3 > len(nv) {
 				return p.ErrStrf("序号超出范围：%v/%v", v3, len(nv))
 			}
 
@@ -9827,7 +9836,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 				return p.ErrStrf("序号超出范围：%v/%v", v2, len(nv))
 			}
 
-			if v3 >= len(nv) {
+			if v3 > len(nv) {
 				return p.ErrStrf("序号超出范围：%v/%v", v3, len(nv))
 			}
 
@@ -9853,7 +9862,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 				return p.ErrStrf("序号超出范围：%v/%v", v2, len(nv))
 			}
 
-			if v3 >= len(nv) {
+			if v3 > len(nv) {
 				return p.ErrStrf("序号超出范围：%v/%v", v3, len(nv))
 			}
 
@@ -9879,7 +9888,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 				return p.ErrStrf("序号超出范围：%v/%v", v2, len(nv))
 			}
 
-			if v3 >= len(nv) {
+			if v3 > len(nv) {
 				return p.ErrStrf("序号超出范围：%v/%v", v3, len(nv))
 			}
 
@@ -9905,7 +9914,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 				return p.ErrStrf("序号超出范围：%v/%v", v2, len(nv))
 			}
 
-			if v3 >= len(nv) {
+			if v3 > len(nv) {
 				return p.ErrStrf("序号超出范围：%v/%v", v3, len(nv))
 			}
 
@@ -9931,7 +9940,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 				return p.ErrStrf("序号超出范围：%v/%v", v2, len(nv))
 			}
 
-			if v3 >= len(nv) {
+			if v3 > len(nv) {
 				return p.ErrStrf("序号超出范围：%v/%v", v3, len(nv))
 			}
 
@@ -9957,7 +9966,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 				return p.ErrStrf("序号超出范围：%v/%v", v2, len(nv))
 			}
 
-			if v3 >= len(nv) {
+			if v3 > len(nv) {
 				return p.ErrStrf("序号超出范围：%v/%v", v3, len(nv))
 			}
 
@@ -11631,6 +11640,22 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 		return ""
 
+	case 1543: // strReplaceIn
+		if instrT.ParamLen < 3 {
+			return p.ErrStrf("参数不够")
+		}
+
+		pr := instrT.Params[0].Ref
+		v1p := 1
+
+		v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
+
+		vs := p.ParamsToStrs(instrT, v1p+1)
+
+		p.SetVarInt(pr, tk.StringReplace(v1, vs...))
+
+		return ""
+
 	case 1550: // trim/strTrim
 		if instrT.ParamLen < 1 {
 			return p.ErrStrf("参数不够")
@@ -11644,9 +11669,15 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			v1p = 1
 		}
 
-		v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
+		v1 := p.GetVarValue(instrT.Params[v1p])
 
-		p.SetVarInt(pr, strings.TrimSpace(v1))
+		if v1 == nil {
+			p.SetVarInt(pr, "")
+		} else if v1 == Undefined {
+			p.SetVarInt(pr, "")
+		} else {
+			p.SetVarInt(pr, strings.TrimSpace(tk.ToStr(v1)))
+		}
 
 		return ""
 
@@ -11983,6 +12014,36 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		vs := p.ParamsToStrs(instrT, v1p+2)
 
 		p.SetVarInt(pr, tk.BytesToData(v1, v2, vs...))
+
+		return ""
+
+	case 1603: // dataToBytes
+		if instrT.ParamLen < 2 {
+			return p.ErrStrf("参数不够")
+		}
+
+		pr := instrT.Params[0].Ref
+		v1p := 1
+
+		v1 := p.GetVarValue(instrT.Params[v1p])
+
+		vs := p.ParamsToStrs(instrT, v1p+1)
+
+		p.SetVarInt(pr, tk.DataToBytes(v1, vs...))
+
+		return ""
+
+	case 1605: // bytesToHex
+		if instrT.ParamLen < 2 {
+			return p.ErrStrf("参数不够")
+		}
+
+		pr := instrT.Params[0].Ref
+		v1p := 1
+
+		v1 := p.GetVarValue(instrT.Params[v1p]).([]byte)
+
+		p.SetVarInt(pr, tk.BytesToHex(v1))
 
 		return ""
 

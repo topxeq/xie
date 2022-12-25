@@ -1,0 +1,20 @@
+getSwitch $connectStrT $argsG -db= "oracle://user:pass@server/service_name"
+
+ifEmpty $connectStrT +1 +2
+    fatalf "DB connect string empty"
+
+dbConnect $dbT oracle $connectStrT
+
+checkErrX $dbT
+
+defer dbClose $dbT
+
+= $sqlT `select * from HR_DEPT1_QUOTA where QUOTA > :v1`
+
+dbQuery $drsT $dbT $sqlT #i10
+
+plv $drsT
+
+len $lenT $drsT
+
+pl "%v records" $lenT

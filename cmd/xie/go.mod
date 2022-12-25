@@ -9,6 +9,7 @@ require (
 	github.com/kbinani/screenshot v0.0.0-20210720154843-7d3a670d8329
 	github.com/mattn/go-sqlite3 v1.14.6
 	github.com/sciter-sdk/go-sciter v0.5.1-0.20210426171118-f5212dff3ad8
+	github.com/sijms/go-ora/v2 v2.5.20
 	github.com/topxeq/dlgs v0.0.0-20220223083937-4d3036aff547
 	github.com/topxeq/tk v1.0.1
 	github.com/topxeq/xie v0.0.0
@@ -60,7 +61,7 @@ require (
 	github.com/topxeq/mahonia v0.0.0-20190828060648-12b0599ddd1a // indirect
 	github.com/topxeq/regexpx v0.0.0-20200814082553-4bffc7d07029 // indirect
 	github.com/topxeq/socks v0.0.0-20200812112322-24acb126b5f3 // indirect
-	github.com/topxeq/sqltk v0.0.0-20220228051745-2503a98a4e47 // indirect
+	github.com/topxeq/sqltk v0.0.0-20221225082143-d6266faebd41 // indirect
 	github.com/topxeq/uuid v0.0.0-20210318003930-0d149e412ca1 // indirect
 	github.com/topxeq/xmlx v0.2.0 // indirect
 	github.com/ulikunitz/xz v0.5.10 // indirect
