@@ -724,8 +724,20 @@ func main() {
 		}
 
 	} else if ifRemoteT {
-		scriptPathG = scriptT
-		scriptT = tk.DownloadPageUTF8(scriptT, nil, "", 30)
+		if (!tk.EndsWith(filePathT, ".xie")) && (!tk.EndsWith(filePathT, ".谢")) {
+			filePathT += ".xie"
+		}
+
+		scriptPathG = filePathT
+		// tk.Pl("scriptT: %v", filePathT)
+		scriptT = tk.DownloadPageUTF8(filePathT, nil, "", 30)
+
+		if tk.IsErrStrX(scriptT) {
+			tk.Pl("读取代码内容失败：%v", tk.GetErrStrX(scriptT))
+
+			return
+
+		}
 
 	} else if ifClipT {
 		scriptPathG = "clip"

@@ -37,7 +37,7 @@ import (
 	"github.com/kbinani/screenshot"
 )
 
-var VersionG string = "0.6.1"
+var VersionG string = "0.6.2"
 
 var ShellModeG bool = false
 
