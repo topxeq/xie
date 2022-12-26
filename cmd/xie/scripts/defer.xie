@@ -1,9 +1,13 @@
+// 延迟执行指令1
 defer pl "main defer: %v" test1
 
+// 延迟执行指令2
+// defer指令遵循“后进先出”的规则，即后指定的defer指令将先被执行
 defer pl "main defer: %v" test2
 
 pln 1
 
+// 函数中的延迟执行
 call :func1
 
 pln func1 return
@@ -14,6 +18,14 @@ exit
     defer pl "sub defer: %v" test1
 
     pln sub1
+
+    // 故意做一个会出现错误的指令，这里是除零操作
+    quickEval $r1 `#i10 / #i0`
+
+    // 检查出错则中断程序，此时应执行本函数内的defer和主函数内的defer
+    checkErrX $r1
+
+    pln "10/0=" $r1
 
     ret
 

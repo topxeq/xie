@@ -972,7 +972,7 @@ pl "[%v] test params: %v" ?"(?nowStr)" $a
 
 ```go
 // 本例展示快速表达式
-// 注意快速表达式中目前不支持内嵌指令或函数（如需使用，请用普通/复杂表达式）
+// 注意快速表达式中需要用花括号来支持内嵌指令或函数
 
 // 将变量a赋值为浮点数15.2
 = $a #f15.2
@@ -997,10 +997,27 @@ assign $b #i18
 // if指令后也可以接快速表达式表示判断条件
 // 快速表达式做参数时，以@符号开始，一般后面用反引号括起来，因为常有空格
 // if语句后快速表达式也可以不带@符号，直接是一个字符串，会自动判断
-if @`$b > #i12` +1 +2
-    fatalf "$a > #i12"
+if @`$b > #i12` +1 +3
+    pl "$a > #i12"
+    goto :next1
 
-    fatalf "$a <= #i12"
+    pl "$a <= #i12"
+
+:next1
+
+// 给变量s1赋值为字符串abcde
+= $s1 `abcde`
+
+// 快速表达式中如果需要进行内嵌指令运算，需要用花括号括起来
+// 另外内嵌指令的结果必须存入临时变量$tmp中
+quickEval $rs `#i15*#i3+{toInt $tmp 19}* {len $tmp $s1}`
+
+pl "first result: %v" $rs
+
+plv @`#i15/#i3+{toInt $tmp 19}* {len $tmp $s1}-#i3`
+
+// 内嵌指令中不能再使用花括号，其他值中可以使用花括号
+plv @`{toStr $tmp #i123456} + " {ab 123 c}"`
 ```
 
 条件判断指令if中，可以直接带字符串类型的快速表达式，方便代码书写。
@@ -2803,6 +2820,52 @@ exit
 代码运行到第1行时发现错误：runtime error: integer divide by zero
 计算完毕(错误处理完毕)
 ```
+
+
+&nbsp;
+
+##### - **延迟执行指令 defer**
+
+&nbsp;
+
+与Go语言类似，谢语言也支持用defer指令延迟执行另一条指令，执行的时机是主程序退出前或函数执行退出前，参看下面的代码（defer.xie）：
+
+```go
+// 延迟执行指令1
+defer pl "main defer: %v" test1
+
+// 延迟执行指令2
+// defer指令遵循“后进先出”的规则，即后指定的defer指令将先被执行
+defer pl "main defer: %v" test2
+
+pln 1
+
+// 函数中的延迟执行
+call :func1
+
+pln func1 return
+
+exit
+
+:func1
+    defer pl "sub defer: %v" test1
+
+    pln sub1
+
+    // 故意做一个会出现错误的指令，这里是除零操作
+    quickEval $r1 `#i10 / #i0`
+
+    // 检查出错则中断程序，此时应执行本函数内的defer和主函数内的defer
+    checkErrX $r1
+
+    pln "10/0=" $r1
+
+    ret
+
+
+```
+
+可以看出，defer指令也可以被用在异常/错误处理的场景下。
 
 &nbsp;
 

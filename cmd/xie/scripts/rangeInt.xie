@@ -2,6 +2,8 @@ onError :l2
 
 range #i2 #i5 :label1
 
+range #i5 :label1
+
 exit
 
 :label1

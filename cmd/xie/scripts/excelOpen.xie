@@ -1,0 +1,28 @@
+// 从命令行参数获取要打开的Excel文件路径
+getSwitch $filePathT $argsG -file= ""
+
+// 文件名不能为空
+if @`{isEmptyTrim $tmp $filePathT}` +1 +2
+    fatalf "empty file name"
+
+pl "try open %v ..." $filePathT
+
+// excelOpen指令用于打开一个Excel文件，获得文件对象
+excelOpen $excelT $filePathT
+
+checkErrX $excelT
+
+// defer执行保证程序退出时被执行
+defer excelClose $excelT
+
+excelReadSheet $rowsT $excelT #i0
+
+checkErrX $rowsT
+
+plv $rowsT
+
+excelReadSheet $rowsT $excelT "sheet1"
+
+checkErrX $rowsT
+
+plv $rowsT

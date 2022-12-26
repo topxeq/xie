@@ -1,0 +1,7 @@
+= $s1 `abcde`
+
+quickEval $rs `#i15*#i3+{toInt $tmp 19}* {len $tmp $s1}`
+
+pl "first result: %v" $rs
+
+plv @`#i15/#i3+{toInt $tmp 19}* {len $tmp $s1}-#i3`

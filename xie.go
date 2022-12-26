@@ -35,6 +35,8 @@ import (
 	"github.com/mholt/archiver/v3"
 
 	"github.com/kbinani/screenshot"
+
+	excelize "github.com/xuri/excelize/v2"
 )
 
 var VersionG string = "0.6.2"
@@ -446,8 +448,9 @@ var InstrNameSet map[string]int = map[string]int{
 	"quote":     1503, // 将字符串进行转义（加上转义符，如“"”变成“\"”）
 	"unquote":   1504, // 将字符串进行解转义
 
-	"isEmpty": 1510, // 判断字符串是否为空
-	"是否空串":    1510,
+	"isEmpty":     1510, // 判断字符串是否为空
+	"是否空串":        1510,
+	"isEmptyTrim": 1513, // 判断字符串trim后是否为空
 
 	"strAdd": 1520,
 
@@ -598,7 +601,8 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"isErrX": 10943, // 同时判断是否是error对象或TXERROR字符串，用法：isErrX $result $err1 $errMsg，第三个参数可选（结果参数不可省略），如有会放入错误原因信息
 
-	"checkErrX": 10945, // 检查后续变量或数值是否是error对象或TXERROR字符串，是则输出后中止
+	"checkErrX":  10945, // 检查后续变量或数值是否是error对象或TXERROR字符串，是则输出后中止
+	"getErrStrX": 10947, // 获取error对象或TXERROR字符串中的错误原因信息（即TXERROR:后的内容）
 
 	// http request/response related HTTP请求相关
 	"writeResp":       20110, // 写一个HTTP请求的响应
@@ -883,7 +887,16 @@ var InstrNameSet map[string]int = map[string]int{
 	"initWebGuiC": 100011,
 
 	// ssh/sftp/ftp related
-	"sshUpload": 200011, // 通过ssh上传一个文件，用法：sshUpload 结果变量 -host=服务器名 -port=服务器端口 -user=用户名 -password=密码 -path=文件路径 -remotePath=远端文件路径
+	"sshConnect": 200001, // 打开一个SSH连接，用法：sshConnect 结果变量 -host=服务器名 -port=服务器端口 -user=用户名 -password=密码
+	"sshOpen":    200001,
+	"sshClose":   200003, // 关闭一个SSH连接
+	"sshUpload":  200011, // 通过ssh上传一个文件，用法：sshUpload 结果变量 -host=服务器名 -port=服务器端口 -user=用户名 -password=密码 -path=文件路径 -remotePath=远端文件路径，可以加-force参数表示覆盖已有文件
+
+	// excel related
+	"excelOpen":  210003, // 打开一个excel文件，用法：excelOpen $excelFileT `d:\tmp\excel1.xlsx`
+	"excelClose": 210005, // 关闭一个excel文件
+
+	"excelReadSheet": 210101, // 读取已打开的excel文件某一个sheet的内容，返回格式是二维数组，用法：excelReadSheet $result $excelFileT sheet1，最后一个参数可以是字符串类型表示按sheet名称读取，或者是一个整数表示按序号读取
 
 	// GUI related 图形界面相关
 	// "guiInit": 210011,
@@ -1561,7 +1574,7 @@ func (p *XieVM) ParseVar(strA string) VarRef {
 
 			typeT := s1T[1]
 
-			if typeT == 'i' {
+			if typeT == 'i' { // int
 				c1T, errT := tk.StrToIntQuick(s1T[2:])
 
 				if errT != nil {
@@ -1569,7 +1582,7 @@ func (p *XieVM) ParseVar(strA string) VarRef {
 				}
 
 				return VarRef{-3, c1T}
-			} else if typeT == 'f' {
+			} else if typeT == 'f' { // float
 				c1T, errT := tk.StrToFloat64E(s1T[2:])
 
 				if errT != nil {
@@ -1577,13 +1590,13 @@ func (p *XieVM) ParseVar(strA string) VarRef {
 				}
 
 				return VarRef{-3, c1T}
-			} else if typeT == 'b' {
+			} else if typeT == 'b' { // bool
 				return VarRef{-3, tk.ToBool(s1T[2:])}
-			} else if typeT == 'y' {
+			} else if typeT == 'y' { // byte
 				return VarRef{-3, tk.ToByte(s1T[2:])}
-			} else if typeT == 'r' {
+			} else if typeT == 'r' { // rune
 				return VarRef{-3, tk.ToRune(s1T[2:])}
-			} else if typeT == 's' {
+			} else if typeT == 's' { // string
 				s1DT := s1T[2:]
 
 				if strings.HasPrefix(s1DT, "`") && strings.HasSuffix(s1DT, "`") {
@@ -1591,7 +1604,7 @@ func (p *XieVM) ParseVar(strA string) VarRef {
 				}
 
 				return VarRef{-3, tk.ToStr(s1DT)}
-			} else if typeT == 'e' {
+			} else if typeT == 'e' { // error
 				s1DT := s1T[2:]
 
 				if strings.HasPrefix(s1DT, "`") && strings.HasSuffix(s1DT, "`") {
@@ -1599,7 +1612,7 @@ func (p *XieVM) ParseVar(strA string) VarRef {
 				}
 
 				return VarRef{-3, fmt.Errorf("%v", s1DT)}
-			} else if typeT == 't' {
+			} else if typeT == 't' { // time
 				s1DT := s1T[2:]
 
 				if strings.HasPrefix(s1DT, "`") && strings.HasSuffix(s1DT, "`") {
@@ -1619,7 +1632,7 @@ func (p *XieVM) ParseVar(strA string) VarRef {
 				}
 
 				return VarRef{-3, rsT}
-			} else if typeT == 'L' { // list
+			} else if typeT == 'L' { // list/array
 				var listT []interface{}
 
 				s1DT := s1T[2:] // tk.UrlDecode(s1T[2:])
@@ -2298,7 +2311,7 @@ func evalSingle(exprA []interface{}) (resultR interface{}) {
 }
 
 type ExprElement struct {
-	// 0: value, 1: operator, 6: (, 7: ), 9: end
+	// 0: value, 1: operator， 5: eval, 6: (, 7: ), 9: end
 	Type     int
 	Priority int
 	Value    string
@@ -2346,7 +2359,7 @@ func (p *XieVM) SplitExpr(strA string) ([]ExprElement, error) {
 
 	elementsT := make([]ExprElement, 0)
 
-	// 0: start, 1: operator, 2: value, 3: value in quote such as "abc", 4: wait slash in quote such as "ab\n", 5: blank after value
+	// 0: start, 1: operator, 2: value, 3: value in quote such as "abc", 4: wait slash in quote such as "ab\n", 5: blank after value, 6: in {}
 	stateT := 0
 
 	opT := ""
@@ -2362,6 +2375,10 @@ func (p *XieVM) SplitExpr(strA string) ([]ExprElement, error) {
 				stateT = 3
 				valueT = `"`
 				break
+			case '{':
+				stateT = 6
+				valueT = ``
+				break
 			case '+', '-', '*', '!', '&', '^':
 				stateT = 1
 				opT = "1" + string(v)
@@ -2372,6 +2389,8 @@ func (p *XieVM) SplitExpr(strA string) ([]ExprElement, error) {
 				break
 			case ')':
 				return nil, fmt.Errorf("无法匹配的括号")
+			case '}':
+				return nil, fmt.Errorf("无法匹配的花括号")
 				// stateT = 0
 				// elementsT = append(elementsT, ExprElement{Type: 7, Priority: 0, Value: ")"})
 				// break
@@ -2390,6 +2409,10 @@ func (p *XieVM) SplitExpr(strA string) ([]ExprElement, error) {
 				stateT = 3
 				valueT = `"`
 				break
+			case '{':
+				stateT = 6
+				valueT = ``
+				break
 			case '+', '-', '*', '/', '%', '!', '&', '|', '=', '<', '>', '^':
 				stateT = 1
 				opT = string(v)
@@ -2401,6 +2424,9 @@ func (p *XieVM) SplitExpr(strA string) ([]ExprElement, error) {
 			case ')':
 				stateT = 5
 				elementsT = append(elementsT, ExprElement{Type: 7, Priority: 0, Value: ")"})
+				break
+			case '}':
+				return nil, fmt.Errorf("无法匹配的花括号")
 				break
 			default:
 				stateT = 2
@@ -2439,6 +2465,17 @@ func (p *XieVM) SplitExpr(strA string) ([]ExprElement, error) {
 				}
 				opT = ""
 				elementsT = append(elementsT, ExprElement{Type: 7, Priority: 0, Value: ")"})
+				break
+			case '{':
+				stateT = 6
+				opT = strings.TrimSpace(opT)
+				if len(opT) > 0 {
+					elementsT = append(elementsT, ExprElement{Type: 1, Priority: OperatorPriorityMap[opT], Value: opT})
+				}
+				opT = ""
+				break
+			case '}':
+				return nil, fmt.Errorf("无法匹配的花括号")
 				break
 			default:
 				stateT = 2
@@ -2518,6 +2555,19 @@ func (p *XieVM) SplitExpr(strA string) ([]ExprElement, error) {
 			}
 
 			continue
+		} else if stateT == 6 { // 值中的花括号内
+			switch v {
+			case '}':
+				// valueT += `}`
+				elementsT = append(elementsT, ExprElement{Type: 5, Priority: 0, Value: valueT})
+				stateT = 5
+				break
+			default:
+				valueT += string(v)
+				break
+			}
+
+			continue
 		}
 	}
 
@@ -2535,6 +2585,8 @@ func (p *XieVM) SplitExpr(strA string) ([]ExprElement, error) {
 		}
 	} else if stateT == 3 || stateT == 4 {
 		return nil, fmt.Errorf("表达式格式错误双引号不匹配")
+	} else if stateT == 6 {
+		return nil, fmt.Errorf("表达式格式错误花引号不匹配")
 	}
 
 	// tk.Plv(elementsT)
@@ -2546,6 +2598,8 @@ func (p *XieVM) SplitExpr(strA string) ([]ExprElement, error) {
 	for _, v := range elementsT {
 		// tk.Pl("process %v, %v, %v", v, backElementsT, opStackT)
 		if v.Type == 0 {
+			backElementsT = append(backElementsT, v)
+		} else if v.Type == 5 {
 			backElementsT = append(backElementsT, v)
 		} else if v.Type == 1 {
 			opLast := opStackT.Peek()
@@ -2609,7 +2663,7 @@ func (p *XieVM) QuickEval(strA string) interface{} {
 	listT, errT := p.SplitExpr(strA)
 
 	if errT != nil {
-		return fmt.Errorf("计算表达式失败：%v", errT)
+		return fmt.Errorf("分析表达式失败：%v", errT)
 	}
 
 	valueStackT := tk.NewSimpleStack(len(listT) + 1)
@@ -2621,6 +2675,30 @@ func (p *XieVM) QuickEval(strA string) interface{} {
 			vv1T := p.GetVarValue(v1T)
 
 			valueStackT.Push(vv1T)
+		} else if v.Type == 5 { // eval
+			// v1T := p.ParseVar(v.Value)
+			// vv1T := p.EvalExpression(v1T)
+
+			// tk.Pl("v.Value: %v", v.Value)
+
+			instrT := p.NewInstr(v.Value, nil)
+
+			if instrT.Code == InstrNameSet["invalidInstr"] {
+				return fmt.Errorf("指令分析失败：%v", instrT.Params[0].Value)
+			}
+
+			rsT := p.RunLine(0, instrT)
+
+			nsv, ok := rsT.(string)
+
+			if ok {
+				if tk.IsErrStr(nsv) {
+					return fmt.Errorf("计算失败：%v", tk.GetErrStr(nsv))
+				}
+			}
+
+			// 表达式应将结果存入$tmp
+			valueStackT.Push(p.TmpM)
 		} else if v.Type == 1 {
 			switch v.Value {
 			case "1-":
@@ -8848,12 +8926,37 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		v1 := p.GetVarValue(instrT.Params[0])
 		var v2 interface{} = nil
 
-		if instrT.ParamLen > 2 {
+		if instrT.ParamLen > 2 { // 用于遍历整数时的第二个数（上限，不包含）
 			labelPT = 2
 			v2 = p.GetVarValue(instrT.Params[1])
 		}
 
-		labelT := tk.ToInt(p.GetVarValue(instrT.Params[labelPT]))
+		var labelT int
+
+		labelValueT := p.GetVarValue(instrT.Params[labelPT])
+
+		lv1, ok := labelValueT.(int)
+
+		if ok {
+			labelT = lv1
+		} else {
+			labelStrT, ok := labelValueT.(string)
+
+			if !ok {
+				labelT = tk.ToInt(labelValueT)
+			} else {
+				if strings.HasPrefix(labelStrT, "+") {
+					labelT = p.CodePointerM + tk.ToInt(labelStrT[1:])
+				} else if strings.HasPrefix(labelStrT, "-") {
+					labelT = p.CodePointerM - tk.ToInt(labelStrT[1:])
+				} else {
+					return p.ErrStrf("无效的标号：%v", labelValueT)
+				}
+			}
+
+		}
+
+		// tk.Pl("%v -> %v", labelValueT, labelT)
 
 		pointerT := p.CodePointerM
 
@@ -11066,8 +11169,9 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 				v2 := tk.ToStr(p.GetVarValue(instrT.Params[v1p+1]))
 				v3 := tk.ToStr(p.GetVarValue(instrT.Params[v1p+2]))
+				vs := p.ParamsToStrs(instrT, v1p+3)
 
-				p.SetVarInt(pr, nv.Upload(v2, v3))
+				p.SetVarInt(pr, nv.Upload(v2, v3, vs...))
 
 				return ""
 			case "download":
@@ -11564,6 +11668,25 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		}
 
 		v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
+
+		p.SetVarInt(pr, (v1 == ""))
+
+		return ""
+
+	case 1513: // isEmptyTrim
+		if instrT.ParamLen < 1 {
+			return p.ErrStrf("参数不够")
+		}
+
+		pr := -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0].Ref
+			v1p = 1
+		}
+
+		v1 := tk.Trim(tk.ToStr(p.GetVarValue(instrT.Params[v1p])))
 
 		p.SetVarInt(pr, (v1 == ""))
 
@@ -13341,6 +13464,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 	case 10945: // checkErrX
 		if instrT.ParamLen < 1 {
 			if tk.IsErrX(p.TmpM) {
+				// p.RunDeferUpToRoot()
 				return p.ErrStrf(tk.GetErrStrX(p.TmpM))
 			}
 
@@ -13351,8 +13475,27 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		v1 := p.GetVarValue(instrT.Params[0])
 
 		if tk.IsErrX(v1) {
+			// p.RunDeferUpToRoot()
 			return p.ErrStrf(tk.GetErrStrX(v1))
 		}
+
+		return ""
+	case 10947: // getErrStrX
+		if instrT.ParamLen < 1 {
+			return p.ErrStrf("参数不够")
+		}
+
+		pr := -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0].Ref
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(instrT.Params[v1p])
+
+		p.SetVarInt(pr, tk.GetErrStrX(v1))
 
 		return ""
 	case 20110: // writeResp
@@ -16635,6 +16778,83 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 		return ""
 
+	case 200001: // sshConnect/sshOpen
+		if instrT.ParamLen < 1 {
+			return p.ErrStrf("参数不够")
+		}
+
+		pr := instrT.Params[0].Ref
+		v1p := 1
+
+		pa := p.ParamsToStrs(instrT, v1p)
+
+		var v1, v2, v3, v4 string
+
+		v1 = strings.TrimSpace(p.GetSwitchVarValue(pa, "-host=", v1))
+		v2 = strings.TrimSpace(p.GetSwitchVarValue(pa, "-port=", "22"))
+		v3 = strings.TrimSpace(p.GetSwitchVarValue(pa, "-user=", v3))
+		v4 = strings.TrimSpace(p.GetSwitchVarValue(pa, "-password=", v4))
+		if strings.HasPrefix(v4, "740404") {
+			v4 = strings.TrimSpace(tk.DecryptStringByTXDEF(v4))
+		}
+
+		if v1 == "" {
+			p.SetVarInt(pr, fmt.Errorf("host不能为空"))
+			return ""
+		}
+
+		if v2 == "" {
+			p.SetVarInt(pr, fmt.Errorf("port不能为空"))
+			return ""
+		}
+
+		if v3 == "" {
+			p.SetVarInt(pr, fmt.Errorf("user不能为空"))
+			return ""
+		}
+
+		if v4 == "" {
+			p.SetVarInt(pr, fmt.Errorf("password不能为空"))
+			return ""
+		}
+
+		sshT, errT := tk.NewSSHClient(v1, v2, v3, v4)
+
+		if errT != nil {
+			p.SetVarInt(pr, errT)
+
+			return ""
+		}
+
+		p.SetVarInt(pr, sshT)
+		return ""
+
+	case 200003: // sshClose
+		if instrT.ParamLen < 1 {
+			return p.ErrStrf("参数不够")
+		}
+
+		pr := -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0].Ref
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(instrT.Params[v1p])
+
+		sshT, ok := v1.(*goph.Client)
+
+		if !ok {
+			return p.ErrStrf("参数类型错误：%T(%v)", sshT, sshT)
+		}
+
+		rsT := sshT.Close()
+
+		p.SetVarInt(pr, rsT)
+		return ""
+
 	case 200011: // sshUpload
 		if instrT.ParamLen < 1 {
 			return p.ErrStrf("参数不够")
@@ -16707,6 +16927,109 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 		p.SetVarInt(pr, nil)
 		return ""
+
+	case 210003: // excelOpen
+		if instrT.ParamLen < 1 {
+			return p.ErrStrf("参数不够")
+		}
+
+		pr := -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0].Ref
+			v1p = 1
+		}
+
+		v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
+
+		f, err := excelize.OpenFile(v1)
+		if err != nil {
+			p.SetVarInt(pr, err)
+			return ""
+		}
+
+		p.SetVarInt(pr, f)
+		return ""
+
+	case 210005: // excelClose
+		if instrT.ParamLen < 1 {
+			return p.ErrStrf("参数不够")
+		}
+
+		pr := -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0].Ref
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(instrT.Params[v1p])
+
+		f1, ok := v1.(*excelize.File)
+
+		if !ok {
+			return p.ErrStrf("参数类型错误：%T(%v)", v1, v1)
+		}
+
+		// tk.Pl("close excel: %v", f1)
+
+		err := f1.Close()
+		if err != nil {
+			p.SetVarInt(pr, err)
+			return ""
+		}
+
+		p.SetVarInt(pr, nil)
+		return ""
+
+	case 210101: // excelReadSheet
+		if instrT.ParamLen < 2 {
+			return p.ErrStrf("参数不够")
+		}
+
+		pr := -5
+		v1p := 0
+
+		if instrT.ParamLen > 2 {
+			pr = instrT.Params[0].Ref
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(instrT.Params[v1p])
+
+		f1, ok := v1.(*excelize.File)
+
+		if !ok {
+			return p.ErrStrf("参数类型错误：%T(%v)", v1, v1)
+		}
+
+		v2 := p.GetVarValue(instrT.Params[v1p+1])
+
+		v2i, ok := v2.(int)
+
+		if ok {
+			rowsT, errT := f1.GetRows(f1.GetSheetName(v2i))
+
+			if errT != nil {
+				p.SetVarInt(pr, errT)
+				return ""
+			}
+
+			p.SetVarInt(pr, rowsT)
+			return ""
+		}
+
+		rowsT, errT := f1.GetRows(tk.ToStr(v2))
+		if errT != nil {
+			p.SetVarInt(pr, errT)
+			return ""
+		}
+		p.SetVarInt(pr, rowsT)
+		return ""
+
+		// pa := p.ParamsToStrs(instrT, v1p)
 
 		// case 210011: // guiInit
 		// 	p.GuiM = make(map[string]interface{}, 10)
@@ -17990,6 +18313,49 @@ func (p *XieVM) RunDefer() interface{} {
 	return nil
 }
 
+func (p *XieVM) RunDeferUpToRoot() interface{} {
+
+	currentContextT := p.CurrentFuncContextM
+
+	for {
+		// tk.Pl("currentContextT: %#v", currentContextT)
+		instrT := currentContextT.DeferStackM.Pop()
+
+		if instrT == nil {
+			if currentContextT.Layer < 1 {
+				break
+			}
+
+			if currentContextT.Layer == 1 {
+				currentContextT = &p.FuncContextM
+				continue
+			}
+
+			currentContextT = &p.FuncStackM[currentContextT.Layer-1]
+
+			continue
+		}
+
+		nv, ok := instrT.(Instr)
+
+		if !ok {
+			return fmt.Errorf("无效的指令：%v", instrT)
+		}
+
+		if p.VerboseM {
+			tk.Pl("延迟执行：%v", nv)
+		}
+
+		rs := p.RunLine(0, nv)
+
+		if tk.IsErrX(rs) {
+			return tk.ErrStrf("[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), tk.GetErrStrX(rs))
+		}
+	}
+
+	return nil
+}
+
 func (p *XieVM) Run(posA ...int) string {
 	p.CodePointerM = 0
 	if len(posA) > 0 {
@@ -18007,10 +18373,12 @@ func (p *XieVM) Run(posA ...int) string {
 			rs, ok := resultT.(string)
 
 			if !ok {
+				p.RunDeferUpToRoot()
 				return p.ErrStrf("返回结果错误: (%T)%v", resultT, resultT)
 			}
 
 			if tk.IsErrStr(rs) {
+				p.RunDeferUpToRoot()
 				return tk.ErrStrf("[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), tk.GetErrStr(rs))
 				// tk.Pl("[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), p.CodeSourceMapM[p.CodePointerM]+1, tk.GetErrStr(rs))
 				// break
@@ -18033,10 +18401,13 @@ func (p *XieVM) Run(posA ...int) string {
 				tmpI := tk.StrToInt(rs)
 
 				if tmpI < 0 {
+					p.RunDeferUpToRoot()
+
 					return p.ErrStrf("无效指令: %v", rs)
 				}
 
 				if tmpI >= len(p.CodeListM) {
+					p.RunDeferUpToRoot()
 					return p.ErrStrf("指令序号超出范围: %v(%v)/%v", tmpI, rs, len(p.CodeListM))
 				}
 

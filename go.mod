@@ -5,7 +5,7 @@ go 1.17
 require (
 	github.com/kbinani/screenshot v0.0.0-20210720154843-7d3a670d8329
 	github.com/mholt/archiver/v3 v3.5.1
-	github.com/topxeq/goph v0.0.0-20220826070657-60e7e124b635
+	github.com/topxeq/goph v0.0.0-20221226004140-460511aa0dde
 	github.com/topxeq/sqltk v0.0.0-20221225082143-d6266faebd41
 	github.com/topxeq/tk v1.0.1
 )
@@ -61,6 +61,6 @@ require (
 	golang.org/x/text v0.3.7 // indirect
 )
 
-replace github.com/topxeq/tk v1.0.1 => ../../../github.com/topxeq/tk
+replace github.com/topxeq/tk v1.0.1 => ../tk
 
-// replace github.com/topxeq/goph v0.0.0 => ../../../github.com/topxeq/goph
+// replace github.com/topxeq/goph v0.0.0 => ../goph
