@@ -1,0 +1,41 @@
+excelNew $excelT
+
+checkErrX $excelT
+
+defer excelClose $excelT
+
+excelSetCell $result $excelT "sheet1" "A1" "VALUE"
+
+checkErrX $result
+
+excelSetCell $result $excelT "sheet1" "A2" #f1.5
+
+checkErrX $result
+
+= $x #BA
+= $y #B2
+++ $y
+spr $idxT "%c%c" $x $y
+
+excelSetCell $result $excelT "sheet1" $idxT #f2.16
+
+checkErrX $result
+
+= $x #BB
+= $y #B1
+spr $idxT "%c%c" $x $y
+
+excelSetCell $result $excelT "sheet1" $idxT "NAME"
+
+++ $y
+spr $idxT "%c%c" $x $y
+
+excelSetCell $result $excelT "sheet1" $idxT "Tom"
+
+checkErrX $result
+
+excelSaveAs $result $excelT `d:\tmpx\test1.xlsx`
+
+checkErrX $result
+
+pln "file saved"

@@ -26,3 +26,7 @@ excelReadSheet $rowsT $excelT "sheet1"
 checkErrX $rowsT
 
 plv $rowsT
+
+excelReadCell $valueT $excelT "sheet1" "A1"
+
+plv $valueT

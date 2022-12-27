@@ -39,7 +39,7 @@ import (
 	excelize "github.com/xuri/excelize/v2"
 )
 
-var VersionG string = "0.6.2"
+var VersionG string = "0.6.3"
 
 var ShellModeG bool = false
 
@@ -893,10 +893,19 @@ var InstrNameSet map[string]int = map[string]int{
 	"sshUpload":  200011, // 通过ssh上传一个文件，用法：sshUpload 结果变量 -host=服务器名 -port=服务器端口 -user=用户名 -password=密码 -path=文件路径 -remotePath=远端文件路径，可以加-force参数表示覆盖已有文件
 
 	// excel related
-	"excelOpen":  210003, // 打开一个excel文件，用法：excelOpen $excelFileT `d:\tmp\excel1.xlsx`
-	"excelClose": 210005, // 关闭一个excel文件
+	"excelNew":    210001, // 新建一个excel文件，用法：excelNew $excelFileT
+	"excelOpen":   210003, // 打开一个excel文件，用法：excelOpen $excelFileT `d:\tmp\excel1.xlsx`
+	"excelClose":  210005, // 关闭一个excel文件
+	"excelSaveAs": 210007, // 保存一个excel文件，用法：excelSave $result $excelFileT `d:\tmp\excel1.xlsx`
+
+	"excelWrite": 210009, // 将excel文件内容写入到可写入源（io.Writer），例如文件、标准输出、网页输出http的response excelWrite $result $excelFileT $writer
 
 	"excelReadSheet": 210101, // 读取已打开的excel文件某一个sheet的内容，返回格式是二维数组，用法：excelReadSheet $result $excelFileT sheet1，最后一个参数可以是字符串类型表示按sheet名称读取，或者是一个整数表示按序号读取
+	"excelReadCell":  210103, // 读取指定单元格的内容，返回字符串或错误信息，用法：excelReadCell $result $excelFileT "A1"
+	"excelWriteCell": 210105, // 将内容写入到指定单元格，用法：excelWriteCell $result $excelFileT "A1" "abc123"
+	"excelSetCell":   210105,
+
+	"excelGetSheetList": 210201, // 获取sheet名字列表，结果是字符串数组
 
 	// GUI related 图形界面相关
 	// "guiInit": 210011,
@@ -1594,6 +1603,14 @@ func (p *XieVM) ParseVar(strA string) VarRef {
 				return VarRef{-3, tk.ToBool(s1T[2:])}
 			} else if typeT == 'y' { // byte
 				return VarRef{-3, tk.ToByte(s1T[2:])}
+			} else if typeT == 'B' { // single rune (same as in Golang, like 'a'), only first character in string is used
+				runesT := []rune(s1T[2:])
+
+				if len(runesT) < 1 {
+					return VarRef{-3, s1T[2:]}
+				}
+
+				return VarRef{-3, runesT[0]}
 			} else if typeT == 'r' { // rune
 				return VarRef{-3, tk.ToRune(s1T[2:])}
 			} else if typeT == 's' { // string
@@ -16928,6 +16945,30 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		p.SetVarInt(pr, nil)
 		return ""
 
+	case 210001: // excelNew
+		// if instrT.ParamLen < 1 {
+		// 	return p.ErrStrf("参数不够")
+		// }
+
+		pr := -5
+		// v1p := 0
+
+		if instrT.ParamLen > 0 {
+			pr = instrT.Params[0].Ref
+			// v1p = 1
+		}
+
+		// v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
+
+		f := excelize.NewFile()
+		if f == nil {
+			p.SetVarInt(pr, fmt.Errorf("无法创建新的Excel文件（failed to create Excel file）"))
+			return ""
+		}
+
+		p.SetVarInt(pr, f)
+		return ""
+
 	case 210003: // excelOpen
 		if instrT.ParamLen < 1 {
 			return p.ErrStrf("参数不够")
@@ -16984,6 +17025,70 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		p.SetVarInt(pr, nil)
 		return ""
 
+	case 210007: // excelSaveAs
+		if instrT.ParamLen < 2 {
+			return p.ErrStrf("参数不够")
+		}
+
+		pr := -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0].Ref
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(instrT.Params[v1p])
+
+		f1, ok := v1.(*excelize.File)
+
+		if !ok {
+			return p.ErrStrf("参数类型错误：%T(%v)", v1, v1)
+		}
+
+		v2 := tk.ToStr(p.GetVarValue(instrT.Params[v1p+1]))
+
+		err := f1.SaveAs(v2)
+		if err != nil {
+			p.SetVarInt(pr, err)
+			return ""
+		}
+
+		p.SetVarInt(pr, nil)
+		return ""
+
+	case 210009: // excelWrite
+		if instrT.ParamLen < 2 {
+			return p.ErrStrf("参数不够")
+		}
+
+		pr := -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0].Ref
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(instrT.Params[v1p])
+
+		f1, ok := v1.(*excelize.File)
+
+		if !ok {
+			return p.ErrStrf("参数类型错误：%T(%v)", v1, v1)
+		}
+
+		v2 := p.GetVarValue(instrT.Params[v1p+1])
+
+		err := f1.Write(v2.(io.Writer))
+		if err != nil {
+			p.SetVarInt(pr, err)
+			return ""
+		}
+
+		p.SetVarInt(pr, nil)
+		return ""
+
 	case 210101: // excelReadSheet
 		if instrT.ParamLen < 2 {
 			return p.ErrStrf("参数不够")
@@ -17027,6 +17132,78 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			return ""
 		}
 		p.SetVarInt(pr, rowsT)
+		return ""
+
+	case 210103: // excelReadCell
+		if instrT.ParamLen < 3 {
+			return p.ErrStrf("参数不够")
+		}
+
+		pr := -5
+		v1p := 0
+
+		if instrT.ParamLen > 3 {
+			pr = instrT.Params[0].Ref
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(instrT.Params[v1p])
+
+		f1, ok := v1.(*excelize.File)
+
+		if !ok {
+			return p.ErrStrf("参数类型错误：%T(%v)", v1, v1)
+		}
+
+		v2 := tk.ToStr(p.GetVarValue(instrT.Params[v1p+1]))
+
+		v3 := tk.ToStr(p.GetVarValue(instrT.Params[v1p+2]))
+
+		valueT, errT := f1.GetCellValue(v2, v3)
+		if errT != nil {
+			p.SetVarInt(pr, errT)
+			return ""
+		}
+
+		p.SetVarInt(pr, valueT)
+		return ""
+
+	case 210105: // excelWriteCell/excelSetCell
+		if instrT.ParamLen < 4 {
+			return p.ErrStrf("参数不够")
+		}
+
+		pr := -5
+		v1p := 0
+
+		if instrT.ParamLen > 4 {
+			pr = instrT.Params[0].Ref
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(instrT.Params[v1p])
+
+		// tk.Pl("v1p: %v, %#v", v1p, v1)
+
+		f1, ok := v1.(*excelize.File)
+
+		if !ok {
+			return p.ErrStrf("参数类型错误：%T(%v)", v1, v1)
+		}
+
+		v2 := tk.ToStr(p.GetVarValue(instrT.Params[v1p+1]))
+
+		v3 := tk.ToStr(p.GetVarValue(instrT.Params[v1p+2]))
+
+		v4 := p.GetVarValue(instrT.Params[v1p+3])
+
+		errT := f1.SetCellValue(v2, v3, v4)
+		if errT != nil {
+			p.SetVarInt(pr, errT)
+			return ""
+		}
+
+		p.SetVarInt(pr, nil)
 		return ""
 
 		// pa := p.ParamsToStrs(instrT, v1p)
