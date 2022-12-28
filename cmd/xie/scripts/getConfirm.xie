@@ -1,0 +1,12 @@
+= $a 2
+= $b 5
+
+getConfirm $result "请确认" "%v + %v = %v，确定吗？" $a $b @`$a+$b`
+
+showInfo "选择结果" "您选择了：%v" $result
+
+if @`$result == #btrue` +1 +3
+    showError "错误提示" "您的选择不正确"
+    exit
+
+showInfo "信息提示" "您的选择正确"

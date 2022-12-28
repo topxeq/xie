@@ -1,0 +1,19 @@
+assign $s abc
+plo $s
+
+assign $s "abc 123"
+plo $s
+
+assign $s `abc 123
+and this`
+plo $s
+
+assign $b int 3
+plo $b
+
+assign $b #i3
+plo $b
+
+assign $b #f3
+plo $b
+

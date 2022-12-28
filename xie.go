@@ -908,6 +908,16 @@ var InstrNameSet map[string]int = map[string]int{
 	"excelGetSheetList": 210201, // 获取sheet名字列表，结果是字符串数组
 
 	// GUI related 图形界面相关
+
+	"alert": 400001, // 类似JavaScript中的alert，弹出对话框，显示一个字符串或任意数字、对象的字符串表达
+
+	"msgBox":   400003, // 类似Delphi、VB中的msgBox，弹出带标题的对话框，显示一个字符串，第一个参数是标题，第二个是字符串
+	"showInfo": 400003,
+
+	"showError": 400005, // 弹框显示错误信息
+
+	"getConfirm": 400011, // 显示信息，获取用户的确认
+
 	// "guiInit": 210011,
 
 	// "guiNewApp": 210013,
@@ -2691,6 +2701,8 @@ func (p *XieVM) QuickEval(strA string) interface{} {
 			v1T := p.ParseVar(v.Value)
 			vv1T := p.GetVarValue(v1T)
 
+			// tk.Plvx(vv1T)
+
 			valueStackT.Push(vv1T)
 		} else if v.Type == 5 { // eval
 			// v1T := p.ParseVar(v.Value)
@@ -2807,6 +2819,7 @@ func (p *XieVM) QuickEval(strA string) interface{} {
 
 				vr := tk.GetEQResult(v2, v1)
 
+				// tk.Plvsr(v1, v2, vr)
 				if tk.IsErrX(vr) {
 					return fmt.Errorf("计算表达式失败：%v", vr)
 				}
@@ -17206,6 +17219,138 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		p.SetVarInt(pr, nil)
 		return ""
 
+	case 400001: // alert
+		if instrT.ParamLen < 1 {
+			return p.ErrStrf("参数不够")
+		}
+
+		// pr := -5
+		// v1p := 0
+
+		// if instrT.ParamLen > 1 {
+		// 	pr = instrT.Params[0].Ref
+		// 	v1p = 1
+		// }
+
+		v0, ok := p.GetVarValue(p.ParseVar("$guiG")).(tk.TXDelegate)
+
+		if !ok {
+			return p.ErrStrf("全局变量guiG不存在（$guiG not exists）")
+		}
+
+		v1p := 0
+
+		v1 := p.GetVarValue(instrT.Params[v1p])
+
+		rs := v0("showInfo", p, nil, "", fmt.Sprintf("%v", v1))
+
+		if tk.IsErrX(rs) {
+			return p.ErrStrf(tk.GetErrStrX(rs))
+		}
+
+		return ""
+
+	case 400003: // msgBox/showInfo
+		if instrT.ParamLen < 2 {
+			return p.ErrStrf("参数不够")
+		}
+
+		// pr := -5
+		// v1p := 0
+
+		// if instrT.ParamLen > 1 {
+		// 	pr = instrT.Params[0].Ref
+		// 	v1p = 1
+		// }
+
+		v0, ok := p.GetVarValue(p.ParseVar("$guiG")).(tk.TXDelegate)
+
+		if !ok {
+			return p.ErrStrf("全局变量guiG不存在（$guiG not exists）")
+		}
+
+		v1p := 0
+
+		// v1 := p.GetVarValue(instrT.Params[v1p])
+		// v2 := p.GetVarValue(instrT.Params[v1p+1])
+		vs := p.ParamsToList(instrT, v1p)
+
+		rs := v0("showInfo", p, nil, vs...)
+
+		if tk.IsErrX(rs) {
+			return p.ErrStrf(tk.GetErrStrX(rs))
+		}
+
+		return ""
+
+	case 400005: // showError
+		if instrT.ParamLen < 2 {
+			return p.ErrStrf("参数不够")
+		}
+
+		// pr := -5
+		// v1p := 0
+
+		// if instrT.ParamLen > 1 {
+		// 	pr = instrT.Params[0].Ref
+		// 	v1p = 1
+		// }
+
+		v0, ok := p.GetVarValue(p.ParseVar("$guiG")).(tk.TXDelegate)
+
+		if !ok {
+			return p.ErrStrf("全局变量guiG不存在（$guiG not exists）")
+		}
+
+		v1p := 0
+
+		// v1 := p.GetVarValue(instrT.Params[v1p])
+		// v2 := p.GetVarValue(instrT.Params[v1p+1])
+		vs := p.ParamsToList(instrT, v1p)
+
+		rs := v0("showError", p, nil, vs...)
+
+		if tk.IsErrX(rs) {
+			return p.ErrStrf(tk.GetErrStrX(rs))
+		}
+
+		return ""
+
+	case 400011: // getConfirm
+		if instrT.ParamLen < 2 {
+			return p.ErrStrf("参数不够")
+		}
+
+		// pr := -5
+		// v1p := 0
+
+		// if instrT.ParamLen > 1 {
+		pr := instrT.Params[0].Ref
+		v1p := 1
+		// }
+
+		v0, ok := p.GetVarValue(p.ParseVar("$guiG")).(tk.TXDelegate)
+
+		if !ok {
+			return p.ErrStrf("全局变量guiG不存在（$guiG not exists）")
+		}
+
+		// v1p := 0
+
+		// v1 := p.GetVarValue(instrT.Params[v1p])
+		// v2 := p.GetVarValue(instrT.Params[v1p+1])
+
+		vs := p.ParamsToList(instrT, v1p)
+
+		rs := v0("getConfirm", p, nil, vs...)
+
+		if tk.IsErrX(rs) {
+			return p.ErrStrf(tk.GetErrStrX(rs))
+		}
+
+		p.SetVarInt(pr, rs)
+		return ""
+
 		// pa := p.ParamsToStrs(instrT, v1p)
 
 		// case 210011: // guiInit
@@ -18537,6 +18682,10 @@ func (p *XieVM) Run(posA ...int) string {
 	p.CodePointerM = 0
 	if len(posA) > 0 {
 		p.CodePointerM = posA[0]
+	}
+
+	if len(p.CodeListM) < 1 {
+		return tk.ErrStrf("no result")
 	}
 
 	for {
