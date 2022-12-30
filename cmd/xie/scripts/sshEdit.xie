@@ -1,13 +1,22 @@
-// 初始化GUI环境
-mt $rs $guiG init
+getSwitch $hostT $argsG "-host=" ""
 
-// 设定界面的HTML
-// 其中的moveToCenter函数，用于将窗口移动到屏幕正中并调整大小
-// 所有在TiScript与谢语言互通的函数都必须和moveToCenter函数这样
-// 接收一个字符串类型的输入参数，并输出一个字符串类型的输出参数
-// 如果想传递多于一个的数据，可以用JSON进行数据的封装
-// moveToCenter函数就接收一个包含两个参数（宽与高）的JSON字符串
-// 并输出一个表示屏幕宽高的字符串
+getSwitch $portT $argsG "-port=" "22"
+
+getSwitch $userT $argsG "-user=" "root"
+
+getSwitch $passT $argsG "-pass=" ""
+
+getSwitch $remotePathT $argsG "-remotePath=" ""
+
+sshDownloadBytes $rs -host=$hostT -port=$portT -user=$userT -password=$passT -path=$localPathT -remotePath=$remotePathT
+
+ifErrX $rs +1 +2
+    fatalf "failed to download file content: %v (%v)" $remotePathT $rs
+
+pln $rs
+
+guiInit
+
 assign $htmlT `
 <!DOCTYPE html>
 <html>
@@ -80,7 +89,7 @@ assign $htmlT `
 
 // 新建窗口，第二个参数传入了JSON格式的表示左、上、宽、高的窗口位置与大小的字符串
 // 但实际上由于下面调用了TiScript中的moveToCenter函数，因此将会使这里定义的宽和高无效
-mt $windowT $guiG newWindow 测试 `[300,200,600,400]` $htmlT
+guiNewWindow 测试 `[300,200,600,400]` $htmlT
 
 // 调用前面HTML代码中TiScript脚本内定义的moveToCenter函数，并传入表示宽与高的JSON字符串
 mt $rs $windowT call moveToCenter `{"Width":800, "Height":600}`

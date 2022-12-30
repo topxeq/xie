@@ -15,6 +15,14 @@ checkErrX $excelT
 // defer执行保证程序退出时被执行
 defer excelClose $excelT
 
+// excelGetSheetList指令用于获取Excel文件中的所有sheet的名称（也就获得了序号和sheet数量）
+// 返回一个字符串列表/数组
+excelGetSheetList $sheetListT $excelT
+
+pl "sheets: %v" $sheetListT
+
+// 读取某个sheet中所有内容到变量rowsT中，结果是一个二维数组
+// excelReadSheet指令的参数可以是代表sheet序号的一个整数（从0开始），也可以是字符串表示的sheet名
 excelReadSheet $rowsT $excelT #i0
 
 checkErrX $rowsT
@@ -27,6 +35,7 @@ checkErrX $rowsT
 
 plv $rowsT
 
+// 读取指定单元格的内容
 excelReadCell $valueT $excelT "sheet1" "A1"
 
 plv $valueT

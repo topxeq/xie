@@ -1,0 +1,25 @@
+getSwitch $hostT $argsG "-host=" ""
+
+getSwitch $portT $argsG "-port=" "22"
+
+getSwitch $userT $argsG "-user=" "root"
+
+getSwitch $passT $argsG "-pass=" ""
+
+getSwitch $remotePathT $argsG "-remotePath=" ""
+
+getSwitch $localPathT $argsG "-localPath=" ""
+
+sshUpload $rs -host=$hostT -port=$portT -user=$userT -password=$passT -path=$localPathT -remotePath=$remotePathT
+
+pl "upload result（nil indicates success）: %v" $rs
+
+= $s1 "abc123"
+
+convert $buf1 $s1 byteList
+
+sshUploadBytes $rs $buf1 -host=$hostT -port=$portT -user=$userT -password=$passT -remotePath=$remotePathT -force
+
+pl "uploadBytes result（nil indicates success）: %v" $rs
+
+

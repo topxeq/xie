@@ -5,9 +5,10 @@ go 1.17
 require (
 	github.com/kbinani/screenshot v0.0.0-20210720154843-7d3a670d8329
 	github.com/mholt/archiver/v3 v3.5.1
-	github.com/topxeq/goph v0.0.0-20221226004140-460511aa0dde
+	github.com/topxeq/goph v0.0.0-20221230013617-12d452557b9e
 	github.com/topxeq/sqltk v0.0.0-20221225082143-d6266faebd41
 	github.com/topxeq/tk v1.0.1
+	github.com/xuri/excelize/v2 v2.6.1
 )
 
 require (
@@ -36,11 +37,14 @@ require (
 	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
+	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
 	github.com/nwaples/rardecode v1.1.2 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
 	github.com/pierrec/lz4/v4 v4.1.14 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pkg/sftp v1.13.4 // indirect
+	github.com/richardlehane/mscfb v1.0.4 // indirect
+	github.com/richardlehane/msoleps v1.0.3 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/ssor/bom v0.0.0-20170718123548-6386211fdfcf // indirect
 	github.com/topxeq/gods v0.0.0-20220125023913-b5718bb0c704 // indirect
@@ -51,16 +55,18 @@ require (
 	github.com/topxeq/xmlx v0.2.0 // indirect
 	github.com/ulikunitz/xz v0.5.10 // indirect
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
+	github.com/xuri/efp v0.0.0-20220603152613-6918739fd470 // indirect
+	github.com/xuri/nfp v0.0.0-20220409054826-5e722a1d9e22 // indirect
 	github.com/yeka/zip v0.0.0-20180914125537-d046722c6feb // indirect
 	github.com/yuin/goldmark v1.4.12 // indirect
 	github.com/yuin/goldmark-highlighting v0.0.0-20220208100518-594be1970594 // indirect
-	golang.org/x/crypto v0.0.0-20220214200702-86341886e292 // indirect
-	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd // indirect
-	golang.org/x/sys v0.0.0-20220224003255-dbe011f71a99 // indirect
+	golang.org/x/crypto v0.0.0-20220817201139-bc19a97f63c8 // indirect
+	golang.org/x/net v0.0.0-20220812174116-3211cb980234 // indirect
+	golang.org/x/sys v0.0.0-20220728004956-3c1f35247d10 // indirect
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
 	golang.org/x/text v0.3.7 // indirect
 )
 
 replace github.com/topxeq/tk v1.0.1 => ../tk
 
-// replace github.com/topxeq/goph v0.0.0 => ../goph
+// replace github.com/topxeq/goph v0.0.0-20221226004140-460511aa0dde => ../goph

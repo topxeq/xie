@@ -1,0 +1,21 @@
+getSwitch $hostT $argsG "-host=" ""
+
+getSwitch $portT $argsG "-port=" "22"
+
+getSwitch $userT $argsG "-user=" "root"
+
+getSwitch $passT $argsG "-pass=" ""
+
+getSwitch $remotePathT $argsG "-remotePath=" ""
+
+getSwitch $localPathT $argsG "-localPath=" ""
+
+sshDownload $rs -host=$hostT -port=$portT -user=$userT -password=$passT -path=$localPathT -remotePath=$remotePathT
+
+pl "download result（nil indicates success）: %v" $rs
+
+sshDownloadBytes $rs -host=$hostT -port=$portT -user=$userT -password=$passT -path=$localPathT -remotePath=$remotePathT
+
+pl "downloadBytes result（nil indicates success）: %v (%v)" $rs @`{toStr $tmp $rs}`
+
+

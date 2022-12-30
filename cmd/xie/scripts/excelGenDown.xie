@@ -1,0 +1,58 @@
+// 本例演示在服务端实时生成Excel文件后供下载
+// 运行后，用浏览器访问 http://127.0.0.1:8080/down 即可下载生成后的Excel文件
+// Excel文件中除了抬头，将包含两行内容，均为当前时间
+
+// 新建一个路由处理器
+newMux $muxT
+
+// 用于处理路由“/down”的代码
+// 注意，由于代码用反引号括起，其中再用到反引号时，需要用~~~代替
+// 然后后面再替换回来
+= $handlerT `
+// 设置函数返回值为TX_END_RESPONSE_XT
+// 这样保证这段HTTP请求的处理代码执行完毕后，
+// HTTP响应将中止输出，否则将会把该返回值输出到响应中
+assign $outG  "TX_END_RESPONSE_XT"
+
+// 输出提示信息
+pl "[%v] 请求名: %v，请求参数： %v，inputG：%v" ?(?nowStr) @~~~{getMapItem $tmp $requestG RequestURI}~~~ $paraMapG $inputG
+
+// 设置输出的http响应头中的键值对
+// 以便输出正确的Excel文件下载信息
+setRespHeader $responseG "Content-Type" "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+setRespHeader $responseG "Content-Disposition" "attachment; filename=doc1.xlsx"
+
+// 设置输出http响应的状态值为200（表示成功，即HTTP_OK）
+writeRespHeader $responseG 200
+
+// 生成Excel文件
+excelNew $excelT
+
+// 确保新建的Excel文件被正确关闭
+defer excelClose $excelT
+
+excelSetCell $result $excelT "sheet1" "A1" "序号"
+excelSetCell $result $excelT "sheet1" "B1" "时间"
+
+excelSetCell $result $excelT "sheet1" "A2" #i1
+excelSetCell $result $excelT "sheet1" "B2" @~~~{nowStr}~~~
+
+excelSetCell $result $excelT "sheet1" "A3" #i2
+excelSetCell $result $excelT "sheet1" "B3" @~~~{nowStr}~~~
+
+// 写入到HTTP响应中，从使用者来看即为下载一个Excel文件doc1.xlsx
+excelWrite $drop $excelT $responseG
+
+
+`
+
+// 将~~~替换回反引号，$backQuoteG是预置的全局变量，代替反引号
+strReplace $handlerT $handlerT ~~~ $backQuoteG
+
+// 设置处理路由“/down”的处理函数
+setMuxHandler $muxT "/down" "" $handlerT
+
+pln 启动服务器……
+
+startHttpServer $resultT ":8080" $muxT
+

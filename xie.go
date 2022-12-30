@@ -887,10 +887,13 @@ var InstrNameSet map[string]int = map[string]int{
 	"initWebGuiC": 100011,
 
 	// ssh/sftp/ftp related
-	"sshConnect": 200001, // 打开一个SSH连接，用法：sshConnect 结果变量 -host=服务器名 -port=服务器端口 -user=用户名 -password=密码
-	"sshOpen":    200001,
-	"sshClose":   200003, // 关闭一个SSH连接
-	"sshUpload":  200011, // 通过ssh上传一个文件，用法：sshUpload 结果变量 -host=服务器名 -port=服务器端口 -user=用户名 -password=密码 -path=文件路径 -remotePath=远端文件路径，可以加-force参数表示覆盖已有文件
+	"sshConnect":       200001, // 打开一个SSH连接，用法：sshConnect 结果变量 -host=服务器名 -port=服务器端口 -user=用户名 -password=密码
+	"sshOpen":          200001,
+	"sshClose":         200003, // 关闭一个SSH连接
+	"sshUpload":        200011, // 通过ssh上传一个文件，用法：sshUpload 结果变量 -host=服务器名 -port=服务器端口 -user=用户名 -password=密码 -path=文件路径 -remotePath=远端文件路径，可以加-force参数表示覆盖已有文件
+	"sshUploadBytes":   200013, // 通过ssh上传一个二进制内容（字节数组）到文件，用法：sshUpload 结果变量 内容变量 -host=服务器名 -port=服务器端口 -user=用户名 -password=密码 -remotePath=远端文件路径，可以加-force参数表示覆盖已有文件
+	"sshDownload":      200021, // 通过ssh下载一个文件，用法：sshDownload 结果变量 -host=服务器名 -port=服务器端口 -user=用户名 -password=密码 -path=本地文件路径 -remotePath=远端文件路径，可以加-force参数表示覆盖已有文件
+	"sshDownloadBytes": 200023, // 通过ssh下载一个文件，结果为字节数组（或error对象），用法：sshDownloadBytes 结果变量 -host=服务器名 -port=服务器端口 -user=用户名 -password=密码 -remotePath=远端文件路径，可以加-force参数表示覆盖已有文件
 
 	// excel related
 	"excelNew":    210001, // 新建一个excel文件，用法：excelNew $excelFileT
@@ -909,6 +912,8 @@ var InstrNameSet map[string]int = map[string]int{
 
 	// GUI related 图形界面相关
 
+	"guiInit": 400000, // 初始化GUI环境
+
 	"alert": 400001, // 类似JavaScript中的alert，弹出对话框，显示一个字符串或任意数字、对象的字符串表达
 
 	"msgBox":   400003, // 类似Delphi、VB中的msgBox，弹出带标题的对话框，显示一个字符串，第一个参数是标题，第二个是字符串
@@ -924,7 +929,7 @@ var InstrNameSet map[string]int = map[string]int{
 
 	// "guiSetFont": 210021,
 
-	// "guiNewWindow": 210031,
+	"guiNewWindow": 400031,
 
 	// "guiNewLoop": 210032,
 
@@ -10471,6 +10476,10 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			rv, ok = nv[v2]
 		case map[string]string:
 			rv, ok = nv[v2]
+		case map[string]map[string]string:
+			rv, ok = nv[v2]
+		case map[string]map[string]interface{}:
+			rv, ok = nv[v2]
 		default:
 			return p.ErrStrf("参数类型错误")
 		}
@@ -16958,6 +16967,239 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		p.SetVarInt(pr, nil)
 		return ""
 
+	case 200013: // sshUploadBytes
+		if instrT.ParamLen < 1 {
+			return p.ErrStrf("参数不够")
+		}
+
+		pr := instrT.Params[0].Ref
+		v1p := 2
+
+		v0 := p.GetVarValue(instrT.Params[1])
+
+		v0v, ok := v0.([]byte)
+
+		if !ok {
+			return p.ErrStrf("参数类型错误：%T(%v)", v0, v0)
+		}
+
+		pa := p.ParamsToStrs(instrT, v1p)
+
+		var v1, v2, v3, v4, v6 string
+
+		v2 = "22"
+
+		v1 = strings.TrimSpace(p.GetSwitchVarValue(pa, "-host=", v1))
+		v2 = strings.TrimSpace(p.GetSwitchVarValue(pa, "-port=", v2))
+		v3 = strings.TrimSpace(p.GetSwitchVarValue(pa, "-user=", v3))
+		v4 = strings.TrimSpace(p.GetSwitchVarValue(pa, "-password=", v4))
+		if strings.HasPrefix(v4, "740404") {
+			v4 = strings.TrimSpace(tk.DecryptStringByTXDEF(v4))
+		}
+		// v5 = strings.TrimSpace(p.GetSwitchVarValue(pa, "-path=", v5))
+		v6 = strings.TrimSpace(p.GetSwitchVarValue(pa, "-remotePath=", v6))
+
+		if v1 == "" {
+			p.SetVarInt(pr, fmt.Errorf("host不能为空"))
+			return ""
+		}
+
+		if v2 == "" {
+			p.SetVarInt(pr, fmt.Errorf("port不能为空"))
+			return ""
+		}
+
+		if v3 == "" {
+			p.SetVarInt(pr, fmt.Errorf("user不能为空"))
+			return ""
+		}
+
+		if v4 == "" {
+			p.SetVarInt(pr, fmt.Errorf("password不能为空"))
+			return ""
+		}
+
+		// if v5 == "" {
+		// 	p.SetVarInt(pr, fmt.Errorf("path不能为空"))
+		// 	return ""
+		// }
+
+		if v6 == "" {
+			p.SetVarInt(pr, fmt.Errorf("remotePath不能为空"))
+			return ""
+		}
+
+		sshT, errT := tk.NewSSHClient(v1, v2, v3, v4)
+
+		if errT != nil {
+			p.SetVarInt(pr, errT)
+
+			return ""
+		}
+
+		defer sshT.Close()
+
+		errT = sshT.UploadFileContent(v0v, v6, pa...)
+
+		if errT != nil {
+			p.SetVarInt(pr, errT)
+
+			return ""
+		}
+
+		p.SetVarInt(pr, nil)
+		return ""
+
+	case 200021: // sshDownload
+		if instrT.ParamLen < 1 {
+			return p.ErrStrf("参数不够")
+		}
+
+		pr := instrT.Params[0].Ref
+		v1p := 1
+
+		pa := p.ParamsToStrs(instrT, v1p)
+
+		var v1, v2, v3, v4, v5, v6 string
+
+		v2 = "22"
+
+		v1 = strings.TrimSpace(p.GetSwitchVarValue(pa, "-host=", v1))
+		v2 = strings.TrimSpace(p.GetSwitchVarValue(pa, "-port=", v2))
+		v3 = strings.TrimSpace(p.GetSwitchVarValue(pa, "-user=", v3))
+		v4 = strings.TrimSpace(p.GetSwitchVarValue(pa, "-password=", v4))
+		if strings.HasPrefix(v4, "740404") {
+			v4 = strings.TrimSpace(tk.DecryptStringByTXDEF(v4))
+		}
+		v5 = strings.TrimSpace(p.GetSwitchVarValue(pa, "-path=", v5))
+		v6 = strings.TrimSpace(p.GetSwitchVarValue(pa, "-remotePath=", v6))
+
+		if v1 == "" {
+			p.SetVarInt(pr, fmt.Errorf("host不能为空"))
+			return ""
+		}
+
+		if v2 == "" {
+			p.SetVarInt(pr, fmt.Errorf("port不能为空"))
+			return ""
+		}
+
+		if v3 == "" {
+			p.SetVarInt(pr, fmt.Errorf("user不能为空"))
+			return ""
+		}
+
+		if v4 == "" {
+			p.SetVarInt(pr, fmt.Errorf("password不能为空"))
+			return ""
+		}
+
+		if v5 == "" {
+			p.SetVarInt(pr, fmt.Errorf("path不能为空"))
+			return ""
+		}
+
+		if v6 == "" {
+			p.SetVarInt(pr, fmt.Errorf("remotePath不能为空"))
+			return ""
+		}
+
+		sshT, errT := tk.NewSSHClient(v1, v2, v3, v4)
+
+		if errT != nil {
+			p.SetVarInt(pr, errT)
+
+			return ""
+		}
+
+		defer sshT.Close()
+
+		errT = sshT.Download(v6, v5)
+
+		if errT != nil {
+			p.SetVarInt(pr, errT)
+
+			return ""
+		}
+
+		p.SetVarInt(pr, nil)
+		return ""
+
+	case 200023: // sshDownloadBytes
+		if instrT.ParamLen < 1 {
+			return p.ErrStrf("参数不够")
+		}
+
+		pr := instrT.Params[0].Ref
+		v1p := 1
+
+		pa := p.ParamsToStrs(instrT, v1p)
+
+		var v1, v2, v3, v4, v6 string
+
+		v2 = "22"
+
+		v1 = strings.TrimSpace(p.GetSwitchVarValue(pa, "-host=", v1))
+		v2 = strings.TrimSpace(p.GetSwitchVarValue(pa, "-port=", v2))
+		v3 = strings.TrimSpace(p.GetSwitchVarValue(pa, "-user=", v3))
+		v4 = strings.TrimSpace(p.GetSwitchVarValue(pa, "-password=", v4))
+		if strings.HasPrefix(v4, "740404") {
+			v4 = strings.TrimSpace(tk.DecryptStringByTXDEF(v4))
+		}
+		// v5 = strings.TrimSpace(p.GetSwitchVarValue(pa, "-path=", v5))
+		v6 = strings.TrimSpace(p.GetSwitchVarValue(pa, "-remotePath=", v6))
+
+		if v1 == "" {
+			p.SetVarInt(pr, fmt.Errorf("host不能为空"))
+			return ""
+		}
+
+		if v2 == "" {
+			p.SetVarInt(pr, fmt.Errorf("port不能为空"))
+			return ""
+		}
+
+		if v3 == "" {
+			p.SetVarInt(pr, fmt.Errorf("user不能为空"))
+			return ""
+		}
+
+		if v4 == "" {
+			p.SetVarInt(pr, fmt.Errorf("password不能为空"))
+			return ""
+		}
+
+		// if v5 == "" {
+		// 	p.SetVarInt(pr, fmt.Errorf("path不能为空"))
+		// 	return ""
+		// }
+
+		if v6 == "" {
+			p.SetVarInt(pr, fmt.Errorf("remotePath不能为空"))
+			return ""
+		}
+
+		sshT, errT := tk.NewSSHClient(v1, v2, v3, v4)
+
+		if errT != nil {
+			p.SetVarInt(pr, errT)
+
+			return ""
+		}
+
+		defer sshT.Close()
+
+		rsT, errT := sshT.GetFileContent(v6)
+
+		if errT != nil {
+			p.SetVarInt(pr, errT)
+
+			return ""
+		}
+
+		p.SetVarInt(pr, rsT)
+		return ""
+
 	case 210001: // excelNew
 		// if instrT.ParamLen < 1 {
 		// 	return p.ErrStrf("参数不够")
@@ -17219,6 +17461,58 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		p.SetVarInt(pr, nil)
 		return ""
 
+	case 210201: // excelGetSheetList
+		if instrT.ParamLen < 1 {
+			return p.ErrStrf("参数不够")
+		}
+
+		pr := -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0].Ref
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(instrT.Params[v1p])
+
+		f1, ok := v1.(*excelize.File)
+
+		if !ok {
+			return p.ErrStrf("参数类型错误：%T(%v)", v1, v1)
+		}
+
+		p.SetVarInt(pr, f1.GetSheetList())
+		return ""
+
+	case 400000: // guiInit
+		// if instrT.ParamLen < 1 {
+		// 	return p.ErrStrf("参数不够")
+		// }
+
+		pr := -5
+		// v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0].Ref
+			// v1p = 1
+		}
+
+		v0, ok := p.GetVarValue(p.ParseVar("$guiG")).(tk.TXDelegate)
+
+		if !ok {
+			return p.ErrStrf("全局变量guiG不存在（$guiG not exists）")
+		}
+
+		rs := v0("init", p, nil)
+
+		// if tk.IsErrX(rs) {
+		p.SetVarInt(pr, rs)
+		// 	return p.ErrStrf(tk.GetErrStrX(rs))
+		// }
+
+		return ""
+
 	case 400001: // alert
 		if instrT.ParamLen < 1 {
 			return p.ErrStrf("参数不够")
@@ -17350,6 +17644,76 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 		p.SetVarInt(pr, rs)
 		return ""
+
+	case 400031: // guiNewWindow
+		if instrT.ParamLen < 2 {
+			return p.ErrStrf("参数不够")
+		}
+
+		// pr := -5
+		// v1p := 0
+
+		// if instrT.ParamLen > 1 {
+		pr := instrT.Params[0].Ref
+		v1p := 1
+		// }
+
+		v0, ok := p.GetVarValue(p.ParseVar("$guiG")).(tk.TXDelegate)
+
+		if !ok {
+			return p.ErrStrf("全局变量guiG不存在（$guiG not exists）")
+		}
+
+		// v1p := 0
+
+		// v1 := p.GetVarValue(instrT.Params[v1p])
+		// v2 := p.GetVarValue(instrT.Params[v1p+1])
+
+		vs := p.ParamsToList(instrT, v1p)
+
+		rs := v0("newWindow", p, nil, vs...)
+
+		// if tk.IsErrX(rs) {
+		// 	return p.ErrStrf(tk.GetErrStrX(rs))
+		// }
+
+		p.SetVarInt(pr, rs)
+		return ""
+
+		// case 400051: // guiCallWindowFunc
+		// if instrT.ParamLen < 2 {
+		// 	return p.ErrStrf("参数不够")
+		// }
+
+		// // pr := -5
+		// // v1p := 0
+
+		// // if instrT.ParamLen > 1 {
+		// pr := instrT.Params[0].Ref
+		// v1p := 1
+		// // }
+
+		// v0, ok := p.GetVarValue(p.ParseVar("$guiG")).(tk.TXDelegate)
+
+		// if !ok {
+		// 	return p.ErrStrf("全局变量guiG不存在（$guiG not exists）")
+		// }
+
+		// // v1p := 0
+
+		// // v1 := p.GetVarValue(instrT.Params[v1p])
+		// // v2 := p.GetVarValue(instrT.Params[v1p+1])
+
+		// vs := p.ParamsToList(instrT, v1p)
+
+		// rs := v0("call", p, nil, vs...)
+
+		// // if tk.IsErrX(rs) {
+		// // 	return p.ErrStrf(tk.GetErrStrX(rs))
+		// // }
+
+		// p.SetVarInt(pr, rs)
+		// return ""
 
 		// pa := p.ParamsToStrs(instrT, v1p)
 

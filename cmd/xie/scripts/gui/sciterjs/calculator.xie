@@ -31,7 +31,7 @@ assign $htmlT `
 	</div>
 	<div>
 		<button id="btnCal">计算</button>
-		<button id="btnClose"">关闭</button>
+		<button id="btnClose">关闭</button>
 	</div>
 
     <script>
