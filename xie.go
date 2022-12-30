@@ -6954,6 +6954,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 		} else {
 			tmpv := p.GetVarValue(instrT.Params[0])
+			// tk.Pl("tmpv: %v", tmpv)
 			condT, ok0 = tmpv.(bool)
 			v2 = p.GetVarValue(instrT.Params[1])
 
@@ -6987,7 +6988,9 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			}
 		} else {
 			if condT {
+				// tk.Pl("s2: %v", s2)
 				if strings.HasPrefix(s2, "+") {
+					// tk.Pl("s2p: %v - %v", p.CodePointerM+tk.ToInt(s2[1:]), p.CodeListM[p.CodePointerM+tk.ToInt(s2[1:])])
 					return p.CodePointerM + tk.ToInt(s2[1:])
 				} else if strings.HasPrefix(s2, "-") {
 					return p.CodePointerM - tk.ToInt(s2[1:])

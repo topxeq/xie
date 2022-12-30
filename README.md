@@ -4402,6 +4402,13 @@ xie -compile hello.xie -output=hello.exe
 
 &nbsp;
 
+##### - **fastCall指令调用的快速函数代码中使用+1等虚拟标号**
+
+谢语言中fastCall指令调用的快速函数代码中，应避免使用+1、+3等虚拟标号，尽量使用:next1这种标准标号。
+
+
+&nbsp;
+
 
 &nbsp;
 

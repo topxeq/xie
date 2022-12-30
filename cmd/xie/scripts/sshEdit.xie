@@ -8,12 +8,14 @@ getSwitch $passT $argsG "-pass=" ""
 
 getSwitch $remotePathT $argsG "-remotePath=" ""
 
-sshDownloadBytes $rs -host=$hostT -port=$portT -user=$userT -password=$passT -path=$localPathT -remotePath=$remotePathT
+sshDownloadBytes $textT -host=$hostT -port=$portT -user=$userT -password=$passT -path=$localPathT -remotePath=$remotePathT
 
-ifErrX $rs +1 +2
-    fatalf "failed to download file content: %v (%v)" $remotePathT $rs
+ifErrX $textT +1 +2
+    fatalf "failed to download file content: %v (%v)" $remotePathT $textT
 
-pln $rs
+pln $textT
+
+toStr $textT $textT 
 
 guiInit
 
@@ -23,21 +25,20 @@ assign $htmlT `
 <head>
 	<meta charset="utf-8">
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-    <title>请登录……</title>
+    <title>编辑远程文件……</title>
 </head>
 <body >
 	<div style="margin-top: 10px; margin-bottom: 10px;">
-		<span>请输入用户名和密码登录……</span>
+		<label for="remotePathID" >远程路径： </label><input id="remotePathID" type=text readonly />
 	</div>
 	<div style="margin-top: 10px; margin-bottom: 10px;">
-		<label for="userNameID" >用户名： </label><input id="userNameID" type=text />
-	</div>
-	<div style="margin-top: 10px; margin-bottom: 10px;">
-		<label for="userNameID" >密码： </label><input id="passwordID" type=password />
+		<textarea id="mainTextArea" style="width: 90%; height: 80%;"></textarea>
 	</div>
 	<div>
-		<button id="btnLoginID">登录</button>
+		<button id="btnLoadID" cmd="reload">重新载入</button>
+		<button id="btnSaveID" cmd="save">保存</button>
 		<button id="btnClose">关闭</button>
+		<button id="btnTest">Test</button>
 	</div>
 
     <script type="text/javascript">
@@ -58,14 +59,24 @@ assign $htmlT `
             return String.printf("%v|%v", w, h);
         }
 
-        function loginIt() {
-			var userNameT = document.getElementById("userNameID").value.trim();
-			var passwordT = document.getElementById("passwordID").value.trim();
+        function showMsg(titleA) {
+            document.getElementById("remotePathID").value = titleA;
+            Window.this.modal(<alert caption=~~~${titleA}~~~>bbb</alert>);
+        }
 
-            Window.this.xcall("delegateDo", JSON.stringify({"userName": userNameT, "password": passwordT}));
+        function setRemotePath(pathA) {
+            document.getElementById("remotePathID").value = pathA;
+        }
 
-       }
- 
+        function setTextValue(textA) {
+            console.log("textA", textA);
+            document.getElementById("mainTextArea").value = textA;
+        }
+
+        function sendCmd(e, senderA) {
+            Window.this.xcall("delegateDo", JSON.stringify({"cmd": senderA.getAttribute("cmd"), "text": document.getElementById("mainTextArea").value}));
+        }
+
         function closeWindow() {
             Window.this.close();
         }
@@ -77,22 +88,40 @@ assign $htmlT `
 
 			buttonT.addEventListener("click", closeWindow);
 
-			document.getElementById("btnLoginID").addEventListener("click", loginIt);
+            document.on("click","button#btnLoadID", sendCmd);
+
+            document.on("click","button#btnSaveID", sendCmd);
+
+            document.on("click","button#btnTestID", test);
+
+            globalThis.showMsg = showMsg;
 
             globalThis.moveToCenter = moveToCenter;
-        }, false);
+
+            globalThis.setTextValue = setTextValue;
+
+            globalThis.setRemotePath = setRemotePath;
+
+       }, false);
 
     </script>
 </body>
 </html>
 `
 
+strReplace $htmlT $htmlT ~~~ $backQuoteG
+
 // 新建窗口，第二个参数传入了JSON格式的表示左、上、宽、高的窗口位置与大小的字符串
 // 但实际上由于下面调用了TiScript中的moveToCenter函数，因此将会使这里定义的宽和高无效
-guiNewWindow 测试 `[300,200,600,400]` $htmlT
+guiNewWindow $windowT 测试 `[300,200,600,400]` $htmlT
 
 // 调用前面HTML代码中TiScript脚本内定义的moveToCenter函数，并传入表示宽与高的JSON字符串
 mt $rs $windowT call moveToCenter `{"Width":800, "Height":600}`
+
+plo $textT
+
+mt $rs $windowT call setRemotePath $remotePathT
+mt $rs $windowT call setTextValue $textT
 
 // 输出moveToCenter函数的返回值
 plo $rs
@@ -114,6 +143,25 @@ exit
     pop $inputT
 
     pl "inputT: %v" $inputT
+
+    fromJson $cmdObjT $inputT
+
+    {} $cmdT $cmdObjT "cmd" ""
+    {} $textT $cmdObjT "text" ""
+
+    pl "cmd: %T(%v) %v" $cmdT $cmdT @`$cmdT == "save"`
+
+    if @`$cmdT == "save"` :inext1 :inext2
+    :inext1
+        pln here1
+
+        # sshUploadBytes $rs1 $textT -host=$hostT -port=$portT -user=$userT -password=$passT -remotePath=$remotePathT -force
+        mt $rs $windowT call showMsg "abcdsdfjllj21"
+
+        pln "rs:" $rs
+
+    :inext2
+    pln here2
 
     push "output1"
 
