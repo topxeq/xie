@@ -39,7 +39,7 @@ import (
 	excelize "github.com/xuri/excelize/v2"
 )
 
-var VersionG string = "0.6.3"
+var VersionG string = "0.6.5"
 
 var ShellModeG bool = false
 

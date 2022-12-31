@@ -4462,6 +4462,7 @@ xie -compile hello.xie -output=hello.exe
 - [获取屏幕分辨率](http://xie.topget.org/xc/c/xielang/example/getScreenInfo.xie)
 - [屏幕截图](http://xie.topget.org/xc/c/xielang/example/captureScreen.xie)
 - [启动WEB服务分享文本文件供编辑](http://xie.topget.org/xc/c/xielang/example/editFileServer.xie)
+- [通过SSH直接编辑远程服务器上的文件](http://xie.topget.org/xc/c/xielang/example/sshEdit.xie)
 
 &nbsp;
 
