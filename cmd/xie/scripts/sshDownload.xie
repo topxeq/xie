@@ -14,7 +14,7 @@ sshDownload $rs -host=$hostT -port=$portT -user=$userT -password=$passT -path=$l
 
 pl "download result（nil indicates success）: %v" $rs
 
-sshDownloadBytes $rs -host=$hostT -port=$portT -user=$userT -password=$passT -path=$localPathT -remotePath=$remotePathT
+sshDownloadBytes $rs -host=$hostT -port=$portT -user=$userT -password=$passT -remotePath=$remotePathT
 
 pl "downloadBytes result（nil indicates success）: %v (%v)" $rs @`{toStr $tmp $rs}`
 

@@ -891,7 +891,7 @@ var InstrNameSet map[string]int = map[string]int{
 	"sshOpen":          200001,
 	"sshClose":         200003, // 关闭一个SSH连接
 	"sshUpload":        200011, // 通过ssh上传一个文件，用法：sshUpload 结果变量 -host=服务器名 -port=服务器端口 -user=用户名 -password=密码 -path=文件路径 -remotePath=远端文件路径，可以加-force参数表示覆盖已有文件
-	"sshUploadBytes":   200013, // 通过ssh上传一个二进制内容（字节数组）到文件，用法：sshUpload 结果变量 内容变量 -host=服务器名 -port=服务器端口 -user=用户名 -password=密码 -remotePath=远端文件路径，可以加-force参数表示覆盖已有文件
+	"sshUploadBytes":   200013, // 通过ssh上传一个二进制内容（字节数组）到文件，用法：sshUpload 结果变量 内容变量 -host=服务器名 -port=服务器端口 -user=用户名 -password=密码 -remotePath=远端文件路径，可以加-force参数表示覆盖已有文件；内容变量也可以是一个字符串，将自动转换为字节数组
 	"sshDownload":      200021, // 通过ssh下载一个文件，用法：sshDownload 结果变量 -host=服务器名 -port=服务器端口 -user=用户名 -password=密码 -path=本地文件路径 -remotePath=远端文件路径，可以加-force参数表示覆盖已有文件
 	"sshDownloadBytes": 200023, // 通过ssh下载一个文件，结果为字节数组（或error对象），用法：sshDownloadBytes 结果变量 -host=服务器名 -port=服务器端口 -user=用户名 -password=密码 -remotePath=远端文件路径，可以加-force参数表示覆盖已有文件
 
@@ -1498,7 +1498,7 @@ func (p *XieVM) InitVM(sharedMapA *tk.SyncMap, globalsA ...map[string]interface{
 
 }
 
-func (p *XieVM) ParseVar(strA string) VarRef {
+func (p *XieVM) ParseVar(strA string, optsA ...interface{}) VarRef {
 	s1T := strings.TrimSpace(strA)
 
 	if strings.HasPrefix(s1T, "`") && strings.HasSuffix(s1T, "`") {
@@ -1582,6 +1582,21 @@ func (p *XieVM) ParseVar(strA string) VarRef {
 			return VarRef{-15, varIndexT}
 		} else if strings.HasPrefix(s1T, ":") { // labels
 			vNameT := s1T[1:]
+
+			currentPointerT := p.CodePointerM
+
+			if len(optsA) > 0 {
+				currentPointerT = tk.ToInt(optsA[0], currentPointerT)
+			}
+
+			if strings.HasPrefix(vNameT, "+") {
+				ssT := vNameT[1:]
+				return VarRef{-3, currentPointerT + tk.ToInt(ssT, 0)}
+			} else if strings.HasPrefix(vNameT, "+") {
+				ssT := vNameT[1:]
+				return VarRef{-3, currentPointerT - tk.ToInt(ssT, 0)}
+			}
+
 			varIndexT, ok := p.VarIndexMapM[vNameT]
 
 			if !ok {
@@ -3963,7 +3978,7 @@ func (p *XieVM) Load(codeA string) string {
 				continue
 			}
 
-			list3T = append(list3T, p.ParseVar(jv))
+			list3T = append(list3T, p.ParseVar(jv, i))
 		}
 
 		instrT.Params = append(instrT.Params, list3T...)
@@ -8852,6 +8867,8 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			// tk.Plv(instrT.Params[0])
 		}
 
+		p.CodePointerM = tmpPointerT
+
 		for {
 			rs := p.RunLine(tmpPointerT)
 
@@ -8859,6 +8876,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 			if ok {
 				tmpPointerT = nv
+				p.CodePointerM = tmpPointerT
 				continue
 			}
 
@@ -8866,10 +8884,12 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 			if ok {
 				if tk.IsErrStr(nsv) {
+					p.CodePointerM = pointerT
 					return nsv
 				}
 
 				if nsv == "exit" {
+					p.CodePointerM = pointerT
 					return "exit"
 				} else if nsv == "fr" {
 					break
@@ -8877,8 +8897,10 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			}
 
 			tmpPointerT++
+			p.CodePointerM = tmpPointerT
 		}
 
+		p.CodePointerM = pointerT
 		return pointerT + 1
 
 	case 1071: // fastRet
@@ -9041,6 +9063,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 				p.CodePointerM = tmpPointerT
 
 				if tmpPointerT < 0 || tmpPointerT >= len(p.CodeListM) {
+					p.CodePointerM = pointerT
 					return p.ErrStrf("遍历中指令序号超出范围: %v/%v", tmpPointerT, len(p.CodeListM))
 				}
 
@@ -9062,10 +9085,12 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 					if ok {
 						if tk.IsErrStr(nsv) {
+							p.CodePointerM = pointerT
 							return nsv
 						}
 
 						if nsv == "exit" {
+							p.CodePointerM = pointerT
 							return "exit"
 						} else if nsv == "cont" {
 
@@ -9081,6 +9106,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 			}
 
+			p.CodePointerM = pointerT
 			return pointerT + 1
 		case map[string]int:
 		for32a:
@@ -9089,6 +9115,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 				p.CodePointerM = tmpPointerT
 
 				if tmpPointerT < 0 || tmpPointerT >= len(p.CodeListM) {
+					p.CodePointerM = pointerT
 					return p.ErrStrf("遍历中指令序号超出范围: %v/%v", tmpPointerT, len(p.CodeListM))
 				}
 
@@ -9110,13 +9137,15 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 					if ok {
 						if tk.IsErrStr(nsv) {
+							p.CodePointerM = pointerT
 							return nsv
 						}
 
 						if nsv == "exit" {
+							p.CodePointerM = pointerT
 							return "exit"
 						} else if nsv == "cont" {
-
+							p.CodePointerM = pointerT
 							continue for32a
 						} else if nsv == "brk" {
 							break for32a
@@ -9129,6 +9158,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 			}
 
+			p.CodePointerM = pointerT
 			return pointerT + 1
 		case map[string]byte:
 		for35a:
@@ -9137,6 +9167,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 				p.CodePointerM = tmpPointerT
 
 				if tmpPointerT < 0 || tmpPointerT >= len(p.CodeListM) {
+					p.CodePointerM = pointerT
 					return p.ErrStrf("遍历中指令序号超出范围: %v/%v", tmpPointerT, len(p.CodeListM))
 				}
 
@@ -9158,10 +9189,12 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 					if ok {
 						if tk.IsErrStr(nsv) {
+							p.CodePointerM = pointerT
 							return nsv
 						}
 
 						if nsv == "exit" {
+							p.CodePointerM = pointerT
 							return "exit"
 						} else if nsv == "cont" {
 
@@ -9177,6 +9210,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 			}
 
+			p.CodePointerM = pointerT
 			return pointerT + 1
 		case map[string]rune:
 		for36a:
@@ -9185,6 +9219,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 				p.CodePointerM = tmpPointerT
 
 				if tmpPointerT < 0 || tmpPointerT >= len(p.CodeListM) {
+					p.CodePointerM = pointerT
 					return p.ErrStrf("遍历中指令序号超出范围: %v/%v", tmpPointerT, len(p.CodeListM))
 				}
 
@@ -9206,10 +9241,12 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 					if ok {
 						if tk.IsErrStr(nsv) {
+							p.CodePointerM = pointerT
 							return nsv
 						}
 
 						if nsv == "exit" {
+							p.CodePointerM = pointerT
 							return "exit"
 						} else if nsv == "cont" {
 
@@ -9225,6 +9262,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 			}
 
+			p.CodePointerM = pointerT
 			return pointerT + 1
 		case map[string]float64:
 		for33a:
@@ -9233,6 +9271,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 				p.CodePointerM = tmpPointerT
 
 				if tmpPointerT < 0 || tmpPointerT >= len(p.CodeListM) {
+					p.CodePointerM = pointerT
 					return p.ErrStrf("遍历中指令序号超出范围: %v/%v", tmpPointerT, len(p.CodeListM))
 				}
 
@@ -9254,10 +9293,12 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 					if ok {
 						if tk.IsErrStr(nsv) {
+							p.CodePointerM = pointerT
 							return nsv
 						}
 
 						if nsv == "exit" {
+							p.CodePointerM = pointerT
 							return "exit"
 						} else if nsv == "cont" {
 
@@ -9273,6 +9314,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 			}
 
+			p.CodePointerM = pointerT
 			return pointerT + 1
 		case map[string]string:
 		for34a:
@@ -9281,6 +9323,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 				p.CodePointerM = tmpPointerT
 
 				if tmpPointerT < 0 || tmpPointerT >= len(p.CodeListM) {
+					p.CodePointerM = pointerT
 					return p.ErrStrf("遍历中指令序号超出范围: %v/%v", tmpPointerT, len(p.CodeListM))
 				}
 
@@ -9302,10 +9345,12 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 					if ok {
 						if tk.IsErrStr(nsv) {
+							p.CodePointerM = pointerT
 							return nsv
 						}
 
 						if nsv == "exit" {
+							p.CodePointerM = pointerT
 							return "exit"
 						} else if nsv == "cont" {
 
@@ -9321,6 +9366,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 			}
 
+			p.CodePointerM = pointerT
 			return pointerT + 1
 
 			// maps end
@@ -9334,6 +9380,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			tmpPointerT := startPointerT
 
 			if tmpPointerT < 0 || tmpPointerT >= len(p.CodeListM) {
+				p.CodePointerM = pointerT
 				return p.ErrStrf("遍历中指令序号超出范围: %v/%v", tmpPointerT, len(p.CodeListM))
 			}
 
@@ -9393,6 +9440,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 				if ok {
 					if tk.IsErrStr(nsv) {
+						p.CodePointerM = pointerT
 						return nsv
 					}
 
@@ -9414,6 +9462,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 		// p.CodePointerM = pointerT
 
+		p.CodePointerM = pointerT
 		return pointerT + 1
 
 	case 1101: // newList/newArray
@@ -10488,7 +10537,6 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		}
 
 		if !ok {
-			// tk.Pln("here", instrT)
 			if instrT.ParamLen > 3 {
 				rv = p.GetVarValue(instrT.Params[v1p+2])
 
@@ -10908,7 +10956,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 				p.Push(strA)
 
 				tmpPointerT := v2
-
+				p.CodePointerM = tmpPointerT
 				for {
 					rs := p.RunLine(tmpPointerT)
 
@@ -10916,6 +10964,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 					if ok {
 						tmpPointerT = nv
+						p.CodePointerM = tmpPointerT
 						continue
 					}
 
@@ -10924,6 +10973,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 					if ok {
 						if tk.IsErrStr(nsv) {
 							// tmpRs := p.Pop()
+
 							p.CodePointerM = pointerT
 							return nsv
 						}
@@ -10938,6 +10988,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 					}
 
 					tmpPointerT++
+					p.CodePointerM = tmpPointerT
 				}
 
 				// return pointerT + 1
@@ -13745,7 +13796,6 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			// tk.Pl("hdl: %#v", hdl)
 			// staticFS = hdl
 			// }
-			// tk.Pl("here: %v", r)
 
 			old := r.URL.Path
 
@@ -16980,10 +17030,18 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 		v0 := p.GetVarValue(instrT.Params[1])
 
+		// tk.Plvx(v0)
+
 		v0v, ok := v0.([]byte)
 
 		if !ok {
-			return p.ErrStrf("参数类型错误：%T(%v)", v0, v0)
+			v0vs, ok := v0.(string)
+
+			if !ok {
+				return p.ErrStrf("参数类型错误：%T(%v)", v0, v0)
+			}
+
+			v0v = []byte(v0vs)
 		}
 
 		pa := p.ParamsToStrs(instrT, v1p)

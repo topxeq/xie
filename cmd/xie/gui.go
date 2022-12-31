@@ -138,7 +138,7 @@ func guiHandler(actionA string, objA interface{}, dataA interface{}, paramsA ...
 
 		baseUrlT := tk.GetSwitch(paraArgsT, "-baseUrl=", "")
 
-		tk.Pln(fromFileT, htmlT, baseUrlT, tk.PathToURI("."))
+		// tk.Pln(fromFileT, htmlT, baseUrlT, tk.PathToURI("."))
 
 		if fromFileT {
 			htmlNewT, errT := filepath.Abs(htmlT)
