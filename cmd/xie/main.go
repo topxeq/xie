@@ -608,7 +608,7 @@ func main() {
 		}
 	}
 
-	if !ifInExeT && len(tk.GetAllParameters(argsT)) < 2 {
+	if !ifInExeT && len(tk.GetAllParameters(argsT)) < 2 && !ifClipT {
 		// if tk.IsErrX(scriptT) {
 		fileListT := tk.GetFileList(".", "-pattern=auto*.xie", "-sort=asc", "-sortKey=Name")
 

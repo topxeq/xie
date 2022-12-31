@@ -3030,7 +3030,6 @@ D:\tmp>xie -server -dir=scripts
 首先浏览器访问 http://127.0.0.1/xmsTmpl.html ，这将是访问一般的WEB服务，因为WEB目录默认与服务器根目录相同，所以将展示根目录下的xmsTmpl.html这个静态文件，也就是一个例子网页。
 
 ![截图](http://xie.topget.org/example/xie/snap/snap1.jpg)
-![截图](https://gitee.com/topxeq/xie/raw/master/cmd/xie/snap/snap1.jpg)
 
 可以看到，该网页文件中文字“请按按钮”后的“{{text1}}”标记，这是我们后面展示动态网页功能时所需要替换的标记。xmsTmpl.html文件的内容如下：
 
@@ -3098,7 +3097,6 @@ exit
 我们访问 http://127.0.0.1/xms/xmsIndex 这个网址（或者叫URL路径），将会看到如下结果：
 
 ![截图](http://xie.topget.org/example/xie/snap/snap2.jpg)
-![截图](https://gitee.com/topxeq/xie/raw/master/cmd/xie/snap/snap2.jpg)
 
 可以发现原来的标记确实被替换成了大写的字母A，验证了动态网页的效果。
 
@@ -3135,7 +3133,6 @@ exit TX_END_RESPONSE_XT
 这样，我们如果点击网页中的按钮1，会得到如下的alert弹框：
 
 ![截图](http://xie.topget.org/example/xie/snap/snap4.jpg)
-![截图](https://gitee.com/topxeq/xie/raw/master/cmd/xie/snap/snap4.jpg)
 
 这是因为网页xmsTmpl.html中，通过AJAX访问了 http://127.0.0.1:80/xms/xmsApi 这个服务，而我们的谢语言服务器会寻找到xmsApi.xie（自动加上了.xie文件名后缀）并执行，因此会输出我们希望的内容。
 
@@ -4192,7 +4189,6 @@ exit
 代码运行后，将得到类似下面的界面：
 
 ![截图](http://xie.topget.org/example/xie/snap/snap5.png)
-![截图](https://gitee.com/topxeq/xie/raw/master/cmd/xie/snap/snap5.png)
 
 在输入框中输入算式，然后点击“计算”按钮，框中就会计算出结果，并且后台也得到了计算结果并将其输出。点击“关闭”按钮则窗口将关闭并执行后续代码（此例中是用exit指令退出了程序运行）。
 
@@ -4224,7 +4220,6 @@ xie -example calculator.xie
 即可运行在线的计算器例子程序。运行效果类似下图：
 
 ![截图](http://xie.topget.org/example/xie/snap/snap6.png)
-![截图](https://gitee.com/topxeq/xie/raw/master/cmd/xie/snap/snap6.png)
 
 注意，如果中文显示有问题，请自行搜索如何在Ubuntu系统下安装中文字体，也有可能是环境变量LANG等的设置问题（应为en_US.UTF-8）。
 
@@ -4345,7 +4340,6 @@ exit
 运行效果如下图所示：
 
 ![截图](http://xie.topget.org/example/xie/snap/snap7.png)
-![截图](https://gitee.com/topxeq/xie/raw/master/cmd/xie/snap/snap7.png)
 
 可以看出，moveToCenter函数返回的是一个非JSON格式的字符串，表示屏幕的宽与高的像素数，而点击登录按钮后，接口代理函数deleFast1将输出一个JSON格式的包含输入的用户名和密码的字符串，可以用于后续处理。
 
@@ -4398,6 +4392,13 @@ xie -compile hello.xie -output=hello.exe
 ##### - **自动执行**
 
 谢语言中主程序运行时，如果不指定要执行的脚本文件，同时当前目录下含有名字类似auto*.xie（例如auto.xie、auto01.xie等）的脚本文件时，将按文件名顺序依次执行这些脚本文件。这在分发程序时会比较有用，使用者可以直接鼠标双击谢语言主程序即可执行开发者编写的脚本，只要这些脚本与谢语言主程序在相同目录下并符合上述命名规则。
+
+
+&nbsp;
+
+##### - **从剪贴板执行代码**
+
+谢语言主程序执行时，如果加上-clip参数，将从剪贴板读取代码然后执行。
 
 
 &nbsp;
