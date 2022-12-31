@@ -39,7 +39,7 @@ import (
 	excelize "github.com/xuri/excelize/v2"
 )
 
-var VersionG string = "0.6.5"
+var VersionG string = "0.6.6"
 
 var ShellModeG bool = false
 
@@ -713,7 +713,8 @@ var InstrNameSet map[string]int = map[string]int{
 	"getCurDir": 21905, // 获取当前工作路径
 	"setCurDir": 21906, // 设置当前工作路径
 
-	"getAppDir": 21907, // 获取应用路径（谢语言主程序路径）
+	"getAppDir":    21907, // 获取应用路径（谢语言主程序路径）
+	"getConfigDir": 21908, // 获取应用配置路径
 
 	"extractFileName": 21910, // 从文件路径中获取文件名部分
 	"extractFileExt":  21911, // 从文件路径中获取文件扩展名（后缀）部分
@@ -14915,6 +14916,30 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 		p.SetVarInt(pr, rsT)
 
+		return ""
+
+	case 21908: // getConfigDir
+
+		// pr := -5
+		// v1p := 0
+
+		// if instrT.ParamLen > 1 {
+		pr := instrT.Params[0].Ref
+		v1p := 1
+		// }
+
+		vs := p.ParamsToStrs(instrT, v1p)
+
+		baseNameT := p.GetSwitchVarValue(vs, "-base=", "xie")
+
+		rsT, errT := tk.EnsureBasePath(baseNameT)
+
+		if errT != nil {
+			p.SetVarInt(pr, errT)
+			return ""
+		}
+
+		p.SetVarInt(pr, rsT)
 		return ""
 
 	case 21910: // extractFileName
