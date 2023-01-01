@@ -797,11 +797,14 @@ var InstrNameSet map[string]int = map[string]int{
 	"dbQuery": 32103, // 在指定数据库连接上执行一个查询的SQL语句（一般是select等），返回数组，每行是映射（字段名：字段值），用法示例：dbQuery $rs $db $sql $arg1 $arg2 ...
 	"查询数据库":   32103,
 
-	"dbQueryRecs": 32104, // 在指定数据库连接上执行一个查询的SQL语句（一般是select等），返回二维数组（第一行为字段名），用法示例：dbQueryRecs $rs $db $sql $arg1 $arg2 ...
-	"查询数据库记录":     32104,
+	"dbQueryMap": 32104, // 在指定数据库连接上执行一个查询的SQL语句（一般是select等），返回一个映射，以指定的数据库记录字段为键名，对应记录为键值，用法示例：dbQueryMap $rs $db $sql $key $arg1 $arg2 ...
+	"查询数据库映射":    32104,
 
-	"dbExec": 32105, // 在指定数据库连接上执行一个有操作的SQL语句（一般是insert、update、delete等），用法示例：dbExec $rs $db $sql $arg1 $arg2 ...
-	"执行数据库":  32105,
+	"dbQueryRecs": 32105, // 在指定数据库连接上执行一个查询的SQL语句（一般是select等），返回二维数组（第一行为字段名），用法示例：dbQueryRecs $rs $db $sql $arg1 $arg2 ...
+	"查询数据库记录":     32105,
+
+	"dbExec": 32111, // 在指定数据库连接上执行一个有操作的SQL语句（一般是insert、update、delete等），用法示例：dbExec $rs $db $sql $arg1 $arg2 ...
+	"执行数据库":  32111,
 
 	// markdown related Markdown格式相关
 	"renderMarkdown": 40001, // 将Markdown格式字符串渲染为HTML
@@ -15667,7 +15670,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 		return ""
 
-	case 32105: // dbExec
+	case 32111: // dbExec
 		if instrT.ParamLen < 3 {
 			return p.ErrStrf("参数不够")
 		}
