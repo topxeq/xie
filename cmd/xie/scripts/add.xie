@@ -7,7 +7,7 @@ push #i5
 // 将栈顶两个数值取出相加后结果压入栈中
 // 此处使用了预定义全局变量$push
 // 此时栈中应仅有一个数值（整数5）
-add $push
+add $push $pop $pop
 
 // 输出栈顶数值（同时该数值被弹出）
 plo $pop
@@ -31,7 +31,7 @@ push $c
 push "9.18"
 
 // 将栈顶两个字符串相加后赋值给变量d
-add $d
+add $d $pop $pop
 
 // 输出变量d
 plo $d

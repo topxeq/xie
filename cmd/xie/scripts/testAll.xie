@@ -1,0 +1,14 @@
+systemCmd $rs "xie" "-gopath" "欢迎.谢"
+
+test $rs "欢迎来到谢语言的世界！\n" $seq "欢迎.谢"
+
+systemCmd $rs "xie" "-gopath" "add.xie"
+
+test $rs "(int)7\n(float64)4.1\n(string)abc123 456\n(string)9.18abc123 456\n(int)208\n" $seq "add.xie"
+
+systemCmd $rs "xie" "-gopath" "assign.xie"
+
+test $rs "(string)abc\n(string)abc 123\n(string)abc 123\nand this\n(int)3\n(int)3\n(float64)3\n" $seq "assign.xie"
+
+
+

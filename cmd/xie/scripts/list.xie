@@ -65,8 +65,8 @@ plo $list4
 // 该代码块必须使用continue指令继续循环遍历
 // 或者break指令跳出循环遍历
 // 遍历完毕或者break跳出遍历后，代码将继续从rangeList指令的下一条指令继续执行
-// 遍历每项时，rangeList会先将当前遍历项和当前序号值（从0开始）先后压栈
-rangeList $list4 :range1
+// 遍历每项时，range指令会先将当前遍历项和当前序号值（从0开始）先后压栈
+range $list4 :range1
 
 // 删除list4中序号为2的项(此时该项为整数2)
 deleteItem $list4 #i2

@@ -42,7 +42,7 @@ assign $outG  "TX_END_RESPONSE_XT"
 
 `
 
-pln 启动服务器……
+pl "启动服务器……(请用浏览器访问 http://127.0.0.1:8080/test 查看运行效果)"
 
 // 在端口8080上启动http服务器
 // 指定路由处理器为muxT

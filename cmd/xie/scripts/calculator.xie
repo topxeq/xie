@@ -34,17 +34,17 @@ assign $htmlT `
 		<button id="btnClose">关闭</button>
 	</div>
 
-    <script type="text/tiscript">
-        $(#btnCal).on("click", function() {
-			var result = eval($(#mainInputID).value);
+    <script>
+        document.$("#btnCal").on("click", function() {
+			var result = eval(document.getElementById("mainInputID").value);
 
-			view.delegateDo(String.printf("%v", result));
+            Window.this.xcall("delegateDo", result);
 
-            $(#mainInputID).value = result;
+            document.$("#mainInputID").value = result;
         });
  
-        $(#btnClose).on("click", function() {
-            view.close();
+        document.$("#btnClose").on("click", function() {
+            Window.this.close();
         });
  
     </script>

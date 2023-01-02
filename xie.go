@@ -39,7 +39,7 @@ import (
 	excelize "github.com/xuri/excelize/v2"
 )
 
-var VersionG string = "0.6.6"
+var VersionG string = "0.6.7"
 
 var ShellModeG bool = false
 
@@ -105,7 +105,8 @@ var InstrNameSet map[string]int = map[string]int{
 	"是否已定义":   112,
 	"isNil":   113, // 判断变量是否是nil，第一个结果参数可省略，第二个参数是要判断的变量
 
-	"test": 121, // 内部测试用，测试两个数值是否相等
+	"test":      121, // 内部测试用，测试两个数值是否相等
+	"testByReg": 123, // 内部测试用，测试第一个字符串是否符合第二个参数的正则表达式
 
 	"typeOf": 131, // 获取变量或数值类型（字符串格式），省略所有参数表示获取看栈值（不弹栈）的类型
 	"类型":     131,
@@ -390,11 +391,11 @@ var InstrNameSet map[string]int = map[string]int{
 	"slice": 1130, // 对列表（数组）切片，如果没有指定结果参数，将改变原来的变量。用法示例：slice $list4 $list3 #i1 #i5，将list3进行切片，截取序号1（包含）至序号5（不包含）之间的项，形成一个新的列表，放入变量list4中
 	"切片":    1130,
 
-	"rangeList": 1140, // 遍历数组
-	"遍历列表":      1140,
+	// "rangeList": 1140, // 遍历数组，已废弃，用range指令代替
+	// "遍历列表":      1140,
 
-	"rangeStrList": 1141, // 遍历字符串数组
-	"遍历字符串列表":      1141,
+	// "rangeStrList": 1141, // 遍历字符串数组，已废弃，用range指令代替
+	// "遍历字符串列表":      1141,
 
 	// control related 控制相关
 	"continue": 1210, // 循环中继续
@@ -417,8 +418,8 @@ var InstrNameSet map[string]int = map[string]int{
 	"取映射项":       1320,
 	"{}":         1320,
 
-	"rangeMap": 1340, // 遍历映射
-	"遍历映射":     1340,
+	// "rangeMap": 1340, // 遍历映射，已废弃，用range代替
+	// "遍历映射":     1340,
 
 	// object related 对象相关
 
@@ -445,8 +446,9 @@ var InstrNameSet map[string]int = map[string]int{
 
 	// string related 字符串相关
 	"backQuote": 1501, // 获取反引号字符串
-	"quote":     1503, // 将字符串进行转义（加上转义符，如“"”变成“\"”）
-	"unquote":   1504, // 将字符串进行解转义
+
+	"quote":   1503, // 将字符串进行转义（加上转义符，如“"”变成“\"”）
+	"unquote": 1504, // 将字符串进行解转义
 
 	"isEmpty":     1510, // 判断字符串是否为空
 	"是否空串":        1510,
@@ -460,7 +462,7 @@ var InstrNameSet map[string]int = map[string]int{
 	"strReplace":   1540, // 字符串替换，用法示例：strReplace $result $str1 $find $replacement
 	"strReplaceIn": 1543, // 字符串替换，可同时替换多个子串，用法示例：strReplace $result $str1 $find1 $replacement1 $find2 $replacement2
 
-	"trim":    1550, // 字符串首尾去空白
+	"trim":    1550, // 字符串首尾去空白，非字符串将自动转换为字符串
 	"strTrim": 1550,
 	"去空白":     1550,
 
@@ -803,6 +805,12 @@ var InstrNameSet map[string]int = map[string]int{
 	"dbQueryRecs": 32105, // 在指定数据库连接上执行一个查询的SQL语句（一般是select等），返回二维数组（第一行为字段名），用法示例：dbQueryRecs $rs $db $sql $arg1 $arg2 ...
 	"查询数据库记录":     32105,
 
+	"dbQueryCount": 32106, // 在指定数据库连接上执行一个查询的SQL语句，返回一个整数，一般用于查询记录条数或者某个整数字段的值等场景，用法示例：dbQueryCount $rs $db `select count(*) from TABLE1 where FIELD1=:v1 and FIELD2=:v2` $arg1 $arg2 ...
+
+	"dbQueryFloat": 32107, // 在指定数据库连接上执行一个查询的SQL语句，返回一个浮点数，用法示例：dbQueryFloat $rs $db `select PRICE from TABLE1 where FIELD1=:v1 and FIELD2=:v2` $arg1 $arg2 ...
+
+	"dbQueryString": 32108, // 在指定数据库连接上执行一个查询的SQL语句，返回一个字符串，用法示例：dbQueryString $rs $db `select NAME from TABLE1 where FIELD1=:v1 and FIELD2=:v2` $arg1 $arg2 ...
+
 	"dbExec": 32111, // 在指定数据库连接上执行一个有操作的SQL语句（一般是insert、update、delete等），用法示例：dbExec $rs $db $sql $arg1 $arg2 ...
 	"执行数据库":  32111,
 
@@ -981,11 +989,15 @@ var InstrNameSet map[string]int = map[string]int{
 
 	// "guiNewVBox": 211101,
 
+	// misc related 杂项相关
+	"getSeq":   500001, // 获得一个自增长的、唯一的整数，最初从1开始，可以用resetSeq指令重置，getSeq指令是线程安全的
+	"resetSeq": 500003, // 重置自增长唯一整数序列，这样下次使用getSeq时获得的序号值为1
+
 	// end of commands/instructions 指令集末尾
 }
 
 type VarRef struct {
-	Ref   int // -99 - invalid, -15 - ref, -12 - unref, -10 - quickEval, -9 - eval, -8 - pop, -7 - peek, -6 - push, -5 - tmp, -4 - pln, -3 - var(string), -2 - drop, -1 - debug, > 0 normal vars
+	Ref   int // -99 - invalid, -15 - ref, -12 - unref, -11 - seq, -10 - quickEval, -9 - eval, -8 - pop, -7 - peek, -6 - push, -5 - tmp, -4 - pln, -3 - var(string), -2 - drop, -1 - debug, > 0 normal vars
 	Value interface{}
 }
 
@@ -1099,6 +1111,8 @@ type XieVM struct {
 	VerboseM bool
 
 	VerbosePlusM bool
+
+	SeqM tk.Seq
 
 	GuiM map[string]interface{}
 	// GuiStrVarsM   []string
@@ -1533,6 +1547,8 @@ func (p *XieVM) ParseVar(strA string, optsA ...interface{}) VarRef {
 				return VarRef{-6, nil}
 			} else if s1T == "$tmp" || s1T == "$临时变量" {
 				return VarRef{-5, nil}
+			} else if s1T == "$seq" || s1T == "$自增长序号" {
+				return VarRef{-11, nil}
 			} else {
 				vNameT := s1T[1:]
 
@@ -3136,6 +3152,11 @@ func (p *XieVM) GetVarValue(vA VarRef) interface{} {
 		return p.TmpM
 	}
 
+	if idxT == -11 {
+		// p.SeqM++
+		return p.SeqM.Get()
+	}
+
 	if idxT == -8 {
 		return p.Pop()
 	}
@@ -3263,6 +3284,11 @@ func (p *XieVM) GetVarValueWithLayer(vA VarRef) (interface{}, int) {
 		return p.TmpM, -2
 	}
 
+	if idxT == -11 {
+		// p.SeqM++
+		return p.SeqM.Get(), -2
+	}
+
 	if idxT == -8 {
 		return p.Pop(), -2
 	}
@@ -3388,6 +3414,10 @@ func (p *XieVM) GetVarRef(vA VarRef) *interface{} {
 		return &p.TmpM
 	}
 
+	if idxT == -11 { // 自增长序号无法寻址
+		return nil
+	}
+
 	if idxT == -6 {
 		return nil
 	}
@@ -3490,6 +3520,10 @@ func (p *XieVM) GetVarRefNative(vA VarRef) interface{} {
 		// // tk.Pl("def%T %v", tmpv, tmpv)
 
 		// return &p.TmpM
+	}
+
+	if idxT == -11 {
+		return tk.GetRef(&p.SeqM)
 	}
 
 	if idxT == -6 {
@@ -3653,6 +3687,11 @@ func (p *XieVM) GetVarValueGlobal(vA VarRef) interface{} {
 
 	if idxT == -5 {
 		return p.TmpM
+	}
+
+	if idxT == -11 {
+		// p.SeqM++
+		return p.SeqM.Get()
 	}
 
 	if idxT == -8 {
@@ -4077,6 +4116,11 @@ func (p *XieVM) SetVarInt(keyA int, vA interface{}) error {
 		return nil
 	}
 
+	if keyA == -11 {
+		p.SeqM.Reset(tk.ToInt(vA, 0))
+		return nil
+	}
+
 	if keyA == -4 {
 		fmt.Println(vA)
 		return nil
@@ -4148,6 +4192,11 @@ func (p *XieVM) SetVarIntLocal(keyA int, vA interface{}) error {
 
 	if keyA == -5 {
 		p.TmpM = vA
+		return nil
+	}
+
+	if keyA == -11 {
+		p.SeqM.Reset(tk.ToInt(vA, 0))
 		return nil
 	}
 
@@ -4223,6 +4272,11 @@ func (p *XieVM) SetVarIntGlobal(keyA int, vA interface{}) error {
 
 	if keyA == -5 {
 		p.TmpM = vA
+		return nil
+	}
+
+	if keyA == -11 {
+		p.SeqM.Reset(tk.ToInt(vA, 0))
 		return nil
 	}
 
@@ -5448,10 +5502,52 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		v1 := p.GetVarValue(instrT.Params[0])
 		v2 := p.GetVarValue(instrT.Params[1])
 
-		if v1 == v2 {
-			tk.Pl("test passed: %#v <-> %#v", v1, v2)
+		var v3 string
+		var v4 string
+
+		if instrT.ParamLen > 3 {
+			v3 = tk.ToStr(p.GetVarValue(instrT.Params[2]))
+			v4 = "(" + tk.ToStr(p.GetVarValue(instrT.Params[3])) + ")"
+		} else if instrT.ParamLen > 2 {
+			v3 = tk.ToStr(p.GetVarValue(instrT.Params[2]))
 		} else {
-			return p.ErrStrf("test failed: %#v <-> %#v", v1, v2)
+			// p.SeqM++
+			v3 = tk.ToStr(p.SeqM.Get())
+		}
+
+		if v1 == v2 {
+			tk.Pl("test %v%v passed", v3, v4)
+		} else {
+			return p.ErrStrf("test %v%v failed: %#v <-> %#v", v3, v4, v1, v2)
+		}
+
+		return ""
+
+	case 123: // testByReg
+		if instrT.ParamLen < 2 {
+			return p.ErrStrf("参数不够")
+		}
+
+		v1 := p.GetVarValue(instrT.Params[0])
+		v2 := p.GetVarValue(instrT.Params[1])
+
+		var v3 string
+		var v4 string
+
+		if instrT.ParamLen > 3 {
+			v3 = tk.ToStr(p.GetVarValue(instrT.Params[2]))
+			v4 = "(" + tk.ToStr(p.GetVarValue(instrT.Params[3])) + ")"
+		} else if instrT.ParamLen > 2 {
+			v3 = tk.ToStr(p.GetVarValue(instrT.Params[2]))
+		} else {
+			// p.SeqM++
+			v3 = tk.ToStr(p.SeqM.Get())
+		}
+
+		if tk.RegMatchX(tk.ToStr(v1), tk.ToStr(v2)) {
+			tk.Pl("test %v%v passed", v3, v4)
+		} else {
+			return p.ErrStrf("test %v%v failed: %#v <-> %#v", v3, v4, v1, v2)
 		}
 
 		return ""
@@ -8989,10 +9085,16 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 		v1 := p.GetVarValue(instrT.Params[0])
 		var v2 interface{} = nil
+		var v3 interface{} = 1 // 用于遍历整数时的第三个数（步长step）
 
-		if instrT.ParamLen > 2 { // 用于遍历整数时的第二个数（上限，不包含）
+		if instrT.ParamLen > 3 { // 用于遍历整数时的第二个数（上限，不包含）
+			labelPT = 3
+			v2 = p.GetVarValue(instrT.Params[1])
+			v3 = p.GetVarValue(instrT.Params[2])
+		} else if instrT.ParamLen > 2 { // 用于遍历整数时的第二个数（上限，不包含）
 			labelPT = 2
 			v2 = p.GetVarValue(instrT.Params[1])
+			v3 = 1
 		}
 
 		var labelT int
@@ -9037,9 +9139,16 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			lenT = len(nv)
 		case int:
 			if v2 != nil {
-				lenT = tk.ToInt(v2) - nv
+				lenT = (tk.ToInt(v2) - nv) / tk.ToInt(v3, 1)
 			} else {
 				lenT = nv
+			}
+		case float64:
+			if v2 != nil {
+				// v3 = tk.ToFloat(v3, 1.0)
+				lenT = tk.ToInt((tk.ToFloat(v2)-nv)/tk.ToFloat(v3, 1.0), 0)
+			} else {
+				lenT = tk.ToInt(nv, 0)
 			}
 		case string:
 			lenT = len(nv)
@@ -9378,6 +9487,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			return p.ErrStrf("参数类型错误：%T(%v)", v1, nv)
 		}
 
+		// tk.Pl("for len: %v", lenT)
 	for21:
 		for i := 0; i < lenT; i++ {
 			// for i, v := range v1 {
@@ -9397,9 +9507,15 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 				p.Push(nv[i])
 			case int:
 				if v2 != nil {
-					p.Push(nv + i)
+					p.Push(nv + i*tk.ToInt(v3))
 				} else {
 					p.Push(i)
+				}
+			case float64:
+				if v2 != nil {
+					p.Push(nv + tk.ToFloat(i)*tk.ToFloat(v3, 1.0))
+				} else {
+					p.Push(tk.ToFloat(i))
 				}
 			case string:
 				p.Push(string(nv[i]))
@@ -10184,186 +10300,186 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 		return ""
 
-	case 1140: // rangeList
-		if instrT.ParamLen < 2 {
-			return p.ErrStrf("参数不够")
-		}
+	// case 1140: // rangeList
+	// 	if instrT.ParamLen < 2 {
+	// 		return p.ErrStrf("参数不够")
+	// 	}
 
-		v1 := p.GetVarValue(instrT.Params[0])
-		labelT := tk.ToInt(p.GetVarValue(instrT.Params[1]))
+	// 	v1 := p.GetVarValue(instrT.Params[0])
+	// 	labelT := tk.ToInt(p.GetVarValue(instrT.Params[1]))
 
-		pointerT := p.CodePointerM
+	// 	pointerT := p.CodePointerM
 
-		startPointerT := labelT
+	// 	startPointerT := labelT
 
-		// tmpPointerT := labelT
+	// 	// tmpPointerT := labelT
 
-		var lenT int
+	// 	var lenT int
 
-		switch nv := v1.(type) {
-		case []interface{}:
-			lenT = len(nv)
-		case []bool:
-			lenT = len(nv)
-		case []int:
-			lenT = len(nv)
-		case []byte:
-			lenT = len(nv)
-		case []rune:
-			lenT = len(nv)
-		case []int64:
-			lenT = len(nv)
-		case []float64:
-			lenT = len(nv)
-		case []string:
-			lenT = len(nv)
-		default:
-			return p.ErrStrf("参数类型错误：%T(%v)", v1, nv)
-		}
+	// 	switch nv := v1.(type) {
+	// 	case []interface{}:
+	// 		lenT = len(nv)
+	// 	case []bool:
+	// 		lenT = len(nv)
+	// 	case []int:
+	// 		lenT = len(nv)
+	// 	case []byte:
+	// 		lenT = len(nv)
+	// 	case []rune:
+	// 		lenT = len(nv)
+	// 	case []int64:
+	// 		lenT = len(nv)
+	// 	case []float64:
+	// 		lenT = len(nv)
+	// 	case []string:
+	// 		lenT = len(nv)
+	// 	default:
+	// 		return p.ErrStrf("参数类型错误：%T(%v)", v1, nv)
+	// 	}
 
-	for1:
-		for i := 0; i < lenT; i++ {
-			// for i, v := range v1 {
-			tmpPointerT := startPointerT
-			p.CodePointerM = tmpPointerT
+	// for1:
+	// 	for i := 0; i < lenT; i++ {
+	// 		// for i, v := range v1 {
+	// 		tmpPointerT := startPointerT
+	// 		p.CodePointerM = tmpPointerT
 
-			if tmpPointerT < 0 || tmpPointerT >= len(p.CodeListM) {
-				return p.ErrStrf("遍历中指令序号超出范围: %v/%v", tmpPointerT, len(p.CodeListM))
-			}
+	// 		if tmpPointerT < 0 || tmpPointerT >= len(p.CodeListM) {
+	// 			return p.ErrStrf("遍历中指令序号超出范围: %v/%v", tmpPointerT, len(p.CodeListM))
+	// 		}
 
-			switch nv := v1.(type) {
-			case []interface{}:
-				p.Push(nv[i])
-			case []bool:
-				p.Push(nv[i])
-			case []int:
-				p.Push(nv[i])
-			case []byte:
-				p.Push(nv[i])
-			case []rune:
-				p.Push(nv[i])
-			case []int64:
-				p.Push(nv[i])
-			case []float64:
-				p.Push(nv[i])
-			case []string:
-				p.Push(nv[i])
-			default:
-				return p.ErrStrf("参数类型错误：%T(%v)", v1, nv)
-			}
-			// p.Push(v)
-			p.Push(i)
+	// 		switch nv := v1.(type) {
+	// 		case []interface{}:
+	// 			p.Push(nv[i])
+	// 		case []bool:
+	// 			p.Push(nv[i])
+	// 		case []int:
+	// 			p.Push(nv[i])
+	// 		case []byte:
+	// 			p.Push(nv[i])
+	// 		case []rune:
+	// 			p.Push(nv[i])
+	// 		case []int64:
+	// 			p.Push(nv[i])
+	// 		case []float64:
+	// 			p.Push(nv[i])
+	// 		case []string:
+	// 			p.Push(nv[i])
+	// 		default:
+	// 			return p.ErrStrf("参数类型错误：%T(%v)", v1, nv)
+	// 		}
+	// 		// p.Push(v)
+	// 		p.Push(i)
 
-			for {
-				// tk.Pln(i, v)
-				// tk.Pl("%v %v %v", lineA, len(p.InstrListM), tk.LimitString(p.SourceM[p.CodeSourceMapM[p.CodePointerM]], 50))
-				// tk.Pl("%v %v %v", tmpPointerT, len(p.InstrListM), tk.LimitString(p.SourceM[p.CodeSourceMapM[tmpPointerT]], 50))
+	// 		for {
+	// 			// tk.Pln(i, v)
+	// 			// tk.Pl("%v %v %v", lineA, len(p.InstrListM), tk.LimitString(p.SourceM[p.CodeSourceMapM[p.CodePointerM]], 50))
+	// 			// tk.Pl("%v %v %v", tmpPointerT, len(p.InstrListM), tk.LimitString(p.SourceM[p.CodeSourceMapM[tmpPointerT]], 50))
 
-				// tk.Exit()
+	// 			// tk.Exit()
 
-				rs := p.RunLine(tmpPointerT)
+	// 			rs := p.RunLine(tmpPointerT)
 
-				nv, ok := rs.(int)
+	// 			nv, ok := rs.(int)
 
-				if ok {
-					tmpPointerT = nv
-					p.CodePointerM = tmpPointerT
-					continue
-				}
+	// 			if ok {
+	// 				tmpPointerT = nv
+	// 				p.CodePointerM = tmpPointerT
+	// 				continue
+	// 			}
 
-				nsv, ok := rs.(string)
+	// 			nsv, ok := rs.(string)
 
-				if ok {
-					if tk.IsErrStr(nsv) {
-						return nsv
-					}
+	// 			if ok {
+	// 				if tk.IsErrStr(nsv) {
+	// 					return nsv
+	// 				}
 
-					if nsv == "exit" {
-						return "exit"
-					} else if nsv == "cont" {
+	// 				if nsv == "exit" {
+	// 					return "exit"
+	// 				} else if nsv == "cont" {
 
-						continue for1
-					} else if nsv == "brk" {
-						break for1
-					}
-				}
+	// 					continue for1
+	// 				} else if nsv == "brk" {
+	// 					break for1
+	// 				}
+	// 			}
 
-				tmpPointerT++
-				p.CodePointerM = tmpPointerT
-			}
+	// 			tmpPointerT++
+	// 			p.CodePointerM = tmpPointerT
+	// 		}
 
-		}
+	// 	}
 
-		// p.CodePointerM = pointerT
+	// 	// p.CodePointerM = pointerT
 
-		return pointerT + 1
+	// 	return pointerT + 1
 
-	case 1141: // rangeStrList
-		if instrT.ParamLen < 2 {
-			return p.ErrStrf("参数不够")
-		}
+	// case 1141: // rangeStrList
+	// 	if instrT.ParamLen < 2 {
+	// 		return p.ErrStrf("参数不够")
+	// 	}
 
-		v1 := p.GetVarValue(instrT.Params[0]).([]string)
-		labelT := tk.ToInt(p.GetVarValue(instrT.Params[1]))
+	// 	v1 := p.GetVarValue(instrT.Params[0]).([]string)
+	// 	labelT := tk.ToInt(p.GetVarValue(instrT.Params[1]))
 
-		pointerT := p.CodePointerM
+	// 	pointerT := p.CodePointerM
 
-		startPointerT := labelT
+	// 	startPointerT := labelT
 
-		// tmpPointerT := labelT
+	// 	// tmpPointerT := labelT
 
-	for5:
-		for i, v := range v1 {
-			tmpPointerT := startPointerT
+	// for5:
+	// 	for i, v := range v1 {
+	// 		tmpPointerT := startPointerT
 
-			if tmpPointerT < 0 || tmpPointerT >= len(p.CodeListM) {
-				return p.ErrStrf("遍历中指令序号超出范围: %v/%v", tmpPointerT, len(p.CodeListM))
-			}
+	// 		if tmpPointerT < 0 || tmpPointerT >= len(p.CodeListM) {
+	// 			return p.ErrStrf("遍历中指令序号超出范围: %v/%v", tmpPointerT, len(p.CodeListM))
+	// 		}
 
-			p.Push(v)
-			p.Push(i)
+	// 		p.Push(v)
+	// 		p.Push(i)
 
-			for {
-				// tk.Pln(i, v)
-				// tk.Pl("%v %v %v", lineA, len(p.InstrListM), tk.LimitString(p.SourceM[p.CodeSourceMapM[p.CodePointerM]], 50))
-				// tk.Pl("%v %v %v", tmpPointerT, len(p.InstrListM), tk.LimitString(p.SourceM[p.CodeSourceMapM[tmpPointerT]], 50))
+	// 		for {
+	// 			// tk.Pln(i, v)
+	// 			// tk.Pl("%v %v %v", lineA, len(p.InstrListM), tk.LimitString(p.SourceM[p.CodeSourceMapM[p.CodePointerM]], 50))
+	// 			// tk.Pl("%v %v %v", tmpPointerT, len(p.InstrListM), tk.LimitString(p.SourceM[p.CodeSourceMapM[tmpPointerT]], 50))
 
-				// tk.Exit()
+	// 			// tk.Exit()
 
-				rs := p.RunLine(tmpPointerT)
+	// 			rs := p.RunLine(tmpPointerT)
 
-				nv, ok := rs.(int)
+	// 			nv, ok := rs.(int)
 
-				if ok {
-					tmpPointerT = nv
-					continue
-				}
+	// 			if ok {
+	// 				tmpPointerT = nv
+	// 				continue
+	// 			}
 
-				nsv, ok := rs.(string)
+	// 			nsv, ok := rs.(string)
 
-				if ok {
-					if tk.IsErrStr(nsv) {
-						return nsv
-					}
+	// 			if ok {
+	// 				if tk.IsErrStr(nsv) {
+	// 					return nsv
+	// 				}
 
-					if nsv == "exit" {
-						return "exit"
-					} else if nsv == "cont" {
+	// 				if nsv == "exit" {
+	// 					return "exit"
+	// 				} else if nsv == "cont" {
 
-						continue for5
-					} else if nsv == "brk" {
-						break for5
-					}
-				}
+	// 					continue for5
+	// 				} else if nsv == "brk" {
+	// 					break for5
+	// 				}
+	// 			}
 
-				tmpPointerT++
-			}
+	// 			tmpPointerT++
+	// 		}
 
-		}
+	// 	}
 
-		// p.CodePointerM = pointerT
+	// 	// p.CodePointerM = pointerT
 
-		return pointerT + 1
+	// 	return pointerT + 1
 
 	case 1210: // continue
 		return "cont"
@@ -10553,313 +10669,313 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 		return ""
 
-	case 1340: // rangeMap
-		if instrT.ParamLen < 2 {
-			return p.ErrStrf("参数不够")
-		}
+	// case 1340: // rangeMap
+	// 	if instrT.ParamLen < 2 {
+	// 		return p.ErrStrf("参数不够")
+	// 	}
 
-		v1 := p.GetVarValue(instrT.Params[0])
-		labelT := tk.ToInt(p.GetVarValue(instrT.Params[1]))
+	// 	v1 := p.GetVarValue(instrT.Params[0])
+	// 	labelT := tk.ToInt(p.GetVarValue(instrT.Params[1]))
 
-		pointerT := p.CodePointerM
-		// tk.Pln(p.CodeSourceMapM[pointerT]+1, tk.LimitString(p.SourceM[p.CodeSourceMapM[pointerT]], 50))
+	// 	pointerT := p.CodePointerM
+	// 	// tk.Pln(p.CodeSourceMapM[pointerT]+1, tk.LimitString(p.SourceM[p.CodeSourceMapM[pointerT]], 50))
 
-		startPointerT := labelT
+	// 	startPointerT := labelT
 
-		// tmpPointerT := labelT
+	// 	// tmpPointerT := labelT
 
-		switch nv := v1.(type) {
-		case map[string]interface{}:
-		for31:
-			for k, v := range nv {
-				tmpPointerT := startPointerT
-				p.CodePointerM = tmpPointerT
-
-				if tmpPointerT < 0 || tmpPointerT >= len(p.CodeListM) {
-					return p.ErrStrf("遍历中指令序号超出范围: %v/%v", tmpPointerT, len(p.CodeListM))
-				}
+	// 	switch nv := v1.(type) {
+	// 	case map[string]interface{}:
+	// 	for31:
+	// 		for k, v := range nv {
+	// 			tmpPointerT := startPointerT
+	// 			p.CodePointerM = tmpPointerT
+
+	// 			if tmpPointerT < 0 || tmpPointerT >= len(p.CodeListM) {
+	// 				return p.ErrStrf("遍历中指令序号超出范围: %v/%v", tmpPointerT, len(p.CodeListM))
+	// 			}
 
-				p.Push(v)
-				p.Push(k)
+	// 			p.Push(v)
+	// 			p.Push(k)
 
-				for {
-					rs := p.RunLine(tmpPointerT)
+	// 			for {
+	// 				rs := p.RunLine(tmpPointerT)
 
-					nv, ok := rs.(int)
+	// 				nv, ok := rs.(int)
 
-					if ok {
-						tmpPointerT = nv
-						p.CodePointerM = tmpPointerT
-						continue
-					}
+	// 				if ok {
+	// 					tmpPointerT = nv
+	// 					p.CodePointerM = tmpPointerT
+	// 					continue
+	// 				}
 
-					nsv, ok := rs.(string)
+	// 				nsv, ok := rs.(string)
 
-					if ok {
-						if tk.IsErrStr(nsv) {
-							return nsv
-						}
+	// 				if ok {
+	// 					if tk.IsErrStr(nsv) {
+	// 						return nsv
+	// 					}
 
-						if nsv == "exit" {
-							return "exit"
-						} else if nsv == "cont" {
+	// 					if nsv == "exit" {
+	// 						return "exit"
+	// 					} else if nsv == "cont" {
 
-							continue for31
-						} else if nsv == "brk" {
-							break for31
-						}
-					}
+	// 						continue for31
+	// 					} else if nsv == "brk" {
+	// 						break for31
+	// 					}
+	// 				}
 
-					tmpPointerT++
-					p.CodePointerM = tmpPointerT
-				}
+	// 				tmpPointerT++
+	// 				p.CodePointerM = tmpPointerT
+	// 			}
 
-			}
+	// 		}
 
-			return pointerT + 1
-		case map[string]int:
-		for32:
-			for k, v := range nv {
-				tmpPointerT := startPointerT
-				p.CodePointerM = tmpPointerT
-
-				if tmpPointerT < 0 || tmpPointerT >= len(p.CodeListM) {
-					return p.ErrStrf("遍历中指令序号超出范围: %v/%v", tmpPointerT, len(p.CodeListM))
-				}
+	// 		return pointerT + 1
+	// 	case map[string]int:
+	// 	for32:
+	// 		for k, v := range nv {
+	// 			tmpPointerT := startPointerT
+	// 			p.CodePointerM = tmpPointerT
+
+	// 			if tmpPointerT < 0 || tmpPointerT >= len(p.CodeListM) {
+	// 				return p.ErrStrf("遍历中指令序号超出范围: %v/%v", tmpPointerT, len(p.CodeListM))
+	// 			}
 
-				p.Push(v)
-				p.Push(k)
+	// 			p.Push(v)
+	// 			p.Push(k)
 
-				for {
-					rs := p.RunLine(tmpPointerT)
+	// 			for {
+	// 				rs := p.RunLine(tmpPointerT)
 
-					nv, ok := rs.(int)
+	// 				nv, ok := rs.(int)
 
-					if ok {
-						tmpPointerT = nv
-						p.CodePointerM = tmpPointerT
-						continue
-					}
+	// 				if ok {
+	// 					tmpPointerT = nv
+	// 					p.CodePointerM = tmpPointerT
+	// 					continue
+	// 				}
 
-					nsv, ok := rs.(string)
+	// 				nsv, ok := rs.(string)
 
-					if ok {
-						if tk.IsErrStr(nsv) {
-							return nsv
-						}
+	// 				if ok {
+	// 					if tk.IsErrStr(nsv) {
+	// 						return nsv
+	// 					}
 
-						if nsv == "exit" {
-							return "exit"
-						} else if nsv == "cont" {
+	// 					if nsv == "exit" {
+	// 						return "exit"
+	// 					} else if nsv == "cont" {
 
-							continue for32
-						} else if nsv == "brk" {
-							break for32
-						}
-					}
-
-					tmpPointerT++
-					p.CodePointerM = tmpPointerT
-				}
+	// 						continue for32
+	// 					} else if nsv == "brk" {
+	// 						break for32
+	// 					}
+	// 				}
+
+	// 				tmpPointerT++
+	// 				p.CodePointerM = tmpPointerT
+	// 			}
 
-			}
-
-			return pointerT + 1
-		case map[string]byte:
-		for35:
-			for k, v := range nv {
-				tmpPointerT := startPointerT
-				p.CodePointerM = tmpPointerT
-
-				if tmpPointerT < 0 || tmpPointerT >= len(p.CodeListM) {
-					return p.ErrStrf("遍历中指令序号超出范围: %v/%v", tmpPointerT, len(p.CodeListM))
-				}
-
-				p.Push(v)
-				p.Push(k)
+	// 		}
+
+	// 		return pointerT + 1
+	// 	case map[string]byte:
+	// 	for35:
+	// 		for k, v := range nv {
+	// 			tmpPointerT := startPointerT
+	// 			p.CodePointerM = tmpPointerT
+
+	// 			if tmpPointerT < 0 || tmpPointerT >= len(p.CodeListM) {
+	// 				return p.ErrStrf("遍历中指令序号超出范围: %v/%v", tmpPointerT, len(p.CodeListM))
+	// 			}
+
+	// 			p.Push(v)
+	// 			p.Push(k)
 
-				for {
-					rs := p.RunLine(tmpPointerT)
+	// 			for {
+	// 				rs := p.RunLine(tmpPointerT)
 
-					nv, ok := rs.(int)
-
-					if ok {
-						tmpPointerT = nv
-						p.CodePointerM = tmpPointerT
-						continue
-					}
+	// 				nv, ok := rs.(int)
+
+	// 				if ok {
+	// 					tmpPointerT = nv
+	// 					p.CodePointerM = tmpPointerT
+	// 					continue
+	// 				}
 
-					nsv, ok := rs.(string)
-
-					if ok {
-						if tk.IsErrStr(nsv) {
-							return nsv
-						}
-
-						if nsv == "exit" {
-							return "exit"
-						} else if nsv == "cont" {
-
-							continue for35
-						} else if nsv == "brk" {
-							break for35
-						}
-					}
-
-					tmpPointerT++
-					p.CodePointerM = tmpPointerT
-				}
+	// 				nsv, ok := rs.(string)
+
+	// 				if ok {
+	// 					if tk.IsErrStr(nsv) {
+	// 						return nsv
+	// 					}
+
+	// 					if nsv == "exit" {
+	// 						return "exit"
+	// 					} else if nsv == "cont" {
+
+	// 						continue for35
+	// 					} else if nsv == "brk" {
+	// 						break for35
+	// 					}
+	// 				}
+
+	// 				tmpPointerT++
+	// 				p.CodePointerM = tmpPointerT
+	// 			}
 
-			}
-
-			return pointerT + 1
-		case map[string]rune:
-		for36:
-			for k, v := range nv {
-				tmpPointerT := startPointerT
-				p.CodePointerM = tmpPointerT
-
-				if tmpPointerT < 0 || tmpPointerT >= len(p.CodeListM) {
-					return p.ErrStrf("遍历中指令序号超出范围: %v/%v", tmpPointerT, len(p.CodeListM))
-				}
-
-				p.Push(v)
-				p.Push(k)
+	// 		}
+
+	// 		return pointerT + 1
+	// 	case map[string]rune:
+	// 	for36:
+	// 		for k, v := range nv {
+	// 			tmpPointerT := startPointerT
+	// 			p.CodePointerM = tmpPointerT
+
+	// 			if tmpPointerT < 0 || tmpPointerT >= len(p.CodeListM) {
+	// 				return p.ErrStrf("遍历中指令序号超出范围: %v/%v", tmpPointerT, len(p.CodeListM))
+	// 			}
+
+	// 			p.Push(v)
+	// 			p.Push(k)
 
-				for {
-					rs := p.RunLine(tmpPointerT)
+	// 			for {
+	// 				rs := p.RunLine(tmpPointerT)
 
-					nv, ok := rs.(int)
-
-					if ok {
-						tmpPointerT = nv
-						p.CodePointerM = tmpPointerT
-						continue
-					}
+	// 				nv, ok := rs.(int)
+
+	// 				if ok {
+	// 					tmpPointerT = nv
+	// 					p.CodePointerM = tmpPointerT
+	// 					continue
+	// 				}
 
-					nsv, ok := rs.(string)
-
-					if ok {
-						if tk.IsErrStr(nsv) {
-							return nsv
-						}
-
-						if nsv == "exit" {
-							return "exit"
-						} else if nsv == "cont" {
-
-							continue for36
-						} else if nsv == "brk" {
-							break for36
-						}
-					}
-
-					tmpPointerT++
-					p.CodePointerM = tmpPointerT
-				}
+	// 				nsv, ok := rs.(string)
+
+	// 				if ok {
+	// 					if tk.IsErrStr(nsv) {
+	// 						return nsv
+	// 					}
+
+	// 					if nsv == "exit" {
+	// 						return "exit"
+	// 					} else if nsv == "cont" {
+
+	// 						continue for36
+	// 					} else if nsv == "brk" {
+	// 						break for36
+	// 					}
+	// 				}
+
+	// 				tmpPointerT++
+	// 				p.CodePointerM = tmpPointerT
+	// 			}
 
-			}
-
-			return pointerT + 1
-		case map[string]float64:
-		for33:
-			for k, v := range nv {
-				tmpPointerT := startPointerT
-				p.CodePointerM = tmpPointerT
-
-				if tmpPointerT < 0 || tmpPointerT >= len(p.CodeListM) {
-					return p.ErrStrf("遍历中指令序号超出范围: %v/%v", tmpPointerT, len(p.CodeListM))
-				}
-
-				p.Push(v)
-				p.Push(k)
-
-				for {
-					rs := p.RunLine(tmpPointerT)
-
-					nv, ok := rs.(int)
-
-					if ok {
-						tmpPointerT = nv
-						p.CodePointerM = tmpPointerT
-						continue
-					}
-
-					nsv, ok := rs.(string)
-
-					if ok {
-						if tk.IsErrStr(nsv) {
-							return nsv
-						}
-
-						if nsv == "exit" {
-							return "exit"
-						} else if nsv == "cont" {
-
-							continue for33
-						} else if nsv == "brk" {
-							break for33
-						}
-					}
-
-					tmpPointerT++
-					p.CodePointerM = tmpPointerT
-				}
-
-			}
-
-			return pointerT + 1
-		case map[string]string:
-		for34:
-			for k, v := range nv {
-				tmpPointerT := startPointerT
-				p.CodePointerM = tmpPointerT
-
-				if tmpPointerT < 0 || tmpPointerT >= len(p.CodeListM) {
-					return p.ErrStrf("遍历中指令序号超出范围: %v/%v", tmpPointerT, len(p.CodeListM))
-				}
-
-				p.Push(v)
-				p.Push(k)
-
-				for {
-					rs := p.RunLine(tmpPointerT)
-
-					nv, ok := rs.(int)
-
-					if ok {
-						tmpPointerT = nv
-						p.CodePointerM = tmpPointerT
-						continue
-					}
-
-					nsv, ok := rs.(string)
-
-					if ok {
-						if tk.IsErrStr(nsv) {
-							return nsv
-						}
-
-						if nsv == "exit" {
-							return "exit"
-						} else if nsv == "cont" {
-
-							continue for34
-						} else if nsv == "brk" {
-							break for34
-						}
-					}
-
-					tmpPointerT++
-					p.CodePointerM = tmpPointerT
-				}
-
-			}
-
-			return pointerT + 1
-		default:
-			return p.ErrStrf("参数类型错误")
-		}
+	// 		}
+
+	// 		return pointerT + 1
+	// 	case map[string]float64:
+	// 	for33:
+	// 		for k, v := range nv {
+	// 			tmpPointerT := startPointerT
+	// 			p.CodePointerM = tmpPointerT
+
+	// 			if tmpPointerT < 0 || tmpPointerT >= len(p.CodeListM) {
+	// 				return p.ErrStrf("遍历中指令序号超出范围: %v/%v", tmpPointerT, len(p.CodeListM))
+	// 			}
+
+	// 			p.Push(v)
+	// 			p.Push(k)
+
+	// 			for {
+	// 				rs := p.RunLine(tmpPointerT)
+
+	// 				nv, ok := rs.(int)
+
+	// 				if ok {
+	// 					tmpPointerT = nv
+	// 					p.CodePointerM = tmpPointerT
+	// 					continue
+	// 				}
+
+	// 				nsv, ok := rs.(string)
+
+	// 				if ok {
+	// 					if tk.IsErrStr(nsv) {
+	// 						return nsv
+	// 					}
+
+	// 					if nsv == "exit" {
+	// 						return "exit"
+	// 					} else if nsv == "cont" {
+
+	// 						continue for33
+	// 					} else if nsv == "brk" {
+	// 						break for33
+	// 					}
+	// 				}
+
+	// 				tmpPointerT++
+	// 				p.CodePointerM = tmpPointerT
+	// 			}
+
+	// 		}
+
+	// 		return pointerT + 1
+	// 	case map[string]string:
+	// 	for34:
+	// 		for k, v := range nv {
+	// 			tmpPointerT := startPointerT
+	// 			p.CodePointerM = tmpPointerT
+
+	// 			if tmpPointerT < 0 || tmpPointerT >= len(p.CodeListM) {
+	// 				return p.ErrStrf("遍历中指令序号超出范围: %v/%v", tmpPointerT, len(p.CodeListM))
+	// 			}
+
+	// 			p.Push(v)
+	// 			p.Push(k)
+
+	// 			for {
+	// 				rs := p.RunLine(tmpPointerT)
+
+	// 				nv, ok := rs.(int)
+
+	// 				if ok {
+	// 					tmpPointerT = nv
+	// 					p.CodePointerM = tmpPointerT
+	// 					continue
+	// 				}
+
+	// 				nsv, ok := rs.(string)
+
+	// 				if ok {
+	// 					if tk.IsErrStr(nsv) {
+	// 						return nsv
+	// 					}
+
+	// 					if nsv == "exit" {
+	// 						return "exit"
+	// 					} else if nsv == "cont" {
+
+	// 						continue for34
+	// 					} else if nsv == "brk" {
+	// 						break for34
+	// 					}
+	// 				}
+
+	// 				tmpPointerT++
+	// 				p.CodePointerM = tmpPointerT
+	// 			}
+
+	// 		}
+
+	// 		return pointerT + 1
+	// 	default:
+	// 		return p.ErrStrf("参数类型错误")
+	// 	}
 
 	case 1401: // new
 		if instrT.ParamLen < 1 {
@@ -10923,6 +11039,8 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			p.SetVarInt(pr, new(sync.RWMutex))
 		case "mux":
 			p.SetVarInt(pr, http.NewServeMux())
+		case "seq":
+			p.SetVarInt(pr, tk.NewSeq())
 		case "ssh":
 			v2 := tk.ToStr(p.GetVarValue(instrT.Params[v1p+1]))
 			v3 := tk.ToStr(p.GetVarValue(instrT.Params[v1p+2]))
@@ -11338,6 +11456,17 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			}
 			break
 			// return ""
+		case *tk.Seq:
+			switch v2 {
+			case "get":
+				p.SetVarInt(pr, nv.Get())
+				return ""
+			default:
+				break
+				// p.SetVarInt(pr, fmt.Sprintf("未知方法: %v", v2))
+				// return p.ErrStrf("未知方法: %v", v2)
+			}
+			break
 		case tk.TXDelegate:
 			// if instrT.ParamLen < 3 {
 			// 	return p.ErrStrf("参数不够")
@@ -15670,6 +15799,148 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 		return ""
 
+	case 32104: // dbQueryMap
+		if instrT.ParamLen < 4 {
+			return p.ErrStrf("参数不够")
+		}
+
+		p1 := instrT.Params[0].Ref
+
+		v2 := p.GetVarValue(instrT.Params[1])
+
+		v3 := p.GetVarValue(instrT.Params[2])
+
+		v4 := p.GetVarValue(instrT.Params[3])
+
+		listT := p.ParamsToList(instrT, 4)
+
+		rs := sqltk.QueryDBMapX(v2.(*sql.DB), tk.ToStr(v3), tk.ToStr(v4), listT...)
+
+		if tk.IsError(rs) {
+			p.SetVarInt(p1, rs)
+		} else {
+			p.SetVarInt(p1, rs)
+		}
+
+		return ""
+
+	case 32105: // dbQueryRecs
+		if instrT.ParamLen < 3 {
+			return p.ErrStrf("参数不够")
+		}
+
+		p1 := instrT.Params[0].Ref
+
+		v2 := p.GetVarValue(instrT.Params[1])
+
+		v3 := p.GetVarValue(instrT.Params[2])
+
+		listT := p.ParamsToList(instrT, 3)
+
+		rs := sqltk.QueryDBRecsX(v2.(*sql.DB), tk.ToStr(v3), listT...)
+
+		if tk.IsError(rs) {
+			p.SetVarInt(p1, rs)
+		} else {
+			p.SetVarInt(p1, rs)
+		}
+
+		return ""
+
+	case 32106: // dbQueryCount
+		if instrT.ParamLen < 3 {
+			return p.ErrStrf("参数不够")
+		}
+
+		p1 := instrT.Params[0].Ref
+
+		v2 := p.GetVarValue(instrT.Params[1])
+
+		v3 := p.GetVarValue(instrT.Params[2])
+
+		listT := p.ParamsToList(instrT, 3)
+
+		rs := sqltk.QueryCountX(v2.(*sql.DB), tk.ToStr(v3), listT...)
+
+		if tk.IsError(rs) {
+			p.SetVarInt(p1, rs)
+		} else {
+			p.SetVarInt(p1, rs)
+		}
+
+		return ""
+
+	case 32107: // dbQueryFloat
+		if instrT.ParamLen < 3 {
+			return p.ErrStrf("参数不够")
+		}
+
+		p1 := instrT.Params[0].Ref
+
+		v2 := p.GetVarValue(instrT.Params[1])
+
+		v3 := p.GetVarValue(instrT.Params[2])
+
+		listT := p.ParamsToList(instrT, 3)
+
+		rs := sqltk.QueryFloatX(v2.(*sql.DB), tk.ToStr(v3), listT...)
+
+		if tk.IsError(rs) {
+			p.SetVarInt(p1, rs)
+		} else {
+			p.SetVarInt(p1, rs)
+		}
+
+		return ""
+
+	case 32108: // dbQueryString
+		if instrT.ParamLen < 3 {
+			return p.ErrStrf("参数不够")
+		}
+
+		p1 := instrT.Params[0].Ref
+
+		v2 := p.GetVarValue(instrT.Params[1])
+
+		v3 := p.GetVarValue(instrT.Params[2])
+
+		listT := p.ParamsToList(instrT, 3)
+
+		rs := sqltk.QueryStringX(v2.(*sql.DB), tk.ToStr(v3), listT...)
+
+		if tk.IsError(rs) {
+			p.SetVarInt(p1, rs)
+		} else {
+			p.SetVarInt(p1, rs)
+		}
+
+		return ""
+
+	case 32109: // dbQueryMapArray
+		if instrT.ParamLen < 4 {
+			return p.ErrStrf("参数不够")
+		}
+
+		p1 := instrT.Params[0].Ref
+
+		v2 := p.GetVarValue(instrT.Params[1])
+
+		v3 := p.GetVarValue(instrT.Params[2])
+
+		v4 := p.GetVarValue(instrT.Params[3])
+
+		listT := p.ParamsToList(instrT, 4)
+
+		rs := sqltk.QueryDBMapArrayX(v2.(*sql.DB), tk.ToStr(v3), tk.ToStr(v4), listT...)
+
+		if tk.IsError(rs) {
+			p.SetVarInt(p1, rs)
+		} else {
+			p.SetVarInt(p1, rs)
+		}
+
+		return ""
+
 	case 32111: // dbExec
 		if instrT.ParamLen < 3 {
 			return p.ErrStrf("参数不够")
@@ -17768,6 +18039,39 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 		p.SetVarInt(pr, rs)
 		return ""
+
+	case 500001: // getSeq
+
+		pr := -5
+
+		// v1p := 0
+
+		if instrT.ParamLen > 0 {
+			pr = instrT.Params[0].Ref
+			// v1p = 1
+		}
+
+		p.SetVarInt(pr, p.SeqM.Get())
+
+		return ""
+
+	case 500003: // resetSeq
+
+		pr := -5
+		v1p := 0
+
+		if instrT.ParamLen > 0 {
+			// pr = instrT.Params[0].Ref
+			p.SeqM.Reset(tk.ToInt(p.GetVarValue(instrT.Params[v1p]), 0))
+		} else {
+			p.SeqM.Reset()
+		}
+
+		p.SetVarInt(pr, nil)
+
+		return ""
+
+		//// ------ cmd end
 
 		// case 400051: // guiCallWindowFunc
 		// if instrT.ParamLen < 2 {

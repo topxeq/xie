@@ -824,6 +824,7 @@ getWeb $resultT "http://127.0.0.1:80/xms/xmsApi" -method=POST -encoding=UTF-8 -t
 - **\$peek** 表示看栈（不弹栈） ，用法类似$pop
 - **\$pln** 表示输出，例如：md5 $pln abc，将把字符串abc的MD5编码输出到命令行（类似于println函数的方式，结尾会输出一个回车符）
 - **\$drop** 表示丢弃，例如：removeFile $drop "c:\temp\tmp.txt"，将删除相应文件后，将执行结果丢弃
+- **\$seq** 表示一个全局的整数，每次使用都会加1，一般用于获取自增长、不重复的序号
 - **\$undefined** 表示未定义的变量值
 - **\$debug** 表示获取当前的调试信息
 - **\$argsG** 一般是命令行参数，字符串列表类型

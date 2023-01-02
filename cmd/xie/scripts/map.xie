@@ -45,8 +45,8 @@ plo $pop
 // 该代码块必须使用continue指令继续循环遍历
 // 或者break指令跳出循环遍历
 // 遍历完毕或者break跳出遍历后，代码将继续从rangeMap指令的下一条指令继续执行
-// 遍历每项时，rangeMap会先将当前键值和当前键名先后压栈
-rangeMap $map2 :range1
+// 遍历每项时，range指令会先将当前键值和当前键名先后压栈
+range $map2 :range1
 
 // 删除map2中键名为“气温”的项(此时该项为浮点数23.3)
 deleteMapItem $map2 "气温"
