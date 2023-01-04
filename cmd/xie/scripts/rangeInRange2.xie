@@ -1,0 +1,38 @@
+fromJson $o1 `{"field1": [1, "Abc", 2.0], "field2": [2, "Def", 5.0], "field3": [3, "Qqq", 9.0]}`
+
+range $o1 :range1
+
+pln "end"
+
+exit
+
+:range1
+    pop $i
+    pop $v
+
+    pl "[1] %v: %v" $i $v
+
+    range $v :range2
+
+    continue
+
+
+:range2
+    pop $j
+    pop $jv
+
+    pl "[2] %v: %v" $j $jv
+
+    range $jv :range3
+
+    continue
+
+:range3
+    pop $k
+    pop $kv
+
+    pl "[3] %v: %v" $k @`{toLower $tmp $kv}`
+
+    continue
+
+

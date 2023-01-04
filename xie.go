@@ -39,7 +39,7 @@ import (
 	excelize "github.com/xuri/excelize/v2"
 )
 
-var VersionG string = "0.6.7"
+var VersionG string = "0.6.8"
 
 var ShellModeG bool = false
 
@@ -73,6 +73,8 @@ var ConstMapG map[string]interface{} = map[string]interface{}{
 // 结果变量一般可以省略，此时表示将结果存入预置全局变量$tmp中（早期版本的谢语言默认是将结果压入堆栈，但从0.2.3版本之后均为存入$tmp）
 // 当指令的参数个数可变时，结果参数不可省略，以免产生混淆
 // 如果指令应返回结果，则当不提结果参数时，“第一个参数”一般指的是除结果参数外的第一个参数，余者类推
+
+var InstrCodeSet map[int]string = map[int]string{}
 
 var InstrNameSet map[string]int = map[string]int{
 
@@ -336,6 +338,8 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"goFunc": 1060, // 并发调用函数，一个参数是传入参数（压栈值）的个数（可省略），第二个参数是字符串类型的源代码
 
+	"go": 1063, // 快速并发调用一个标号处的代码，该段代码应该使用exit命令仅表示退出该线程
+
 	"fastCall": 1070, // 快速调用函数
 	"快调":       1070,
 
@@ -344,7 +348,7 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"for": 1080, // for循环
 
-	"range": 1085, // 遍历一个数字、字符串、数组、映射等，用法：range $list1 :label1，标号label1处应以continue来进行循环，break跳出，也可以用continueIf、breakIf后加条件来进行循环控制。对于整数，可以用range #i2 #i5 :label1的方式来遍历2至4。循环遍历中，对于整数、字符串和数组（切片）会将遍历值和序号依次压栈，循环体内需要弹栈这两个数值进行处理（注意弹栈时的顺序，先弹出序号，后弹出遍历值）；而对映射类对象，则依次将键值和键名压栈。
+	"range": 1085, // 遍历一个数字、字符串、数组、映射等，用法：range $list1 :label1，标号label1处应以continue来进行循环，break跳出，也可以用continueIf、breakIf后加条件来进行循环控制。对于整数，可以用range #i2 #i5 :label1的方式来遍历2至4。循环遍历中，对于整数、字符串和数组（切片）会将遍历值和序号依次压栈，循环体内需要弹栈这两个数值进行处理（注意弹栈时的顺序，先弹出序号，后弹出遍历值）；而对映射类对象，则依次将键值和键名压栈。注意，多层嵌套的range指令中的break不能用标号跳出至超出本级之上的循环遍历；
 
 	// array/slice related 数组/切片相关
 	"newList":  1101, // 新建一个数组，后接任意个元素作为数组的初始项
@@ -418,6 +422,7 @@ var InstrNameSet map[string]int = map[string]int{
 	"取映射项":       1320,
 	"{}":         1320,
 
+	"getMapKeys": 1331, // 取所有的映射键名，可用于手工遍历等场景
 	// "rangeMap": 1340, // 遍历映射，已废弃，用range代替
 	// "遍历映射":     1340,
 
@@ -1013,6 +1018,7 @@ type Instr struct {
 	Code     int
 	ParamLen int
 	Params   []VarRef
+	Cmd      string
 	Line     string
 	// Param1Ref   int
 	// Param1Value interface{}
@@ -1449,6 +1455,10 @@ func NewXie(sharedMapA *tk.SyncMap, globalsA ...map[string]interface{}) *XieVM {
 }
 
 func (p *XieVM) InitVM(sharedMapA *tk.SyncMap, globalsA ...map[string]interface{}) {
+	for k, v := range InstrNameSet {
+		InstrCodeSet[v] = k
+	}
+
 	p.ErrorHandlerM = -1
 
 	p.StackM = make([]interface{}, 0, 10)
@@ -1612,7 +1622,7 @@ func (p *XieVM) ParseVar(strA string, optsA ...interface{}) VarRef {
 			if strings.HasPrefix(vNameT, "+") {
 				ssT := vNameT[1:]
 				return VarRef{-3, currentPointerT + tk.ToInt(ssT, 0)}
-			} else if strings.HasPrefix(vNameT, "+") {
+			} else if strings.HasPrefix(vNameT, "-") {
 				ssT := vNameT[1:]
 				return VarRef{-3, currentPointerT - tk.ToInt(ssT, 0)}
 			}
@@ -3138,6 +3148,7 @@ func (p *XieVM) GetSwitchVarValue(argsA []string, switchStrA string, defaultA ..
 }
 
 func (p *XieVM) GetVarValue(vA VarRef) interface{} {
+	// tk.Plv(vA)
 	idxT := vA.Ref
 
 	if idxT == -2 {
@@ -3862,20 +3873,20 @@ func (p *XieVM) NewInstr(codeA string, valuesA *map[string]interface{}) Instr {
 	v := strings.TrimSpace(codeA)
 
 	if tk.StartsWith(v, "//") || tk.StartsWith(v, "#") {
-		instrT := Instr{Code: 101, ParamLen: 0}
+		instrT := Instr{Code: 101, Cmd: InstrCodeSet[101], ParamLen: 0}
 		return instrT
 	}
 
 	// var varCountT int
 
 	if tk.StartsWith(v, ":") {
-		instrT := Instr{Code: InstrNameSet["pass"], ParamLen: 0}
+		instrT := Instr{Code: InstrNameSet["pass"], Cmd: InstrCodeSet[101], ParamLen: 0}
 		return instrT
 	}
 
 	listT, lineT, errT := p.ParseLine(v)
 	if errT != nil {
-		instrT := Instr{Code: InstrNameSet["invalidInstr"], ParamLen: 1, Params: []VarRef{VarRef{Ref: -3, Value: "参数解析失败"}}, Line: lineT}
+		instrT := Instr{Code: InstrNameSet["invalidInstr"], Cmd: "invalidInstr", ParamLen: 1, Params: []VarRef{VarRef{Ref: -3, Value: "参数解析失败"}}, Line: lineT}
 		return instrT
 	}
 
@@ -3886,11 +3897,11 @@ func (p *XieVM) NewInstr(codeA string, valuesA *map[string]interface{}) Instr {
 	codeT, ok := InstrNameSet[instrNameT]
 
 	if !ok {
-		instrT := Instr{Code: InstrNameSet["invalidInstr"], ParamLen: 1, Params: []VarRef{VarRef{Ref: -3, Value: tk.Spr("未知指令：%v", instrNameT)}}}
+		instrT := Instr{Code: InstrNameSet["invalidInstr"], Cmd: "invalidInstr", ParamLen: 1, Params: []VarRef{VarRef{Ref: -3, Value: tk.Spr("未知指令：%v", instrNameT)}}}
 		return instrT
 	}
 
-	instrT := Instr{Code: codeT, Params: make([]VarRef, 0, lenT-1)} //&([]VarRef{})}
+	instrT := Instr{Code: codeT, Cmd: InstrCodeSet[codeT], Params: make([]VarRef, 0, lenT-1)} //&([]VarRef{})}
 
 	list3T := []VarRef{}
 
@@ -4006,13 +4017,13 @@ func (p *XieVM) Load(codeA string) string {
 		codeT, ok := InstrNameSet[instrNameT]
 
 		if !ok {
-			instrT := Instr{Code: codeT, ParamLen: 1, Params: []VarRef{VarRef{Ref: -3, Value: v}}, Line: lineT} //&([]VarRef{})}
+			instrT := Instr{Code: codeT, Cmd: InstrCodeSet[codeT], ParamLen: 1, Params: []VarRef{VarRef{Ref: -3, Value: v}}, Line: lineT} //&([]VarRef{})}
 			p.InstrListM = append(p.InstrListM, instrT)
 
 			return tk.ErrStrf("编译错误(行 %v/%v %v): 未知指令", i, p.CodeSourceMapM[i]+1, tk.LimitString(p.SourceM[p.CodeSourceMapM[i]], 50))
 		}
 
-		instrT := Instr{Code: codeT, Params: make([]VarRef, 0, lenT-1), Line: lineT} //&([]VarRef{})}
+		instrT := Instr{Code: codeT, Cmd: InstrCodeSet[codeT], Params: make([]VarRef, 0, lenT-1), Line: lineT} //&([]VarRef{})}
 
 		list3T := []VarRef{}
 
@@ -4571,6 +4582,7 @@ func (p *XieVM) Pop() interface{} {
 	p.StackPointerM--
 	rs := p.StackM[p.StackPointerM]
 
+	// tk.Pl("Pop: %v %v", p.StackPointerM, rs)
 	return rs
 }
 
@@ -5432,7 +5444,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			return p.ErrStrf("未知指令：%v", v1)
 		}
 
-		instrT := Instr{Code: codeT, Params: instrT.Params[1:], ParamLen: instrT.ParamLen - 1, Line: tk.RemoveFirstSubString(strings.TrimSpace(instrT.Line), v1)} //&([]VarRef{})}
+		instrT := Instr{Code: codeT, Cmd: InstrCodeSet[codeT], Params: instrT.Params[1:], ParamLen: instrT.ParamLen - 1, Line: tk.RemoveFirstSubString(strings.TrimSpace(instrT.Line), v1)} //&([]VarRef{})}
 
 		p.CurrentFuncContextM.DeferStackM.Push(instrT)
 
@@ -8921,6 +8933,61 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		codeT = strings.ReplaceAll(codeT, "~~~", "`")
 
 		return p.GoFunc(codeT, argCountT)
+	case 1063: // go
+		if instrT.ParamLen < 1 {
+			return p.ErrStrf("参数不够")
+		}
+
+		v1p := 0
+
+		v2 := tk.ToInt(p.GetVarValue(instrT.Params[v1p]))
+
+		vs := p.ParamsToList(instrT, v1p+1)
+
+		var deleT tk.QuickVarDelegate
+
+		for i := len(vs) - 1; i >= 0; i-- {
+			p.Push(vs[i])
+		}
+
+		deleT = func(argsA ...interface{}) interface{} {
+
+			tmpPointerT := v2
+
+			for {
+				// tk.Pl("RunLine: %v", tmpPointerT)
+				rs := p.RunLine(tmpPointerT)
+
+				nv, ok := rs.(int)
+
+				if ok {
+					tmpPointerT = nv
+					continue
+				}
+
+				nsv, ok := rs.(string)
+
+				if ok {
+					if tk.IsErrStr(nsv) {
+						return nsv
+					}
+
+					if nsv == "exit" {
+						return nil
+					} else if nsv == "fr" {
+						break
+					}
+				}
+
+				tmpPointerT++
+			}
+
+			return nil
+		}
+
+		go deleT()
+
+		return ""
 
 	case 1070: // fastCall
 		if instrT.ParamLen < 1 {
@@ -9258,7 +9325,6 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 							p.CodePointerM = pointerT
 							return "exit"
 						} else if nsv == "cont" {
-							p.CodePointerM = pointerT
 							continue for32a
 						} else if nsv == "brk" {
 							break for32a
@@ -9492,13 +9558,14 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		for i := 0; i < lenT; i++ {
 			// for i, v := range v1 {
 			tmpPointerT := startPointerT
+			p.CodePointerM = tmpPointerT
 
 			if tmpPointerT < 0 || tmpPointerT >= len(p.CodeListM) {
 				p.CodePointerM = pointerT
 				return p.ErrStrf("遍历中指令序号超出范围: %v/%v", tmpPointerT, len(p.CodeListM))
 			}
 
-			p.CodePointerM = tmpPointerT
+			// p.CodePointerM = tmpPointerT
 
 			switch nv := v1.(type) {
 			case []interface{}:
@@ -9565,6 +9632,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 					}
 
 					if nsv == "exit" {
+						p.CodePointerM = pointerT
 						return "exit"
 					} else if nsv == "cont" {
 
@@ -9579,8 +9647,6 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			}
 
 		}
-
-		// p.CodePointerM = pointerT
 
 		p.CodePointerM = pointerT
 		return pointerT + 1
@@ -10300,187 +10366,6 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 		return ""
 
-	// case 1140: // rangeList
-	// 	if instrT.ParamLen < 2 {
-	// 		return p.ErrStrf("参数不够")
-	// 	}
-
-	// 	v1 := p.GetVarValue(instrT.Params[0])
-	// 	labelT := tk.ToInt(p.GetVarValue(instrT.Params[1]))
-
-	// 	pointerT := p.CodePointerM
-
-	// 	startPointerT := labelT
-
-	// 	// tmpPointerT := labelT
-
-	// 	var lenT int
-
-	// 	switch nv := v1.(type) {
-	// 	case []interface{}:
-	// 		lenT = len(nv)
-	// 	case []bool:
-	// 		lenT = len(nv)
-	// 	case []int:
-	// 		lenT = len(nv)
-	// 	case []byte:
-	// 		lenT = len(nv)
-	// 	case []rune:
-	// 		lenT = len(nv)
-	// 	case []int64:
-	// 		lenT = len(nv)
-	// 	case []float64:
-	// 		lenT = len(nv)
-	// 	case []string:
-	// 		lenT = len(nv)
-	// 	default:
-	// 		return p.ErrStrf("参数类型错误：%T(%v)", v1, nv)
-	// 	}
-
-	// for1:
-	// 	for i := 0; i < lenT; i++ {
-	// 		// for i, v := range v1 {
-	// 		tmpPointerT := startPointerT
-	// 		p.CodePointerM = tmpPointerT
-
-	// 		if tmpPointerT < 0 || tmpPointerT >= len(p.CodeListM) {
-	// 			return p.ErrStrf("遍历中指令序号超出范围: %v/%v", tmpPointerT, len(p.CodeListM))
-	// 		}
-
-	// 		switch nv := v1.(type) {
-	// 		case []interface{}:
-	// 			p.Push(nv[i])
-	// 		case []bool:
-	// 			p.Push(nv[i])
-	// 		case []int:
-	// 			p.Push(nv[i])
-	// 		case []byte:
-	// 			p.Push(nv[i])
-	// 		case []rune:
-	// 			p.Push(nv[i])
-	// 		case []int64:
-	// 			p.Push(nv[i])
-	// 		case []float64:
-	// 			p.Push(nv[i])
-	// 		case []string:
-	// 			p.Push(nv[i])
-	// 		default:
-	// 			return p.ErrStrf("参数类型错误：%T(%v)", v1, nv)
-	// 		}
-	// 		// p.Push(v)
-	// 		p.Push(i)
-
-	// 		for {
-	// 			// tk.Pln(i, v)
-	// 			// tk.Pl("%v %v %v", lineA, len(p.InstrListM), tk.LimitString(p.SourceM[p.CodeSourceMapM[p.CodePointerM]], 50))
-	// 			// tk.Pl("%v %v %v", tmpPointerT, len(p.InstrListM), tk.LimitString(p.SourceM[p.CodeSourceMapM[tmpPointerT]], 50))
-
-	// 			// tk.Exit()
-
-	// 			rs := p.RunLine(tmpPointerT)
-
-	// 			nv, ok := rs.(int)
-
-	// 			if ok {
-	// 				tmpPointerT = nv
-	// 				p.CodePointerM = tmpPointerT
-	// 				continue
-	// 			}
-
-	// 			nsv, ok := rs.(string)
-
-	// 			if ok {
-	// 				if tk.IsErrStr(nsv) {
-	// 					return nsv
-	// 				}
-
-	// 				if nsv == "exit" {
-	// 					return "exit"
-	// 				} else if nsv == "cont" {
-
-	// 					continue for1
-	// 				} else if nsv == "brk" {
-	// 					break for1
-	// 				}
-	// 			}
-
-	// 			tmpPointerT++
-	// 			p.CodePointerM = tmpPointerT
-	// 		}
-
-	// 	}
-
-	// 	// p.CodePointerM = pointerT
-
-	// 	return pointerT + 1
-
-	// case 1141: // rangeStrList
-	// 	if instrT.ParamLen < 2 {
-	// 		return p.ErrStrf("参数不够")
-	// 	}
-
-	// 	v1 := p.GetVarValue(instrT.Params[0]).([]string)
-	// 	labelT := tk.ToInt(p.GetVarValue(instrT.Params[1]))
-
-	// 	pointerT := p.CodePointerM
-
-	// 	startPointerT := labelT
-
-	// 	// tmpPointerT := labelT
-
-	// for5:
-	// 	for i, v := range v1 {
-	// 		tmpPointerT := startPointerT
-
-	// 		if tmpPointerT < 0 || tmpPointerT >= len(p.CodeListM) {
-	// 			return p.ErrStrf("遍历中指令序号超出范围: %v/%v", tmpPointerT, len(p.CodeListM))
-	// 		}
-
-	// 		p.Push(v)
-	// 		p.Push(i)
-
-	// 		for {
-	// 			// tk.Pln(i, v)
-	// 			// tk.Pl("%v %v %v", lineA, len(p.InstrListM), tk.LimitString(p.SourceM[p.CodeSourceMapM[p.CodePointerM]], 50))
-	// 			// tk.Pl("%v %v %v", tmpPointerT, len(p.InstrListM), tk.LimitString(p.SourceM[p.CodeSourceMapM[tmpPointerT]], 50))
-
-	// 			// tk.Exit()
-
-	// 			rs := p.RunLine(tmpPointerT)
-
-	// 			nv, ok := rs.(int)
-
-	// 			if ok {
-	// 				tmpPointerT = nv
-	// 				continue
-	// 			}
-
-	// 			nsv, ok := rs.(string)
-
-	// 			if ok {
-	// 				if tk.IsErrStr(nsv) {
-	// 					return nsv
-	// 				}
-
-	// 				if nsv == "exit" {
-	// 					return "exit"
-	// 				} else if nsv == "cont" {
-
-	// 					continue for5
-	// 				} else if nsv == "brk" {
-	// 					break for5
-	// 				}
-	// 			}
-
-	// 			tmpPointerT++
-	// 		}
-
-	// 	}
-
-	// 	// p.CodePointerM = pointerT
-
-	// 	return pointerT + 1
-
 	case 1210: // continue
 		return "cont"
 	case 1211: // break
@@ -10669,313 +10554,71 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 		return ""
 
-	// case 1340: // rangeMap
-	// 	if instrT.ParamLen < 2 {
-	// 		return p.ErrStrf("参数不够")
-	// 	}
-
-	// 	v1 := p.GetVarValue(instrT.Params[0])
-	// 	labelT := tk.ToInt(p.GetVarValue(instrT.Params[1]))
-
-	// 	pointerT := p.CodePointerM
-	// 	// tk.Pln(p.CodeSourceMapM[pointerT]+1, tk.LimitString(p.SourceM[p.CodeSourceMapM[pointerT]], 50))
-
-	// 	startPointerT := labelT
-
-	// 	// tmpPointerT := labelT
-
-	// 	switch nv := v1.(type) {
-	// 	case map[string]interface{}:
-	// 	for31:
-	// 		for k, v := range nv {
-	// 			tmpPointerT := startPointerT
-	// 			p.CodePointerM = tmpPointerT
-
-	// 			if tmpPointerT < 0 || tmpPointerT >= len(p.CodeListM) {
-	// 				return p.ErrStrf("遍历中指令序号超出范围: %v/%v", tmpPointerT, len(p.CodeListM))
-	// 			}
-
-	// 			p.Push(v)
-	// 			p.Push(k)
-
-	// 			for {
-	// 				rs := p.RunLine(tmpPointerT)
-
-	// 				nv, ok := rs.(int)
-
-	// 				if ok {
-	// 					tmpPointerT = nv
-	// 					p.CodePointerM = tmpPointerT
-	// 					continue
-	// 				}
-
-	// 				nsv, ok := rs.(string)
-
-	// 				if ok {
-	// 					if tk.IsErrStr(nsv) {
-	// 						return nsv
-	// 					}
-
-	// 					if nsv == "exit" {
-	// 						return "exit"
-	// 					} else if nsv == "cont" {
-
-	// 						continue for31
-	// 					} else if nsv == "brk" {
-	// 						break for31
-	// 					}
-	// 				}
-
-	// 				tmpPointerT++
-	// 				p.CodePointerM = tmpPointerT
-	// 			}
-
-	// 		}
-
-	// 		return pointerT + 1
-	// 	case map[string]int:
-	// 	for32:
-	// 		for k, v := range nv {
-	// 			tmpPointerT := startPointerT
-	// 			p.CodePointerM = tmpPointerT
-
-	// 			if tmpPointerT < 0 || tmpPointerT >= len(p.CodeListM) {
-	// 				return p.ErrStrf("遍历中指令序号超出范围: %v/%v", tmpPointerT, len(p.CodeListM))
-	// 			}
-
-	// 			p.Push(v)
-	// 			p.Push(k)
-
-	// 			for {
-	// 				rs := p.RunLine(tmpPointerT)
-
-	// 				nv, ok := rs.(int)
-
-	// 				if ok {
-	// 					tmpPointerT = nv
-	// 					p.CodePointerM = tmpPointerT
-	// 					continue
-	// 				}
-
-	// 				nsv, ok := rs.(string)
-
-	// 				if ok {
-	// 					if tk.IsErrStr(nsv) {
-	// 						return nsv
-	// 					}
-
-	// 					if nsv == "exit" {
-	// 						return "exit"
-	// 					} else if nsv == "cont" {
-
-	// 						continue for32
-	// 					} else if nsv == "brk" {
-	// 						break for32
-	// 					}
-	// 				}
-
-	// 				tmpPointerT++
-	// 				p.CodePointerM = tmpPointerT
-	// 			}
-
-	// 		}
-
-	// 		return pointerT + 1
-	// 	case map[string]byte:
-	// 	for35:
-	// 		for k, v := range nv {
-	// 			tmpPointerT := startPointerT
-	// 			p.CodePointerM = tmpPointerT
-
-	// 			if tmpPointerT < 0 || tmpPointerT >= len(p.CodeListM) {
-	// 				return p.ErrStrf("遍历中指令序号超出范围: %v/%v", tmpPointerT, len(p.CodeListM))
-	// 			}
-
-	// 			p.Push(v)
-	// 			p.Push(k)
-
-	// 			for {
-	// 				rs := p.RunLine(tmpPointerT)
-
-	// 				nv, ok := rs.(int)
-
-	// 				if ok {
-	// 					tmpPointerT = nv
-	// 					p.CodePointerM = tmpPointerT
-	// 					continue
-	// 				}
-
-	// 				nsv, ok := rs.(string)
-
-	// 				if ok {
-	// 					if tk.IsErrStr(nsv) {
-	// 						return nsv
-	// 					}
-
-	// 					if nsv == "exit" {
-	// 						return "exit"
-	// 					} else if nsv == "cont" {
-
-	// 						continue for35
-	// 					} else if nsv == "brk" {
-	// 						break for35
-	// 					}
-	// 				}
-
-	// 				tmpPointerT++
-	// 				p.CodePointerM = tmpPointerT
-	// 			}
-
-	// 		}
-
-	// 		return pointerT + 1
-	// 	case map[string]rune:
-	// 	for36:
-	// 		for k, v := range nv {
-	// 			tmpPointerT := startPointerT
-	// 			p.CodePointerM = tmpPointerT
-
-	// 			if tmpPointerT < 0 || tmpPointerT >= len(p.CodeListM) {
-	// 				return p.ErrStrf("遍历中指令序号超出范围: %v/%v", tmpPointerT, len(p.CodeListM))
-	// 			}
-
-	// 			p.Push(v)
-	// 			p.Push(k)
-
-	// 			for {
-	// 				rs := p.RunLine(tmpPointerT)
-
-	// 				nv, ok := rs.(int)
-
-	// 				if ok {
-	// 					tmpPointerT = nv
-	// 					p.CodePointerM = tmpPointerT
-	// 					continue
-	// 				}
-
-	// 				nsv, ok := rs.(string)
-
-	// 				if ok {
-	// 					if tk.IsErrStr(nsv) {
-	// 						return nsv
-	// 					}
-
-	// 					if nsv == "exit" {
-	// 						return "exit"
-	// 					} else if nsv == "cont" {
-
-	// 						continue for36
-	// 					} else if nsv == "brk" {
-	// 						break for36
-	// 					}
-	// 				}
-
-	// 				tmpPointerT++
-	// 				p.CodePointerM = tmpPointerT
-	// 			}
-
-	// 		}
-
-	// 		return pointerT + 1
-	// 	case map[string]float64:
-	// 	for33:
-	// 		for k, v := range nv {
-	// 			tmpPointerT := startPointerT
-	// 			p.CodePointerM = tmpPointerT
-
-	// 			if tmpPointerT < 0 || tmpPointerT >= len(p.CodeListM) {
-	// 				return p.ErrStrf("遍历中指令序号超出范围: %v/%v", tmpPointerT, len(p.CodeListM))
-	// 			}
-
-	// 			p.Push(v)
-	// 			p.Push(k)
-
-	// 			for {
-	// 				rs := p.RunLine(tmpPointerT)
-
-	// 				nv, ok := rs.(int)
-
-	// 				if ok {
-	// 					tmpPointerT = nv
-	// 					p.CodePointerM = tmpPointerT
-	// 					continue
-	// 				}
-
-	// 				nsv, ok := rs.(string)
-
-	// 				if ok {
-	// 					if tk.IsErrStr(nsv) {
-	// 						return nsv
-	// 					}
-
-	// 					if nsv == "exit" {
-	// 						return "exit"
-	// 					} else if nsv == "cont" {
-
-	// 						continue for33
-	// 					} else if nsv == "brk" {
-	// 						break for33
-	// 					}
-	// 				}
-
-	// 				tmpPointerT++
-	// 				p.CodePointerM = tmpPointerT
-	// 			}
-
-	// 		}
-
-	// 		return pointerT + 1
-	// 	case map[string]string:
-	// 	for34:
-	// 		for k, v := range nv {
-	// 			tmpPointerT := startPointerT
-	// 			p.CodePointerM = tmpPointerT
-
-	// 			if tmpPointerT < 0 || tmpPointerT >= len(p.CodeListM) {
-	// 				return p.ErrStrf("遍历中指令序号超出范围: %v/%v", tmpPointerT, len(p.CodeListM))
-	// 			}
-
-	// 			p.Push(v)
-	// 			p.Push(k)
-
-	// 			for {
-	// 				rs := p.RunLine(tmpPointerT)
-
-	// 				nv, ok := rs.(int)
-
-	// 				if ok {
-	// 					tmpPointerT = nv
-	// 					p.CodePointerM = tmpPointerT
-	// 					continue
-	// 				}
-
-	// 				nsv, ok := rs.(string)
-
-	// 				if ok {
-	// 					if tk.IsErrStr(nsv) {
-	// 						return nsv
-	// 					}
-
-	// 					if nsv == "exit" {
-	// 						return "exit"
-	// 					} else if nsv == "cont" {
-
-	// 						continue for34
-	// 					} else if nsv == "brk" {
-	// 						break for34
-	// 					}
-	// 				}
-
-	// 				tmpPointerT++
-	// 				p.CodePointerM = tmpPointerT
-	// 			}
-
-	// 		}
-
-	// 		return pointerT + 1
-	// 	default:
-	// 		return p.ErrStrf("参数类型错误")
-	// 	}
+	case 1331: // getMapKeys
+		if instrT.ParamLen < 1 {
+			return p.ErrStrf("参数不够")
+		}
+
+		pr := -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0].Ref
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(instrT.Params[v1p])
+
+		var rv []string
+
+		switch nv := v1.(type) {
+		case map[string]interface{}:
+			rv = make([]string, 0, len(nv))
+			for k, _ := range nv {
+				rv = append(rv, k)
+			}
+		case map[string]int:
+			rv = make([]string, 0, len(nv))
+			for k, _ := range nv {
+				rv = append(rv, k)
+			}
+		case map[string]byte:
+			rv = make([]string, 0, len(nv))
+			for k, _ := range nv {
+				rv = append(rv, k)
+			}
+		case map[string]rune:
+			rv = make([]string, 0, len(nv))
+			for k, _ := range nv {
+				rv = append(rv, k)
+			}
+		case map[string]float64:
+			rv = make([]string, 0, len(nv))
+			for k, _ := range nv {
+				rv = append(rv, k)
+			}
+		case map[string]string:
+			rv = make([]string, 0, len(nv))
+			for k, _ := range nv {
+				rv = append(rv, k)
+			}
+		case map[string]map[string]string:
+			rv = make([]string, 0, len(nv))
+			for k, _ := range nv {
+				rv = append(rv, k)
+			}
+		case map[string]map[string]interface{}:
+			rv = make([]string, 0, len(nv))
+			for k, _ := range nv {
+				rv = append(rv, k)
+			}
+		default:
+			return p.ErrStrf("参数类型错误")
+		}
+
+		p.SetVarInt(pr, rv)
+
+		return ""
 
 	case 1401: // new
 		if instrT.ParamLen < 1 {
@@ -11062,7 +10705,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		case "gui":
 			objT := p.GetVar("guiG")
 			p.SetVarInt(pr, objT)
-		case "quickDelegate":
+		case "quickDelegate": // quickDelegate中，CodePointerM并不跳转（除非有移动其的指令执行）
 			if instrT.ParamLen < 2 {
 				return p.ErrStrf("参数不够")
 			}
@@ -11192,6 +10835,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 				p.Push(strA)
 
 				tmpPointerT := v2
+				p.CodePointerM = tmpPointerT
 
 				for {
 					rs := p.RunLine(tmpPointerT)
@@ -11200,6 +10844,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 					if ok {
 						tmpPointerT = nv
+						p.CodePointerM = tmpPointerT
 						continue
 					}
 
@@ -11222,6 +10867,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 					}
 
 					tmpPointerT++
+					p.CodePointerM = tmpPointerT
 				}
 
 				// return pointerT + 1

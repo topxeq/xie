@@ -1,0 +1,38 @@
+= $n1 #i5
+
+range $n1 :range1
+
+pln "end"
+
+exit
+
+:range1
+    pop $i
+    pop $v
+
+    pl "[1] %v: %v" $i $v
+
+    range "abc" :range2
+
+    continue
+
+
+:range2
+    pop $j
+    pop $jv
+
+    pl "[2] %v: %v" $j $jv
+
+    range $j @`$j + $j + #i1` :range3
+
+    continue
+
+:range3
+    pop $k
+    pop $kv
+
+    pl "[3] %v: %v" $k @`$kv * $kv`
+
+    continue
+
+

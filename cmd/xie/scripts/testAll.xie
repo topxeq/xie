@@ -10,5 +10,21 @@ systemCmd $rs "xie" "-gopath" "assign.xie"
 
 test $rs "(string)abc\n(string)abc 123\n(string)abc 123\nand this\n(int)3\n(int)3\n(float64)3\n" $seq "assign.xie"
 
+systemCmd $rs "xie" "-gopath" "list.xie"
+
+test $rs "([]interface {})[]\n([]interface {})[8 12.7]\n([]interface {})[abc 2 1.3 true]\nlength= 4\n(int)2\n(int)10\n([]interface {})[8 12.7 abc 2 1.3 true]\n([]interface {})[12.7 abc 2 1.3]\n第0项是12.7\n第1项是abc\n第2项是2\n([]interface {})[烙红尘]\n" $seq "list.xie"
+
+systemCmd $rs "xie" "-gopath" "map.xie"
+
+test $rs "(map[string]interface {})map[]\n(map[string]interface {})map[Age:23 Name:李白]\n(map[string]interface {})map[日期:2022年4月23日 气温:23.3 空气质量:良]\nlength= 3\n(string)李白良\n键名为 日期 项的键值是 2022年4月23日\n键名为 气温 项的键值是 23.3\n键名为 空气质量 项的键值是 良\n(map[string]interface {})map[日期:2022年4月23日 空气质量:良]\n" $seq "map.xie"
+
+systemCmd $rs "xie" "-gopath" "rangeInRange.xie"
+
+test $rs "[1] 0: 0\n[2] 0: a\n[3] 0: 0\n[2] 1: b\n[3] 0: 1\n[3] 1: 4\n[2] 2: c\n[3] 0: 4\n[3] 1: 9\n[3] 2: 16\n[1] 1: 1\n[2] 0: a\n[3] 0: 0\n[2] 1: b\n[3] 0: 1\n[3] 1: 4\n[2] 2: c\n[3] 0: 4\n[3] 1: 9\n[3] 2: 16\n[1] 2: 2\n[2] 0: a\n[3] 0: 0\n[2] 1: b\n[3] 0: 1\n[3] 1: 4\n[2] 2: c\n[3] 0: 4\n[3] 1: 9\n[3] 2: 16\n[1] 3: 3\n[2] 0: a\n[3] 0: 0\n[2] 1: b\n[3] 0: 1\n[3] 1: 4\n[2] 2: c\n[3] 0: 4\n[3] 1: 9\n[3] 2: 16\n[1] 4: 4\n[2] 0: a\n[3] 0: 0\n[2] 1: b\n[3] 0: 1\n[3] 1: 4\n[2] 2: c\n[3] 0: 4\n[3] 1: 9\n[3] 2: 16\nend\n" $seq "rangeInRange.xie"
+
+systemCmd $rs "xie" "-gopath" "go1.xie"
+
+test $rs "start...\n0\n1\n2\n3\n4\n" $seq "go1.xie"
+
 
 

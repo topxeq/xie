@@ -1,0 +1,30 @@
+pln start...
+
+go :func1 #i5
+
+sleep 3.0
+
+exit
+
+:func1
+    pop $s1
+
+    = $i #i0
+
+    :for1
+
+        >= $b1 $i $s1
+        
+        if $b1 :inner1
+
+        pln $i
+
+        sleep 0.5
+
+        ++ $i
+
+        goto :for1
+
+
+    :inner1
+        exit

@@ -1,0 +1,17 @@
+pln start...
+
+go :func1 "prefix:"
+
+sleep 1.0
+
+goto :-1
+
+:func1
+    pop $s1
+
+    :inner1
+    pln $s1 ?`? now`
+
+    sleep 0.5
+
+    goto :inner1
