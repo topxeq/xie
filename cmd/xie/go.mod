@@ -6,6 +6,7 @@ require (
 	github.com/denisenkom/go-mssqldb v0.12.0
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/godror/godror v0.33.0
+	github.com/jchv/go-webview2 v0.0.0-20221223143126-dc24628cff85
 	github.com/kbinani/screenshot v0.0.0-20210720154843-7d3a670d8329
 	github.com/mattn/go-sqlite3 v1.14.6
 	github.com/sciter-sdk/go-sciter v0.5.1-0.20210426171118-f5212dff3ad8
@@ -37,6 +38,7 @@ require (
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/gopherjs/gopherjs v1.17.2 // indirect
 	github.com/jaytaylor/html2text v0.0.0-20211105163654-bc68cce691ba // indirect
+	github.com/jchv/go-winloader v0.0.0-20200815041850-dec1ee9a7fd5 // indirect
 	github.com/jezek/xgb v0.0.0-20210312150743-0e0f116e1240 // indirect
 	github.com/jhillyerd/enmime v0.9.3 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect

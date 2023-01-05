@@ -1543,6 +1543,14 @@ func (p *XieVM) ParseVar(strA string, optsA ...interface{}) VarRef {
 		return VarRef{-3, tmps} // value(string)
 	} else {
 		if strings.HasPrefix(s1T, "$") {
+			var vv interface{} = nil
+
+			if strings.HasSuffix(s1T, "...") {
+				vv = "..."
+
+				s1T = s1T[:len(s1T)-3]
+			}
+
 			if s1T == "$drop" || s1T == "$丢弃" {
 				return VarRef{-2, nil}
 			} else if s1T == "$debug" || s1T == "$调试" {
@@ -1550,13 +1558,13 @@ func (p *XieVM) ParseVar(strA string, optsA ...interface{}) VarRef {
 			} else if s1T == "$pln" || s1T == "$行输出" {
 				return VarRef{-4, nil}
 			} else if s1T == "$pop" || s1T == "$出栈" {
-				return VarRef{-8, nil}
+				return VarRef{-8, vv}
 			} else if s1T == "$peek" || s1T == "$看栈" {
-				return VarRef{-7, nil}
+				return VarRef{-7, vv}
 			} else if s1T == "$push" || s1T == "$入栈" {
 				return VarRef{-6, nil}
 			} else if s1T == "$tmp" || s1T == "$临时变量" {
-				return VarRef{-5, nil}
+				return VarRef{-5, vv}
 			} else if s1T == "$seq" || s1T == "$自增长序号" {
 				return VarRef{-11, nil}
 			} else {
@@ -1584,7 +1592,7 @@ func (p *XieVM) ParseVar(strA string, optsA ...interface{}) VarRef {
 					p.VarNameMapM[varIndexT] = vNameT
 				}
 
-				return VarRef{varIndexT, nil}
+				return VarRef{varIndexT, vv}
 			}
 		} else if strings.HasPrefix(s1T, "*") {
 			vNameT := s1T[1:]
@@ -10764,6 +10772,65 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			}
 
 			p.SetVarInt(pr, deleT)
+		case "delegate": // delegate中，CodePointerM并不跳转（除非有移动其的指令执行）
+			if instrT.ParamLen < 2 {
+				return p.ErrStrf("参数不够")
+			}
+
+			v2 := tk.ToInt(p.GetVarValue(instrT.Params[v1p+1]))
+
+			var deleT tk.QuickVarDelegate
+
+			// same as fastCall
+			deleT = func(argsA ...interface{}) interface{} {
+				pointerT := p.CodePointerM
+
+				p.Push(argsA)
+
+				tmpPointerT := v2
+				p.CodePointerM = tmpPointerT
+				for {
+					rs := p.RunLine(tmpPointerT)
+
+					nv, ok := rs.(int)
+
+					if ok {
+						tmpPointerT = nv
+						p.CodePointerM = tmpPointerT
+						continue
+					}
+
+					nsv, ok := rs.(string)
+
+					if ok {
+						if tk.IsErrStr(nsv) {
+							// tmpRs := p.Pop()
+
+							p.CodePointerM = pointerT
+							return nsv
+						}
+
+						if nsv == "exit" { // 不应发生
+							tmpRs := p.Pop()
+							p.CodePointerM = pointerT
+							return tk.ToStr(tmpRs)
+						} else if nsv == "fr" {
+							break
+						}
+					}
+
+					tmpPointerT++
+					p.CodePointerM = tmpPointerT
+				}
+
+				// return pointerT + 1
+
+				tmpRs := p.Pop()
+				p.CodePointerM = pointerT
+				return tk.ToStr(tmpRs)
+			}
+
+			p.SetVarInt(pr, deleT)
 		case "image.Point", "point":
 			// var p1 image.Point
 			p.SetVarInt(pr, new(image.Point))
@@ -12535,13 +12602,52 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 		formatT := ""
 
+		// tk.Pl("instrT.Params: %v", instrT.Params)
+
 		for i, v := range instrT.Params {
+			// tk.Pl("[%v]: %v %#v", i, v, v)
 			if i == 0 {
-				formatT = v.Value.(string)
+				formatT = tk.ToStr(p.GetVarValue(v))
 				continue
 			}
 
-			list1T = append(list1T, p.GetVarValue(v))
+			if v.Ref != -3 && v.Value == "..." {
+				vv := p.GetVarValue(v)
+				// tk.Plo(vv)
+
+				switch nv := vv.(type) {
+				case []byte:
+					for _, v9 := range nv {
+						list1T = append(list1T, v9)
+					}
+
+				case []int:
+					for _, v9 := range nv {
+						list1T = append(list1T, v9)
+					}
+
+				case []rune:
+					for _, v9 := range nv {
+						list1T = append(list1T, v9)
+					}
+
+				case []string:
+					for _, v9 := range nv {
+						list1T = append(list1T, v9)
+					}
+
+				case []interface{}:
+					for _, v9 := range nv {
+						list1T = append(list1T, v9)
+					}
+
+				}
+			} else {
+				// tk.Pl("not slice: %v", v)
+				// tk.Pl("not slice value: %v", p.GetVarValue(v))
+				list1T = append(list1T, p.GetVarValue(v))
+			}
+
 		}
 
 		fmt.Printf(formatT+"\n", list1T...)
@@ -18740,27 +18846,6 @@ func (p *XieVM) GoFunc(codeA string, argCountA int) string {
 // 		rs := regexp.MustCompile(p2).ReplaceAllString(p3, p1)
 
 // 		p.Push(rs)
-
-// 		return ""
-// 	} else if cmdT == "pl" {
-// 		listT, errT := tk.ParseCommandLine(paramsT)
-// 		if errT != nil {
-// 			return p.ErrStrf("failed to parse paramters")
-// 		}
-
-// 		list1T := []interface{}{}
-
-// 		formatT := ""
-
-// 		for i, v := range listT {
-// 			if i == 0 {
-// 				formatT = v
-// 				continue
-// 			}
-// 			list1T = append(list1T, p.GetValue(v))
-// 		}
-
-// 		tk.Pl(formatT, list1T...)
 
 // 		return ""
 // 	} else if cmdT == "plv" {
