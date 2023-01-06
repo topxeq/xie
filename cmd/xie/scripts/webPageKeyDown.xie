@@ -1,0 +1,104 @@
+mt $w $guiG newWindow "-title=Test keydown event" -width=1024 -height=768 -center
+
+checkErrX $w
+
+defer mt $rs $w close
+
+new $deleT delegate :dele1
+
+mt $rs $w setDelegate $deleT
+
+checkErrX $rs
+
+= $htmlT `
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title></title>
+<script>
+	function showChar() {
+		let arr = [] ; 
+		
+		for (let key in event) {
+			arr.push(key+'='+event[key]);
+		}
+			
+		let str = arr.join(' <br> ');
+
+		document.getElementById("messageID").innerHTML = str;
+		console.log("e:", event);
+		// console.log("event:", JSON.stringify(event));
+
+        delegateDo("pl", str);
+	}
+
+	window.onload = function() {
+		var s1 = "a信b";
+
+		var s2 = "1\x602";
+		alert(s2);
+
+		console.log(s1.charCodeAt(0), s1.charCodeAt(1), s1.charCodeAt(2), s2, JSON.stringify(s2));
+	}
+</script>
+</head>
+<body onkeydown="showChar()">
+<div id="div1">
+</div>
+<div id="div2">
+	<span id='messageID'>abc</span>
+</div>
+</body>
+</html>
+`
+
+mt $rs $w setHtml $htmlT
+
+checkErrX $rs
+
+mt $rs $w show
+
+exit
+
+:dele1
+    pop $argsT
+
+    # pl "%#v" $argsT
+    
+    getArrayItem $cmdT $argsT 0
+
+    ifEqual $cmdT "showNav" :+1 :inext1
+        getArrayItem $arg1 $argsT 1
+        getArrayItem $arg2 $argsT 2
+
+        pl "name: %v, value: %v" $arg1 $arg2
+
+        push ""
+
+        fastRet
+
+    :inext1
+    ifEqual $cmdT "pl" :+1 :inext2
+        getArrayItem $formatT $argsT 1
+
+        # plo $formatT
+
+        slice $list1 $argsT 2 -
+
+        # plo $list1
+
+        pl $formatT $list1...
+
+        push ""
+
+        fastRet
+
+    :inext2
+    pl "unknown command: %v" $cmdT
+
+    push ""
+
+    fastRet

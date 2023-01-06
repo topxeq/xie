@@ -285,16 +285,22 @@ func guiHandler(actionA string, objA interface{}, dataA interface{}, paramsA ...
 		titleT := tk.GetSwitch(paraArgsT, "-title=", "dialog")
 		widthT := tk.GetSwitch(paraArgsT, "-width=", "800")
 		heightT := tk.GetSwitch(paraArgsT, "-height=", "600")
+		iconT := tk.GetSwitch(paraArgsT, "-icon=", "2")
+		debugT := tk.IfSwitchExistsWhole(paraArgsT, "-debug")
+		centerT := tk.IfSwitchExistsWhole(paraArgsT, "-center")
+		fixT := tk.IfSwitchExistsWhole(paraArgsT, "-fix")
+		maxT := tk.IfSwitchExistsWhole(paraArgsT, "-max")
+		minT := tk.IfSwitchExistsWhole(paraArgsT, "-min")
 
 		w := webview2.NewWithOptions(webview2.WebViewOptions{
-			Debug:     true,
+			Debug:     debugT,
 			AutoFocus: true,
 			WindowOptions: webview2.WindowOptions{
 				Title:  titleT,
 				Width:  uint(tk.ToInt(widthT, 800)),
 				Height: uint(tk.ToInt(heightT, 600)),
-				IconId: 2, // icon resource id
-				Center: true,
+				IconId: uint(tk.ToInt(iconT, 2)), // icon resource id
+				Center: centerT,
 			},
 		})
 
@@ -302,7 +308,21 @@ func guiHandler(actionA string, objA interface{}, dataA interface{}, paramsA ...
 			return fmt.Errorf("创建窗口失败：%v", "N/A")
 		}
 
-		w.SetSize(tk.ToInt(widthT, 800), tk.ToInt(heightT, 600), webview2.HintNone)
+		windowStyleT := webview2.HintNone
+
+		if fixT {
+			windowStyleT := webview2.HintFixed
+		}
+
+		if maxT {
+			windowStyleT := webview2.HintMax
+		}
+
+		if minT {
+			windowStyleT := webview2.HintMin
+		}
+
+		w.SetSize(tk.ToInt(widthT, 800), tk.ToInt(heightT, 600), windowStyleT)
 
 		var handlerT tk.TXDelegate
 
