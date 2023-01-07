@@ -74,7 +74,7 @@ var ConstMapG map[string]interface{} = map[string]interface{}{
 // 当指令的参数个数可变时，结果参数不可省略，以免产生混淆
 // 如果指令应返回结果，则当不提结果参数时，“第一个参数”一般指的是除结果参数外的第一个参数，余者类推
 
-var InstrCodeSet map[int]string = map[int]string{}
+var InstrCodeSet map[int]string = nil
 
 var InstrNameSet map[string]int = map[string]int{
 
@@ -107,8 +107,9 @@ var InstrNameSet map[string]int = map[string]int{
 	"是否已定义":   112,
 	"isNil":   113, // 判断变量是否是nil，第一个结果参数可省略，第二个参数是要判断的变量
 
-	"test":      121, // 内部测试用，测试两个数值是否相等
-	"testByReg": 123, // 内部测试用，测试第一个字符串是否符合第二个参数的正则表达式
+	"test":             121, // 内部测试用，测试两个数值是否相等
+	"testByStartsWith": 122, // 内部测试用，测试第一个字符串是否以第二个字符串开头
+	"testByReg":        123, // 内部测试用，测试第一个字符串是否符合第二个参数的正则表达式
 
 	"typeOf": 131, // 获取变量或数值类型（字符串格式），省略所有参数表示获取看栈值（不弹栈）的类型
 	"类型":     131,
@@ -621,7 +622,7 @@ var InstrNameSet map[string]int = map[string]int{
 	"serveFile":       20116,
 
 	"newMux":          20121, // 新建一个HTTP请求处理路由对象，等同于 new mux
-	"setMuxHandler":   20122, // 设置HTTP请求路由处理函数
+	"setMuxHandler":   20122, // 设置HTTP请求路由处理函数，用法：setMuxHandler $muxT "/text1" $arg $text1，其中，text1是字符串形式的处理函数代码，arg是可以传入处理函数的一个参数，处理函数内可通过全局变量inputG来访问，另外还有全局变量requestG表示请求对象，responseG表示响应对象，reqNameG表示请求的子路径，paraMapG表示请求的URL（GET）参数或POST参数映射
 	"setMuxStaticDir": 20123, // 设置静态WEB服务的目录，用法示例：setMuxStaticDir $muxT "/static/" "./scripts" ，设置处理路由“/static/”后的URL为静态资源服务，第1个参数为newMux指令创建的路由处理器对象变量，第2个参数是路由路径，第3个参数是对应的本地文件路径，例如：访问 http://127.0.0.1:8080/static/basic.xie，而当前目录是c:\tmp，那么实际上将获得c:\tmp\scripts\basic.xie
 
 	"startHttpServer":  20151, // 启动http服务器，用法示例：startHttpServer $resultT ":80" $muxT ；可以后面加-go参数表示以线程方式启动，此时应注意主线程不要退出，否则服务器线程也会随之退出，可以用无限循环等方式保持运行
@@ -632,7 +633,8 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"downloadFile": 20220, // 下载文件
 
-	"getResource":     20291, // 获取JQuery等常用的脚本或其他内置文本资源，一般用于服务器端提供内置的jquery等脚本嵌入，避免从互联网即时加载，第一个的参数是jquery.min.js等js文件的名称
+	"getResource":     20291, // 获取JQuery等常用的脚本或其他内置文本资源，一般用于服务器端提供内置的jquery等脚本嵌入，避免从互联网即时加载，第一个的参数是jquery.min.js等js文件的名称，内置资源中如果含有反引号，将被替换成~~~存储，使用getResource时将被自动替换回反引号
+	"getResourceRaw":  20292, // 与getResource作用类似，唯一区别是不将~~~替换回反引号
 	"getResourceList": 20293, // 获取可获取的资源名称列表
 
 	// html related HTML相关
@@ -947,6 +949,8 @@ var InstrNameSet map[string]int = map[string]int{
 	// "guiSetFont": 210021,
 
 	"guiNewWindow": 400031,
+
+	// "guiSetDelegate": 400053,
 
 	// "guiNewLoop": 210032,
 
@@ -1455,8 +1459,13 @@ func NewXie(sharedMapA *tk.SyncMap, globalsA ...map[string]interface{}) *XieVM {
 }
 
 func (p *XieVM) InitVM(sharedMapA *tk.SyncMap, globalsA ...map[string]interface{}) {
-	for k, v := range InstrNameSet {
-		InstrCodeSet[v] = k
+	if InstrCodeSet == nil {
+		InstrCodeSet = make(map[int]string, 0)
+
+		for k, v := range InstrNameSet {
+			InstrCodeSet[v] = k
+		}
+
 	}
 
 	p.ErrorHandlerM = -1
@@ -5536,6 +5545,35 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		}
 
 		if v1 == v2 {
+			tk.Pl("test %v%v passed", v3, v4)
+		} else {
+			return p.ErrStrf("test %v%v failed: %#v <-> %#v", v3, v4, v1, v2)
+		}
+
+		return ""
+
+	case 122: // testByStartsWith
+		if instrT.ParamLen < 2 {
+			return p.ErrStrf("参数不够")
+		}
+
+		v1 := p.GetVarValue(instrT.Params[0])
+		v2 := p.GetVarValue(instrT.Params[1])
+
+		var v3 string
+		var v4 string
+
+		if instrT.ParamLen > 3 {
+			v3 = tk.ToStr(p.GetVarValue(instrT.Params[2]))
+			v4 = "(" + tk.ToStr(p.GetVarValue(instrT.Params[3])) + ")"
+		} else if instrT.ParamLen > 2 {
+			v3 = tk.ToStr(p.GetVarValue(instrT.Params[2]))
+		} else {
+			// p.SeqM++
+			v3 = tk.ToStr(p.SeqM.Get())
+		}
+
+		if strings.HasPrefix(tk.ToStr(v1), tk.ToStr(v2)) {
 			tk.Pl("test %v%v passed", v3, v4)
 		} else {
 			return p.ErrStrf("test %v%v failed: %#v <-> %#v", v3, v4, v1, v2)
@@ -10713,7 +10751,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		case "gui":
 			objT := p.GetVar("guiG")
 			p.SetVarInt(pr, objT)
-		case "quickDelegate": // quickDelegate中，CodePointerM并不跳转（除非有移动其的指令执行）
+		case "quickStringDelegate": // quickStringDelegate中，CodePointerM并不跳转（除非有移动其的指令执行）
 			if instrT.ParamLen < 2 {
 				return p.ErrStrf("参数不够")
 			}
@@ -10772,7 +10810,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			}
 
 			p.SetVarInt(pr, deleT)
-		case "delegate": // delegate中，CodePointerM并不跳转（除非有移动其的指令执行）
+		case "quickDelegate": // quickDelegate中，CodePointerM并不跳转（除非有移动其的指令执行）
 			if instrT.ParamLen < 2 {
 				return p.ErrStrf("参数不够")
 			}
@@ -10828,6 +10866,49 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 				tmpRs := p.Pop()
 				p.CodePointerM = pointerT
 				return tk.ToStr(tmpRs)
+			}
+
+			p.SetVarInt(pr, deleT)
+		case "delegate": // delegate中，类似callFunc，将使用单独的虚拟机执行代码
+			if instrT.ParamLen < 2 {
+				return p.ErrStrf("参数不够")
+			}
+
+			v2 := tk.ToStr(p.GetVarValue(instrT.Params[v1p+1]))
+
+			// like callFunc
+			deleT := func(argsA ...interface{}) interface{} {
+				vmT := NewXie(p.SharedMapM)
+
+				// argCountT := p.Pop()
+
+				// if argCountT == Undefined {
+				// 	return tk.ErrStrf()
+				// }
+
+				// for i := 0; i < argCountA; i++ {
+				// 	vmT.Push(p.Pop())
+				// }
+
+				vmT.SetVar("inputG", argsA)
+
+				lrs := vmT.Load(v2)
+
+				if tk.IsErrStr(lrs) {
+					return lrs
+				}
+
+				rs := vmT.Run()
+
+				if !tk.IsErrStr(rs) {
+					argCountT := tk.ToInt(rs) // vmT.Pop().(int)
+
+					for i := 0; i < argCountT; i++ {
+						p.Push(vmT.Pop())
+					}
+				}
+
+				return ""
 			}
 
 			p.SetVarInt(pr, deleT)
@@ -13604,6 +13685,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		// }
 
 		fnT := func(res http.ResponseWriter, req *http.Request) {
+			// tk.Pl("h1")
 			if res != nil {
 				res.Header().Set("Access-Control-Allow-Origin", "*")
 				res.Header().Set("Access-Control-Allow-Headers", "*")
@@ -13621,7 +13703,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 			toWriteT := ""
 
-			vmT := NewXie(p.SharedMapM)
+			vmT := NewXie(nil)
 
 			vmT.SetVar("paraMapG", paraMapT)
 			vmT.SetVar("requestG", req)
@@ -13818,6 +13900,10 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		return ""
 
 	case 20291: // getResource
+		if instrT.ParamLen < 1 {
+			return p.ErrStrf("参数不够")
+		}
+
 		pr := -5
 		v1p := 0
 
@@ -13826,7 +13912,34 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			v1p = 1
 		}
 
-		p.SetVarInt(pr, tk.SafelyGetStringForKeyWithDefault(ResourceG, strings.ReplaceAll(tk.ToStr(p.GetVarValue(instrT.Params[v1p])), "~~~", "`"), ""))
+		v2 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
+
+		// ResourceLockG.Lock()
+
+		textT := tk.SafelyGetStringForKeyWithDefault(ResourceG, v2, "")
+
+		p.SetVarInt(pr, strings.ReplaceAll(textT, "~~~", "`"))
+
+		return ""
+
+	case 20292: // getResourceRaw
+		pr := -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0].Ref
+			v1p = 1
+		}
+
+		v2 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
+
+		// ResourceLockG.Lock()
+
+		textT := tk.SafelyGetStringForKeyWithDefault(ResourceG, v2, "")
+
+		// ResourceLockG.Unlock()
+
+		p.SetVarInt(pr, textT)
 
 		return ""
 
@@ -13839,10 +13952,13 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			// v1p = 1
 		}
 
+		// ResourceLockG.Lock()
+
 		aryT := make([]string, 0, len(ResourceG))
 		for k, _ := range ResourceG {
 			aryT = append(aryT, k)
 		}
+		// ResourceLockG.Unlock()
 
 		p.SetVarInt(pr, aryT)
 
@@ -17792,6 +17908,41 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		p.SetVarInt(pr, rs)
 		return ""
 
+	// case 400053: // guiSetDelegate
+	// 	if instrT.ParamLen < 2 {
+	// 		return p.ErrStrf("参数不够")
+	// 	}
+
+	// 	// pr := -5
+	// 	// v1p := 0
+
+	// 	// if instrT.ParamLen > 1 {
+	// 	pr := instrT.Params[0].Ref
+	// 	v1p := 1
+	// 	// }
+
+	// 	v0, ok := p.GetVarValue(p.ParseVar("$guiG")).(tk.TXDelegate)
+
+	// 	if !ok {
+	// 		return p.ErrStrf("全局变量guiG不存在（$guiG not exists）")
+	// 	}
+
+	// 	// v1p := 0
+
+	// 	// v1 := p.GetVarValue(instrT.Params[v1p])
+	// 	// v2 := p.GetVarValue(instrT.Params[v1p+1])
+
+	// 	vs := p.ParamsToList(instrT, v1p)
+
+	// 	rs := v0("newWindow", p, nil, vs...)
+
+	// 	// if tk.IsErrX(rs) {
+	// 	// 	return p.ErrStrf(tk.GetErrStrX(rs))
+	// 	// }
+
+	// 	p.SetVarInt(pr, rs)
+	// 	return ""
+
 	case 500001: // getSeq
 
 		pr := -5
@@ -19177,6 +19328,7 @@ func (p *XieVM) Run(posA ...int) string {
 	}
 
 	for {
+		// tk.Pl("-- [%v] %v", p.CodePointerM, tk.LimitString(p.SourceM[p.CodeSourceMapM[p.CodePointerM]], 50))
 		resultT := p.RunLine(p.CodePointerM)
 
 		c1T, ok := resultT.(int)

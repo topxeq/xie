@@ -1,5 +1,7 @@
 package xie
 
+// var ResourceLockG sync.Mutex
+
 var ResourceG map[string]string = map[string]string{
 	"js/test.js": `
 	function len(objA) {

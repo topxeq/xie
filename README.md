@@ -10,7 +10,7 @@
 
 谢语言支持各种基本的语法元素和结构，包括变量、条件分支、循环、函数、递归函数调用、多线程等，支持作为嵌入型语言在不同语言中调用，也支持独立运行（单文件的可执行程序），还支持作为后台微服务运行。同时，谢语言也提供一个命令行交互式编程环境，可用于一般的测试。
 
-谢语言的Go语言版本，单文件即可执行，包含了脚本执行功能（无需安装其他依赖环境）、交互式命令行环境和微服务器模式，支持图形界面编程（仅需附加一个动态链接库文件）。
+谢语言的Go语言版本，单文件即可执行，包含了脚本执行功能（无需安装其他依赖环境）、交互式命令行环境和微服务器模式，支持图形界面编程（可采用多种方式，无需或仅需附加一个动态链接库文件）。
 
 谢语言的JavaScript版本（官网[xie.topget.org](http://xie.topget.org)），使用时仅需在网页中引用两个JavaScript文件，即可使用谢语言的功能，并且可以与JavaScript良好互通，充分发挥JavaScript中既有功能以及丰富的第三方库的优势。
 
@@ -110,7 +110,7 @@ D:\tmp>
 
 &nbsp;
 
-谢语言的出现，最初是因为希望有一个能够嵌入在各种语言（初期考虑的语言主要是Go、Java、JavaScript、C/C++、C#、Switch等）内的轻量级脚本语言，能够支持在后端微服务中热加载修改的代码，要求语言的语法简单而又速度相对较快，但是能够充分发挥宿主语言的丰富库函数优势。后来逐渐发现谢语言也具备可以成为一门全栈语言的潜力，希望它最终能够达到。另外，考虑到目前还没有一个开源免费并支持全栈编程的全中文编程语言，也希望谢语言能够作为填补空缺的一员。（* 多说一句，编程中完全不用到英文是不太可能的，希望尽量减少英文不好开发者的难度吧。为满足喜欢输入方便的开发者，谢语言也同时支持英语编程。）
+谢语言的出现，最初是因为希望有一个能够嵌入在各种语言（初期考虑的语言主要是Go、Java、JavaScript、C/C++、C#、Swift等）内的轻量级脚本语言，能够支持在后端微服务中热加载修改的代码，要求语言的语法简单而又速度相对较快，但是能够充分发挥宿主语言的丰富库函数优势。后来逐渐发现谢语言也具备可以成为一门全栈语言的潜力，希望它最终能够达到。另外，考虑到目前还没有一个开源免费并支持全栈编程的全中文编程语言，也希望谢语言能够作为填补空缺的一员。（* 多说一句，编程中完全不用到英文是不太可能的，希望尽量减少英文不好开发者的难度吧。为满足喜欢输入方便的开发者，谢语言也同时支持英语编程。）
 
 借鉴汇编语言的思路，谢语言引入了堆栈等概念，也因此在某些功能的实现上会比一般的高级语言显得复杂一些，但从速度上（包括语法解析的速度）考虑，还是值得的。但要求开发者对堆栈等概念做一些简单的了解。
 
@@ -836,6 +836,8 @@ getWeb $resultT "http://127.0.0.1:80/xms/xmsApi" -method=POST -encoding=UTF-8 -t
 - **\$newLineG** 表示回车换行字符
 - **\$scriptPathG** 表示当前执行的脚本所在路径
 - **\$guiG** GUI编程中的全局引用对象
+
+注意，要避免自定义变量与这些变量名称冲突。
 
 &nbsp;
 
@@ -4065,13 +4067,613 @@ result= 52
 
 #### 图形界面（GUI）编程
 
-谢语言支持方便的图形界面编程，通过 [Sciter](http://sciter.com) 等第三方库实现，Windows下只需要一个动态链接库文件（sciter.dll），Linux下的配置请参考[这里](https://www.jianshu.com/p/b184826b9de1)。通过下面基本说明和几个例子可以快速了解掌握。
+谢语言支持方便的图形界面（GUI）编程，包含多种实现方式，各有各的优势和使用场景。
+
+其中，Windows下使用WebView2系统控件是比较推荐的GUI编程方式，WebView2功能强大并且随时更新，在Windows 10及以上系统中已经内置，Windows 7等系统中也可以单独安装，谢语言无需附加任何文件即可用这种方式编写和分发图形界面应用。
+
+第二种方式是通过 [SciterJS](http://sciter.com) 这个第三方库实现，Windows下只需要一个动态链接库文件（sciter.dll），Linux下的配置请参考[这里](https://www.jianshu.com/p/b184826b9de1)。
+
+第三种方式是使用一个外部的浏览器来访问谢语言启动的WEB服务器或API服务器，这样前端可以完全使用标准的HTML/CSS/JavaScript技术进行图形界面编程，通过Ajax方式访问谢语言编写的Web服务来使用谢语言的能力。这种方式的缺点是，一般的浏览器为安全考虑一般不允许通过代码调整浏览器的标题、大小和位置。
+
+第四种方式是在第三种方式的基础上，调用谢语言配套的浏览器，即可解决调整浏览器标题、大小和位置等问题。目前谢语言配套的浏览器包括一个基于IE11内核的浏览器和基于Chromium内核的浏览器，前者比较轻量级但IE11对新版JavaScript的支持有缺陷，后者较重（体积较大，初次使用初始化图形界面环境时下载慢）但功能更完善。
+
+谢语言中的图形界面编程通过下面的基本说明和几个例子可以快速地了解掌握。
 
 &nbsp;
 
-#### 谢语言GUI编程的基础
+#### 谢语言GUI编程的基础（WebView2）
 
-谢语言主要通过第三方图形界面库Sciter来支持跨平台的GUI编程。以Windows系统下为例，除谢语言主程序文件外，只需要一个动态链接库文件（sciter.dll），即可完美支持图形界面编程。Sciter使用标准的HTML、CSS以及类似JavaScript的TiScript脚本语言，来实现图形界面的展示和操控，谢语言则负责后台逻辑的处理，两者之间可以互通，谢语言通过特定的接口方式可以调用TiScript中的函数传递数据并进行操作，反之亦然，TiScript也可以调用谢语言中的特定函数。基本熟悉网页编程的开发者都可以很方便地上手。
+谢语言GUI图形编程的WebView2方式，主要通过Windows自带的WebView2组件来支持GUI编程，仅适用于Windows系统，分发时无需附加文件（如果低版本Windows系统，可以自行下载安装WebView2）。WebView2使用标准的HTML、CSS以及JavaScript的进行编程，来实现图形界面的展示和操控，谢语言则负责后台逻辑的处理，两者之间可以互通，JavaScript中通过特定的接口方式可以调用谢语言中的函数传递数据并进行操作，反之亦然，谢语言也可以调用JavaScript中的特定函数。基本熟悉网页编程的开发者都可以很方便地上手。
+
+谢语言中有一个预置全局变量\$guiG，用于作为调用GUI功能的接口对象。
+
+下面我们通过一些例子逐步说明谢语言中基于WebView2方式的GUI编程方法。
+
+&nbsp;
+
+##### - 基本界面
+
+我们直接通过一个代码例子（webGui1.xie）来了解：、
+
+```go
+// 本例演示使用Windows下的WebView2（Windows 10以上自带，Win 7等可以单独安装）来制作图形化界面程序
+// WebView2在Windows 10以上系统自带，Win 7等可以单独安装
+// 也因此本例只在Windows下有效
+
+// 新建一个窗口，放入变量w中
+// guiG是全局预置变量，表示图形界面主控对象
+// 它的newWindow方法根据指定参数创建一个新窗口
+// width参数表示窗口的宽度，缺省为800
+// height参数表示窗口的高度，缺省为600
+// 如果带有-debug参数，表示是否允许调试（鼠标右键菜单带有“检查”等选项）
+// -fix参数表示窗口不允许调整大小
+// -center参数表示窗口居中
+// 还有-max、-min分别表示以最大或最小化的状态展示窗口
+
+mt $w $guiG newWindow "-title=Test WebView2" -width=1024 -height=768 -center
+
+plo $w
+
+// 新建一个用于窗口事件处理的快速代理函数
+// 代码在标号dele1处开始
+// 快速代理函数必须以fastRet指令返回
+new $deleT quickDelegate :dele1
+
+// 调用窗口对象的setQuickDelegate方法来指定代理函数
+mt $rs $w setQuickDelegate $deleT
+
+plo $rs
+
+// 如果从网络加载网页，那么可以用下面的navigate方法
+// mt $rs $w navigate http://xie.topget.org
+
+// 本例中使用从本地加载的网页代码
+// 设置准备在窗口中载入的HTML代码
+// 本例中HTML页面中引入的JavaScript和CSS代码均直接用网址形式加载
+= $htmlT `
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<script src="http://xie.topget.org/js/jquery.min.js"></script>
+<link rel="stylesheet"  type="text/css" href="http://xie.topget.org/css/tabulator.min.css">
+<script src="http://xie.topget.org/js/tabulator.min.js"></script>
+<title></title>
+<script>
+	// 页面加载完毕后，将用alert展示一个值，然后准备数据并显示一个报表
+	window.onload = function() {
+		var s1 = "a信b";
+
+		var s2 = "1\x602";
+		alert(s2);
+
+		console.log(s1.charCodeAt(0), s1.charCodeAt(1), s1.charCodeAt(2), s2, JSON.stringify(s2));
+
+		var tabledata = [
+            {id:1, name:"Oli Bob", age:"12", col:"red", dob:""},
+            {id:2, name:"Mary May", age:"1", col:"blue", dob:"14/05/1982"},
+            {id:3, name:"Christine Lobowski", age:"42", col:"green", dob:"22/05/1982"},
+            {id:4, name:"Brendon Philips", age:"125", col:"orange", dob:"01/08/1980"},
+            {id:5, name:"Margret Marmajuke", age:"16", col:"yellow", dob:"31/01/1999"},
+        ];
+
+		var table = new Tabulator("#div3", {
+			height:205, // set height of table (in CSS or here), this enables the Virtual DOM and improves render speed dramatically (can be any valid css height value)
+			data:tabledata, //assign data to table
+			layout:"fitColumns", //fit columns to width of table (optional)
+			columns:[ //Define Table Columns
+				{title:"Name", field:"name", width:150},
+				{title:"Age", field:"age", hozAlign:"left", formatter:"progress"},
+				{title:"Favourite Color", field:"col"},
+				{title:"Date Of Birth", field:"dob", sorter:"date", hozAlign:"center"},
+			],
+			rowClick:function(e, row){ //trigger an alert message when the row is clicked
+				alert("Row " + row.getData().id + " Clicked!!!!");
+			},
+		});
+
+	}
+
+	// 点击test1按钮后，将调用quickDelegateDo函数来调用谢语言中定义的快速代理函数，并传入需要的函数
+	function test1() {
+		quickDelegateDo("pl", "time: %v, navigator: %v", new Date(), navigator.userAgent);
+	}
+
+	// 点击test2按钮后，将调用quickDelegateDo函数来调用谢语言中定义的快速代理函数，并alert返回的值
+	function test2() {
+		var rs = quickDelegateDo("showNav", "userAgent", navigator.userAgent);
+
+		// 返回的结果是一个Promise，因此要用相应的方式获取
+		rs.then(res => {
+			alert("test2: "+res);
+		});
+	}
+
+	// 点击test按钮后，将用Ajax方式访问一个网络API，获取结果并显示
+	function test() {
+		$.ajax({
+			url: "http://topget.org/xms/test",
+			dataType: 'text',
+			type: 'POST',
+			data: { 
+				req: "test", 
+				name: 'Tom'
+			},
+			success: function (data) {
+				alert(data);
+			},
+			error: function (response) {
+				console.log(JSON.stringify(response));
+			}
+		});
+
+	}
+</script>
+</head>
+<body>
+<div id="div1">
+	<button onclick="javascript:test();">test</button>
+	<button onclick="javascript:test1();">test1</button>
+	<button onclick="javascript:test2();">test2</button>
+</div>
+<div id="div3">
+</div>
+</body>
+</html>
+`
+
+// 调用窗口对象的setHtml方法来设置其内容
+mt $rs $w setHtml $htmlT
+
+plo $rs
+
+// 调用窗口对象的setHtml方法来展示窗口
+// 此时窗口才真正显示
+// 并且直至窗口关闭都将阻塞（即等待窗口关闭后才往下继续执行后面的代码）
+mt $rs $w show
+
+plo $rs
+
+// 调用窗口对象的close方法关闭窗口
+mt $rs $w close
+
+plo $rs
+
+// 结束程序的执行
+// 也是为了避免如果继续往下执行将误入后面的快速代理代码
+exit
+
+// 用于网页中的快速代理函数
+// 网页中的JavaScript代码中可以用quickDelegateDo函数来调用本函数
+// quickDelegateDo函数中所带的参数将被封装成一个列表（数组）压入堆栈
+// 快速代理函数需要将其弹栈后进行处理
+:dele1
+	// 弹栈出参数数组
+    pop $argsT
+
+    # pl "%#v" $argsT
+    
+	// 本例中，第一个参数被约定为传递一个命令
+	// 后面的参数为该命令所需的参数，参数个数视该命令的需要而定
+	// 因此这里从参数数组中取出第一个参数放入变量cmdT中
+    getArrayItem $cmdT $argsT 0
+
+	// 如果命令为showNav，则取后两个参数并输出其内容
+    ifEqual $cmdT "showNav" :+1 :inext1
+        getArrayItem $arg1 $argsT 1
+        getArrayItem $arg2 $argsT 2
+
+        pl "name: %v, value: %v" $arg1 $arg2
+
+		// 快速处理函数最后必须返回一个值，无论是否需要
+        push "showNav result"
+
+		// 快速处理函数最后必须用fastRet指令返回
+        fastRet
+
+    :inext1
+	// 如果命令为pl，则类似pl指令（其他语言中的或printf）
+	// 取出后面第一个参数为格式化字串
+	// 再后面都是格式化字串中所需的填充值
+	// 然后输出输出
+    ifEqual $cmdT "pl" :+1 :inext2
+        getArrayItem $formatT $argsT 1
+
+        slice $list1 $argsT 2 -
+
+        pl $formatT $list1...
+
+        push ""
+
+        fastRet
+
+    :inext2
+	// 不支持的命令将输出错误信息
+    pl "unknown command: %v" $cmdT
+
+    push ""
+
+    fastRet
+
+```
+
+代码运行后，将看到类似下面的界面：
+
+![截图](http://xie.topget.org/example/xie/snap/snap8.png)
+
+代码中有详尽注释，我们可以看到，代码中展示了如何载入一个HTML页面作为窗口并显示出来，点击几个test按钮可以进行不同的操作，其中test1和test2都是与谢语言的后台逻辑进行互动，其中test2还从谢语言处理函数中获取了返回值并显示。test按钮则演示了如何通过Ajax方式获取一个网络API请求的结果并进行处理。
+
+&nbsp;
+
+##### - 直接嵌入网页脚本
+
+下面的这个代码例子（webGui2.xie）与上面类似，但使用了内置嵌入JavaScript或CSS文本的方式，避免了网络访问或者从附带文件中读取的麻烦。另外，本例中还演示了如何设置更安全的代理（回调）函数来进行前台界面与谢语言后台的互动。
+
+```go
+// 本例演示使用WebView2做图形界面时
+// 获取内置的JavaScript或CSS文本嵌入HTML中
+// 这样可以避免网络访问或者从附带文件中读取的麻烦
+// 另外，本例也演示了如何设置普通代理函数来更安全地进行网页与谢语言后台逻辑之间的互动
+
+// guiNewWindow是内置指令，与下面命令等效
+// mt $w $guiG newWindow "-title=Test WebView2a" -width=1024 -height=768 -center -debug
+// -debug参数表示打开调试功能
+guiNewWindow $w "-title=Test WebView2a" -width=1024 -height=768 -center -debug
+
+// 如果出错则停止执行
+checkErrX $w
+
+// 调用窗口对象的setDelegate方法来指定代理函数
+// 之前的例子中使用的快速代理函数直接在当前虚拟机中运行，存在一定的并发冲突可能性
+// 因此为安全起见，更建议使用普通代理函数
+// 普通代理函数通过字符串来定义其代码
+// 普通代理函数将在单独新建的虚拟机中运行
+// 传入的参数通过全局变量inputG传入，是一个参数数组
+// 传出的参数则应放于全局outG中返回
+// 与快速代理函数不同，普通代理函数不用fastRet指令来退出，而是直接用exit指令
+mt $rs $w setDelegate `
+     
+    getArrayItem $cmdT $inputG 0
+
+    ifEqual $cmdT "showNav" :+1 :inext1
+        getArrayItem $arg1 $inputG 1
+        getArrayItem $arg2 $inputG 2
+
+        pl "name: %v, value: %v" $arg1 $arg2
+
+        = $outG "showNav result"
+
+        exit
+
+    :inext1
+    ifEqual $cmdT "pl" :+1 :inext2
+        getArrayItem $formatT $inputG 1
+
+        slice $list1 $inputG 2 -
+
+        pl $formatT $list1...
+
+        = $outG ""
+
+        exit
+
+    :inext2
+    pl "unknown command: %v" $cmdT
+
+    spr $outG "unknown command: %v" $cmdT
+
+    exit
+`
+
+= $htmlT `
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<script>TX_jquery.min.js_XT</script>
+<style>TX_tabulator.min.css_XT</style>
+<script>TX_tabulator.min.js_XT</script>
+<title></title>
+<script>
+	$().ready(function (){
+		var tabledata = [
+            {id:1, name:"Oli Bob", age:"12", col:"red", dob:""},
+            {id:2, name:"Mary May", age:"1", col:"blue", dob:"14/05/1982"},
+            {id:3, name:"Christine Lobowski", age:"42", col:"green", dob:"22/05/1982"},
+            {id:4, name:"Brendon Philips", age:"125", col:"orange", dob:"01/08/1980"},
+            {id:5, name:"Margret Marmajuke", age:"16", col:"yellow", dob:"31/01/1999"},
+        ];
+
+		var table = new Tabulator("#div3", {
+			height:205, // set height of table (in CSS or here), this enables the Virtual DOM and improves render speed dramatically (can be any valid css height value)
+			data:tabledata, //assign data to table
+			layout:"fitColumns", //fit columns to width of table (optional)
+			columns:[ //Define Table Columns
+				{title:"Name", field:"name", width:150},
+				{title:"Age", field:"age", hozAlign:"left", formatter:"progress"},
+				{title:"Favourite Color", field:"col"},
+				{title:"Date Of Birth", field:"dob", sorter:"date", hozAlign:"center"},
+			],
+			rowClick:function(e, row){ //trigger an alert message when the row is clicked
+				alert("Row " + row.getData().id + " Clicked!!!!");
+			},
+		});
+
+	});
+
+	function test1() {
+		delegateDo("pl", "time: %v, navigator: %v", new Date(), navigator.userAgent);
+	}
+
+	function test2() {
+		var rs = delegateDo("showNav", "userAgent", navigator.userAgent);
+
+		// 返回的结果是一个Promise，因此要用相应的方式获取
+		rs.then(res => {
+			alert("test2: "+res);
+		});
+	}
+</script>
+</head>
+<body>
+<div id="div1">
+	<button onclick="javascript:test1();">test1</button>
+	<button onclick="javascript:test2();">test2</button>
+</div>
+<div id="div3" style="margin-top: 1.0em;">
+</div>
+</body>
+</html>
+`
+
+// 提示：使用getResourceList指令可以看到所有内置的资源
+getResource $t1 "js/jquery.min.js"
+
+strReplace $htmlT $htmlT "TX_jquery.min.js_XT" $t1
+
+getResource $t2 "css/tabulator.min.css"
+
+strReplace $htmlT $htmlT "TX_tabulator.min.css_XT" $t2
+
+getResource $t3 "js/tabulator.min.js"
+
+strReplace $htmlT $htmlT "TX_tabulator.min.js_XT" $t3
+
+mt $rs $w setHtml $htmlT
+
+checkErrX $rs
+
+mt $rs $w show
+
+checkErrX $rs
+
+mt $rs $w close
+
+exit
+
+
+```
+
+&nbsp;
+
+##### - 直接嵌入网页脚本
+
+下面的这个代码例子（webGui3.xie）与前两个也是类似，但前后台并非采用回调函数来进行互动，而是谢语言后台用线程在本机的随机端口上启动了一个WEB与API混合服务器来提供网页与接口服务，前台WebView2通过HTTP协议来访问后台接口实现互动，这也是常见的一种方式。
+
+```go
+// 本例演示使用WebView2做图形界面时
+// 启动一个谢语言WEB服务器和API服务器来自行提供网页资源与API数据服务
+// 这样可以避免网络访问或者从附带文件中读取的麻烦，实现前后台的互通
+// 唯一的缺点是需要占用一个本机端口
+
+guiNewWindow $w "-title=Test WebView2b" -width=1024 -height=768 -center -debug
+
+checkErrX $w
+
+// 设置路由处理器
+newMux $muxT
+
+// 设置静态内容的处理函数
+// 用于网页中嵌入JS和CSS时获取内置资源中的这些内容
+// 这样，如果主页的网址是 http://127.0.0.1:8721
+// 那么，网页中可以用嵌入的 /static/js/jquery.min.js 来获取内置的内容
+setMuxHandler $muxT "/static/" "" `
+	// 去掉请求路由的前缀 /static/
+	trimPrefix $shortNameT $reqNameG "/static/"
+
+	// 获取形如 js/jquery.min.js 形式的内置资源内容
+	getResource $textT $shortNameT
+
+	// 根据内置资源的后缀名，获取其MIME类型，例如：text/javascript
+	getMimeType $mimeTypeT $shortNameT
+
+	// 拼装完整的mime类型字符串
+	spr $mimeTypeT "%v; charset=utf-8" $mimeTypeT 
+
+	setRespHeader $responseG "Content-Type" $mimeTypeT
+	writeRespHeader $responseG 200
+
+	writeResp $responseG $textT
+
+	assign $outG "TX_END_RESPONSE_XT"
+
+`
+
+// 设置/test路由处理函数，用于测试WEB API
+// 返回内容是JSON格式
+setMuxHandler $muxT "/test" 0 `
+	setRespHeader $responseG "Content-Type" "text/json; charset=utf-8"
+	writeRespHeader $responseG 200
+
+	spr $strT "[%v] 请求名: test，请求参数： %v，inputG：%v" ?(?nowStr) $paraMapG $inputG
+
+	var $resMapT map
+
+	setMapItem $resMapT "Status" "success"
+	setMapItem $resMapT "Value" $strT
+
+	toJson $jsonStrT $resMapT
+
+	writeResp $responseG $jsonStrT
+
+	assign $outG  "TX_END_RESPONSE_XT"
+`
+
+// htmlT中即为准备用于根路由访问时的网页
+// 其中 test、test1和test2函数分别演示了使用异步Ajax、fetch和同步Ajax方式来调用本地接口的例子
+= $htmlT `
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<script src="/static/js/jquery.min.js"></script>
+<link rel="stylesheet" type="text/css" href="/static/css/tabulator.min.css">
+<script src="/static/js/tabulator.min.js"></script>
+<script>
+	$().ready(function (){
+		var tabledata = [
+            {id:1, name:"Oli Bob", age:"12", col:"red", dob:""},
+            {id:2, name:"Mary May", age:"1", col:"blue", dob:"14/05/1982"},
+            {id:3, name:"Christine Lobowski", age:"42", col:"green", dob:"22/05/1982"},
+            {id:4, name:"Brendon Philips", age:"125", col:"orange", dob:"01/08/1980"},
+            {id:5, name:"Margret Marmajuke", age:"16", col:"yellow", dob:"31/01/1999"},
+        ];
+
+		var table = new Tabulator("#div3", {
+			height:205,
+			data:tabledata, 
+			layout:"fitColumns", 
+			columns:[ 
+				{title:"Name", field:"name", width:150},
+				{title:"Age", field:"age", hozAlign:"left", formatter:"progress"},
+				{title:"Favourite Color", field:"col"},
+				{title:"Date Of Birth", field:"dob", sorter:"date", hozAlign:"center"},
+			],
+			rowClick:function(e, row){ 
+				alert("Row " + row.getData().id + " Clicked!!!!");
+			},
+		});
+
+	});
+
+	function test1() {
+		fetch('/test', {
+			method: 'POST', 
+			body: JSON.stringify({
+				time: new Date(),
+				navigator: navigator.userAgent
+			})
+		}).then(function(res) { 
+			res.json().then(function(res1){
+				alert(JSON.stringify(res1));
+			});
+		});
+	}
+
+	function test2() {
+		var rs = $.ajax({
+			url: "/test",
+			type: "POST",
+			async: false,
+			dataType: "text",
+			data: {
+				req: "test", 
+				name: 'Jerry'
+			}
+		});
+
+		var objT = JSON.parse(rs.responseText);
+
+		if (objT.Status == "success") {
+			alert("success: " + objT.Value);
+		} else {
+			alert("fail: " + objT.Value);
+		}
+	}
+
+	function test() {
+		$.ajax({
+			url: "/test",
+			dataType: 'text',
+			type: 'POST',
+			data: { 
+				req: "test", 
+				name: 'Tom'
+			},
+			success: function (data) {
+				alert(data);
+			},
+			error: function (response) {
+				console.log(JSON.stringify(response));
+			}
+		});
+
+	}
+
+</script>
+</head>
+<body>
+<div id="div1">
+	<button onclick="javascript:test();">test</button>
+	<button onclick="javascript:test1();">test1</button>
+	<button onclick="javascript:test2();">test2</button>
+</div>
+<div id="div3" style="margin-top: 1.0em;">
+</div>
+</body>
+</html>
+`
+
+// 设置根路径访问时的返回内容
+// 即htmlT中存放的网页HTML
+// setMuxHandler中的第三个参数传入处理函数中即为可通过全局变量inputG访问的值
+setMuxHandler $muxT "/" $htmlT `
+	setRespHeader $responseG "Content-Type" "text/html; charset=utf-8"
+	writeRespHeader $responseG 200
+
+	writeResp $responseG $inputG
+
+	assign $outG "TX_END_RESPONSE_XT"
+`
+
+
+// 获取一个随机的可用端口用于命令服务器与图形界面通信
+getRandomPort $portT
+
+// 启动一个线程来运行HTTP服务器
+startHttpServer $resultT $portT $muxT -go
+
+spr $urlT "http://127.0.0.1:%v" $portT
+
+// 让WebView2窗口访问本机的这个端口
+// URL地址类似http://127.0.0.1:8721
+mt $rs $w navigate $urlT
+
+checkErrX $rs
+
+mt $rs $w show
+
+checkErrX $rs
+
+mt $rs $w close
+
+exit
+
+
+
+```
+
+&nbsp;
+
+#### 谢语言GUI编程的基础（SciterJS）
+
+谢语言GUI图形编程的SciterJS方式，主要通过第三方图形界面库SciterJS来支持跨平台的GUI编程。以Windows系统下为例，除谢语言主程序文件外，只需要一个动态链接库文件（sciter.dll），即可完美支持图形界面编程。Sciter使用标准的HTML、CSS以及类似JavaScript的TiScript脚本语言，来实现图形界面的展示和操控，谢语言则负责后台逻辑的处理，两者之间可以互通，谢语言通过特定的接口方式可以调用TiScript中的函数传递数据并进行操作，反之亦然，TiScript也可以调用谢语言中的特定函数。基本熟悉网页编程的开发者都可以很方便地上手。
 
 谢语言使用GUI功能时，均需使用initGui命令来初始化环境，如果此时系统中没有Sciter的动态链接库文件，将会自动下载到主程序相同的路径下（也可以自行在谢语言官网下载后放到该位置）。谢语言中还有一个预置全局变量\$guiG，用于作为调用GUI功能的接口对象。
 

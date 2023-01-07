@@ -1,0 +1,201 @@
+// 本例演示使用WebView2做图形界面时
+// 启动一个谢语言WEB服务器和API服务器来自行提供网页资源与API数据服务
+// 这样可以避免网络访问或者从附带文件中读取的麻烦，实现前后台的互通
+// 唯一的缺点是需要占用一个本机端口
+
+guiNewWindow $w "-title=Test WebView2b" -width=1024 -height=768 -center -debug
+
+checkErrX $w
+
+// 设置路由处理器
+newMux $muxT
+
+// 设置静态内容的处理函数
+// 用于网页中嵌入JS和CSS时获取内置资源中的这些内容
+// 这样，如果主页的网址是 http://127.0.0.1:8721
+// 那么，网页中可以用嵌入的 /static/js/jquery.min.js 来获取内置的内容
+setMuxHandler $muxT "/static/" "" `
+	// 去掉请求路由的前缀 /static/
+	trimPrefix $shortNameT $reqNameG "/static/"
+
+	// 获取形如 js/jquery.min.js 形式的内置资源内容
+	getResource $textT $shortNameT
+
+	// 根据内置资源的后缀名，获取其MIME类型，例如：text/javascript
+	getMimeType $mimeTypeT $shortNameT
+
+	// 拼装完整的mime类型字符串
+	spr $mimeTypeT "%v; charset=utf-8" $mimeTypeT 
+
+	setRespHeader $responseG "Content-Type" $mimeTypeT
+	writeRespHeader $responseG 200
+
+	writeResp $responseG $textT
+
+	assign $outG "TX_END_RESPONSE_XT"
+
+`
+
+// 设置/test路由处理函数，用于测试WEB API
+// 返回内容是JSON格式
+setMuxHandler $muxT "/test" 0 `
+	setRespHeader $responseG "Content-Type" "text/json; charset=utf-8"
+	writeRespHeader $responseG 200
+
+	spr $strT "[%v] 请求名: test，请求参数： %v，inputG：%v" ?(?nowStr) $paraMapG $inputG
+
+	var $resMapT map
+
+	setMapItem $resMapT "Status" "success"
+	setMapItem $resMapT "Value" $strT
+
+	toJson $jsonStrT $resMapT
+
+	writeResp $responseG $jsonStrT
+
+	assign $outG  "TX_END_RESPONSE_XT"
+`
+
+// htmlT中即为准备用于根路由访问时的网页
+// 其中 test、test1和test2函数分别演示了使用异步Ajax、fetch和同步Ajax方式来调用本地接口的例子
+= $htmlT `
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<script src="/static/js/jquery.min.js"></script>
+<link rel="stylesheet" type="text/css" href="/static/css/tabulator.min.css">
+<script src="/static/js/tabulator.min.js"></script>
+<script>
+	$().ready(function (){
+		var tabledata = [
+            {id:1, name:"Oli Bob", age:"12", col:"red", dob:""},
+            {id:2, name:"Mary May", age:"1", col:"blue", dob:"14/05/1982"},
+            {id:3, name:"Christine Lobowski", age:"42", col:"green", dob:"22/05/1982"},
+            {id:4, name:"Brendon Philips", age:"125", col:"orange", dob:"01/08/1980"},
+            {id:5, name:"Margret Marmajuke", age:"16", col:"yellow", dob:"31/01/1999"},
+        ];
+
+		var table = new Tabulator("#div3", {
+			height:205,
+			data:tabledata, 
+			layout:"fitColumns", 
+			columns:[ 
+				{title:"Name", field:"name", width:150},
+				{title:"Age", field:"age", hozAlign:"left", formatter:"progress"},
+				{title:"Favourite Color", field:"col"},
+				{title:"Date Of Birth", field:"dob", sorter:"date", hozAlign:"center"},
+			],
+			rowClick:function(e, row){ 
+				alert("Row " + row.getData().id + " Clicked!!!!");
+			},
+		});
+
+	});
+
+	function test1() {
+		fetch('/test', {
+			method: 'POST', 
+			body: JSON.stringify({
+				time: new Date(),
+				navigator: navigator.userAgent
+			})
+		}).then(function(res) { 
+			res.json().then(function(res1){
+				alert(JSON.stringify(res1));
+			});
+		});
+	}
+
+	function test2() {
+		var rs = $.ajax({
+			url: "/test",
+			type: "POST",
+			async: false,
+			dataType: "text",
+			data: {
+				req: "test", 
+				name: 'Jerry'
+			}
+		});
+
+		var objT = JSON.parse(rs.responseText);
+
+		if (objT.Status == "success") {
+			alert("success: " + objT.Value);
+		} else {
+			alert("fail: " + objT.Value);
+		}
+	}
+
+	function test() {
+		$.ajax({
+			url: "/test",
+			dataType: 'text',
+			type: 'POST',
+			data: { 
+				req: "test", 
+				name: 'Tom'
+			},
+			success: function (data) {
+				alert(data);
+			},
+			error: function (response) {
+				console.log(JSON.stringify(response));
+			}
+		});
+
+	}
+
+</script>
+</head>
+<body>
+<div id="div1">
+	<button onclick="javascript:test();">test</button>
+	<button onclick="javascript:test1();">test1</button>
+	<button onclick="javascript:test2();">test2</button>
+</div>
+<div id="div3" style="margin-top: 1.0em;">
+</div>
+</body>
+</html>
+`
+
+// 设置根路径访问时的返回内容
+// 即htmlT中存放的网页HTML
+// setMuxHandler中的第三个参数传入处理函数中即为可通过全局变量inputG访问的值
+setMuxHandler $muxT "/" $htmlT `
+	setRespHeader $responseG "Content-Type" "text/html; charset=utf-8"
+	writeRespHeader $responseG 200
+
+	writeResp $responseG $inputG
+
+	assign $outG "TX_END_RESPONSE_XT"
+`
+
+
+// 获取一个随机的可用端口用于命令服务器与图形界面通信
+getRandomPort $portT
+
+// 启动一个线程来运行HTTP服务器
+startHttpServer $resultT $portT $muxT -go
+
+spr $urlT "http://127.0.0.1:%v" $portT
+
+// 让WebView2窗口访问本机的这个端口
+// URL地址类似http://127.0.0.1:8721
+mt $rs $w navigate $urlT
+
+checkErrX $rs
+
+mt $rs $w show
+
+checkErrX $rs
+
+mt $rs $w close
+
+exit
+
+

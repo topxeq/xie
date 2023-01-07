@@ -311,15 +311,15 @@ func guiHandler(actionA string, objA interface{}, dataA interface{}, paramsA ...
 		windowStyleT := webview2.HintNone
 
 		if fixT {
-			windowStyleT := webview2.HintFixed
+			windowStyleT = webview2.HintFixed
 		}
 
 		if maxT {
-			windowStyleT := webview2.HintMax
+			windowStyleT = webview2.HintMax
 		}
 
 		if minT {
-			windowStyleT := webview2.HintMin
+			windowStyleT = webview2.HintMin
 		}
 
 		w.SetSize(tk.ToInt(widthT, 800), tk.ToInt(heightT, 600), windowStyleT)
@@ -369,10 +369,10 @@ func guiHandler(actionA string, objA interface{}, dataA interface{}, paramsA ...
 			case "close":
 				w.Destroy()
 				return nil
-			case "setDelegate":
+			case "setQuickDelegate":
 				var deleT tk.QuickVarDelegate = paramsA[0].(tk.QuickVarDelegate)
 
-				w.Bind("delegateDo", func(args ...interface{}) interface{} {
+				w.Bind("quickDelegateDo", func(args ...interface{}) interface{} {
 					// args是WebView2中调用谢语言函数时传入的参数
 					// 可以是多个，谢语言中按位置索引进行访问
 					// strT := args[0].String()
@@ -381,6 +381,81 @@ func guiHandler(actionA string, objA interface{}, dataA interface{}, paramsA ...
 
 					// 最后一定要返回一个值，空字符串也可以
 					return rsT
+				})
+
+				return nil
+			case "setDelegate":
+				var codeT string = tk.ToStr(paramsA[0])
+
+				p := objA.(*xie.XieVM)
+
+				w.Bind("delegateDo", func(argsA ...interface{}) interface{} {
+					// args是WebView2中调用谢语言函数时传入的参数
+					// 可以是多个，谢语言中按位置索引进行访问
+					// strT := args[0].String()
+
+					vmT := xie.NewXie(p.SharedMapM)
+
+					vmT.SetVar("inputG", argsA)
+
+					lrs := vmT.Load(codeT)
+
+					if tk.IsErrStr(lrs) {
+						return lrs
+					}
+
+					rs := vmT.Run()
+
+					if !tk.IsErrStr(rs) {
+						outIndexT, ok := vmT.VarIndexMapM["outG"]
+						if !ok {
+							return tk.ErrStrf("no result")
+						}
+
+						return tk.ToStr((*vmT.FuncContextM.VarsM)[vmT.FuncContextM.VarsLocalMapM[outIndexT]])
+					}
+
+					// 最后一定要返回一个值，空字符串也可以
+					return rs
+				})
+
+				return nil
+			case "setGoDelegate":
+				var codeT string = tk.ToStr(paramsA[0])
+
+				p := objA.(*xie.XieVM)
+
+				w.Bind("goDelegateDo", func(args ...interface{}) interface{} {
+					// args是WebView2中调用谢语言函数时传入的参数
+					// 可以是多个，谢语言中按位置索引进行访问
+					// strT := args[0].String()
+
+					vmT := xie.NewXie(p.SharedMapM)
+
+					vmT.VerboseM = true
+
+					vmT.SetVar("inputG", args)
+
+					// argCountT := p.Pop()
+
+					// if argCountT == Undefined {
+					// 	return tk.ErrStrf()
+					// }
+
+					// for i := 0; i < argCountA; i++ {
+					// 	vmT.Push(p.Pop())
+					// }
+
+					lrs := vmT.Load(codeT)
+
+					if tk.IsErrStr(lrs) {
+						return lrs
+					}
+
+					go vmT.Run()
+
+					// 最后一定要返回一个值，空字符串也可以
+					return ""
 				})
 
 				return nil

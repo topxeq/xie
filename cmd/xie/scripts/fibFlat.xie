@@ -1,26 +1,30 @@
-getParam $argsG 2 ``
+getParam $roundStrT $argsG 2 ``
 
-isEmpty $peek
+isEmpty $br $roundStrT
 
-ifNot :next1
+ifNot  $br :next1
     pln `参数不够`
 exit
 
 :next1
 
-convert $pop int
+convert $roundT $roundStrT int
 
 now $t1
+
+push $roundT
 
 call :fib
 
 now $t2
 
-timeSub $t2 $t1
+timeSub $timeDiffT $t2 $t1
 
-floatDiv $pop 1000
+convert $timeDiffT $timeDiffT float
 
-pl `%v 秒` $pop
+div $timeDiffT $timeDiffT #f1000
+
+pl `%v 秒` $timeDiffT
 
 pln $pop
 
@@ -31,9 +35,9 @@ exit
  
     pop $c
 
-    < $c #i2
+    < $br $c #i2
 
-    if $pop :label1
+    if $br :label1
 
     :else
         assignLocal $fibo #i1
@@ -44,8 +48,6 @@ exit
         var $temp
         
         :loop1
-            add $i #i10
-
             assign $temp $fibo
 
             add $fibo $fibo $fiboPrev
@@ -53,8 +55,8 @@ exit
             assign $fiboPrev $temp
 
             inc $i
-            < $i $c
-            if $pop :loop1
+            < $br2 $i $c
+            if $br2 :loop1
 
         push $fibo
         ret
