@@ -245,6 +245,8 @@ var InstrNameSet map[string]int = map[string]int{
 	"ifErr":  651, // 判断是否是error对象或TXERROR字符串，是则跳转
 	"ifErrX": 651, // 判断是否是error对象或TXERROR字符串，是则跳转
 
+	"switch": 691, // 用法：switch $condition1 $value1 :label1 $value2 :label2 ...
+
 	// compare related
 	"==": 701, // 判断两个数值是否相等，无参数时，比较两个弹栈值，结果压栈；参数为1个时是结果参数，两个数值从堆栈获取；参数为2个时，表示两个数值，结果压栈；参数为3个时，第一个参数是结果参数，后两个为待比较数值
 	"等于": 701,
@@ -2946,6 +2948,30 @@ func (p *XieVM) QuickEval(strA string) interface{} {
 				v2 := valueStackT.Pop()
 
 				vr := tk.GetLETResult(v2, v1)
+
+				if tk.IsErrX(vr) {
+					return fmt.Errorf("计算表达式失败：%v", vr)
+				}
+
+				valueStackT.Push(vr)
+			case "&&":
+				v1 := valueStackT.Pop()
+
+				v2 := valueStackT.Pop()
+
+				vr := tk.GetANDResult(v2, v1)
+
+				if tk.IsErrX(vr) {
+					return fmt.Errorf("计算表达式失败：%v", vr)
+				}
+
+				valueStackT.Push(vr)
+			case "||":
+				v1 := valueStackT.Pop()
+
+				v2 := valueStackT.Pop()
+
+				vr := tk.GetORResult(v2, v1)
 
 				if tk.IsErrX(vr) {
 					return fmt.Errorf("计算表达式失败：%v", vr)
@@ -7782,6 +7808,33 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 		if elseLabelIntT >= 0 {
 			return elseLabelIntT
+		}
+
+		return ""
+
+	case 691: // switch
+		if instrT.ParamLen < 3 {
+			return p.ErrStrf("参数不够")
+		}
+
+		v1 := p.GetVarValue(instrT.Params[0])
+
+		vs := p.ParamsToList(instrT, 1)
+
+		lenT := len(vs) / 2
+
+		for i := 0; i < lenT; i++ {
+			if v1 == vs[i*2] {
+				labelT := vs[i*2+1]
+
+				c, ok := labelT.(int)
+
+				if ok {
+					return c
+				} else {
+					return p.ErrStrf("标号格式错误：%T(%v)", labelT, labelT)
+				}
+			}
 		}
 
 		return ""

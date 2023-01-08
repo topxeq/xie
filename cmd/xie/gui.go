@@ -282,15 +282,33 @@ func guiHandler(actionA string, objA interface{}, dataA interface{}, paramsA ...
 			paraArgsT = append(paraArgsT, tk.ToStr(paramsA[i]))
 		}
 
-		titleT := tk.GetSwitch(paraArgsT, "-title=", "dialog")
-		widthT := tk.GetSwitch(paraArgsT, "-width=", "800")
-		heightT := tk.GetSwitch(paraArgsT, "-height=", "600")
-		iconT := tk.GetSwitch(paraArgsT, "-icon=", "2")
+		p := objA.(*xie.XieVM)
+
+		titleT := p.GetSwitchVarValue(paraArgsT, "-title=", "dialog")
+		widthT := p.GetSwitchVarValue(paraArgsT, "-width=", "800")
+		heightT := p.GetSwitchVarValue(paraArgsT, "-height=", "600")
+		iconT := p.GetSwitchVarValue(paraArgsT, "-icon=", "2")
 		debugT := tk.IfSwitchExistsWhole(paraArgsT, "-debug")
 		centerT := tk.IfSwitchExistsWhole(paraArgsT, "-center")
 		fixT := tk.IfSwitchExistsWhole(paraArgsT, "-fix")
 		maxT := tk.IfSwitchExistsWhole(paraArgsT, "-max")
 		minT := tk.IfSwitchExistsWhole(paraArgsT, "-min")
+
+		if maxT {
+			// windowStyleT = webview2.HintMax
+
+			rectT := screenshot.GetDisplayBounds(0)
+
+			widthT = tk.ToStr(rectT.Max.X)
+			heightT = tk.ToStr(rectT.Max.Y)
+		}
+
+		if minT {
+			// windowStyleT = webview2.HintMin
+
+			widthT = "0"
+			heightT = "0"
+		}
 
 		w := webview2.NewWithOptions(webview2.WebViewOptions{
 			Debug:     debugT,
@@ -312,14 +330,6 @@ func guiHandler(actionA string, objA interface{}, dataA interface{}, paramsA ...
 
 		if fixT {
 			windowStyleT = webview2.HintFixed
-		}
-
-		if maxT {
-			windowStyleT = webview2.HintMax
-		}
-
-		if minT {
-			windowStyleT = webview2.HintMin
 		}
 
 		w.SetSize(tk.ToInt(widthT, 800), tk.ToInt(heightT, 600), windowStyleT)
