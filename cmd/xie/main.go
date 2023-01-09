@@ -857,7 +857,7 @@ func main() {
 
 	}
 
-	if tk.IfSwitchExistsWhole(argsT, "-removeService") {
+	if tk.IfSwitchExistsWhole(argsT, "-removeService") || tk.IfSwitchExistsWhole(argsT, "-uninstallService") {
 		s := initSvc()
 
 		if s == nil {
