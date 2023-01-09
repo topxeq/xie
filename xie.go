@@ -712,7 +712,7 @@ var InstrNameSet map[string]int = map[string]int{
 	"getFileSize":  21703, // 获取文件大小
 	"getFileInfo":  21705, // 获取文件信息，返回映射对象，参看genFileList命令
 
-	"removeFile": 21801, // 删除文件
+	"removeFile": 21801, // 删除文件，用法：remove $rs $fileNameT -dry
 	"renameFile": 21803, // 重命名文件
 	"copyFile":   21805, // 复制文件，用法 copyFile $result $fileName1 $fileName2，可带参数-force和-bufferSize=100000等
 
@@ -731,6 +731,7 @@ var InstrNameSet map[string]int = map[string]int{
 	"getConfigDir": 21908, // 获取应用配置路径
 
 	"extractFileName": 21910, // 从文件路径中获取文件名部分
+	"getFileBase":     21910,
 	"extractFileExt":  21911, // 从文件路径中获取文件扩展名（后缀）部分
 	"extractFileDir":  21912, // 从文件路径中获取文件目录（路径）部分
 	"extractPathRel":  21915, // 从文件路径中获取文件相对路径（根据指定的根路径）
