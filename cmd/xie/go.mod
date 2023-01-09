@@ -7,6 +7,7 @@ require (
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/godror/godror v0.33.0
 	github.com/jchv/go-webview2 v0.0.0-20221223143126-dc24628cff85
+	github.com/kardianos/service v1.2.2
 	github.com/kbinani/screenshot v0.0.0-20210720154843-7d3a670d8329
 	github.com/mattn/go-sqlite3 v1.14.6
 	github.com/sciter-sdk/go-sciter v0.5.1-0.20210426171118-f5212dff3ad8

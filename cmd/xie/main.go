@@ -11,10 +11,13 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 
 	"github.com/topxeq/tk"
 	"github.com/topxeq/xie"
+
+	"github.com/kardianos/service"
 
 	_ "github.com/denisenkom/go-mssqldb"
 
@@ -24,6 +27,206 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/mattn/go-sqlite3"
 )
+
+var serviceNameG = "xieService"
+var configFileNameG = serviceNameG + ".cfg"
+var serviceModeG = false
+var currentOSG = ""
+
+type program struct {
+	BasePath string
+}
+
+func (p *program) Start(s service.Service) error {
+	// Start should not block. Do the actual work async.
+	// basePathG = p.BasePath
+	// logWithTime("basePath: %v", basePathG)
+	serviceModeG = true
+
+	go p.run()
+
+	return nil
+}
+
+func (p *program) run() {
+	go doWork()
+}
+
+func (p *program) Stop(s service.Service) error {
+	// Stop should not block. Return with a few seconds.
+	return nil
+}
+
+func initSvc() *service.Service {
+	if tk.GetOSName() == "windows" {
+		currentOSG = "win"
+		if tk.Trim(basePathG) == "." || strings.TrimSpace(basePathG) == "" {
+			basePathG = "c:\\" + "xie" // serviceNameG
+		}
+		configFileNameG = serviceNameG + "win.cfg"
+	} else {
+		currentOSG = "linux"
+		if tk.Trim(basePathG) == "." || strings.TrimSpace(basePathG) == "" {
+			basePathG = "/" + "xie" //  + serviceNameG
+		}
+		configFileNameG = serviceNameG + "linux.cfg"
+	}
+
+	if !tk.IfFileExists(basePathG) {
+		os.MkdirAll(basePathG, 0777)
+	}
+
+	tk.SetLogFile(filepath.Join(basePathG, serviceNameG+".log"))
+
+	svcConfigT := &service.Config{
+		Name:        serviceNameG,
+		DisplayName: serviceNameG,
+		Description: serviceNameG + " V" + xie.VersionG,
+		Arguments:   []string{"-service"},
+	}
+
+	prgT := &program{BasePath: basePathG}
+	var s, err = service.New(prgT, svcConfigT)
+
+	if err != nil {
+		tk.LogWithTimeCompact("%v 无法启动服务（unable to init servcie）: %v\n", svcConfigT.DisplayName, err)
+		return nil
+	}
+
+	return &s
+}
+
+func Svc() {
+	if tk.GetOSName() == "windows" {
+		currentOSG = "win"
+		if tk.Trim(basePathG) == "." || strings.TrimSpace(basePathG) == "" {
+			basePathG = "c:\\" + "xie" // serviceNameG
+		}
+		configFileNameG = serviceNameG + "win.cfg"
+	} else {
+		currentOSG = "linux"
+		if tk.Trim(basePathG) == "." || strings.TrimSpace(basePathG) == "" {
+			basePathG = "/" + "xie" //  + serviceNameG
+		}
+		configFileNameG = serviceNameG + "linux.cfg"
+	}
+
+	if !tk.IfFileExists(basePathG) {
+		os.MkdirAll(basePathG, 0777)
+	}
+
+	tk.SetLogFile(filepath.Join(basePathG, serviceNameG+".log"))
+
+	defer func() {
+		if v := recover(); v != nil {
+			tk.LogWithTimeCompact("服务异常（panic in svc）： %v", v)
+		}
+	}()
+
+	tk.DebugModeG = true
+
+	tk.LogWithTimeCompact("%v V%v", serviceNameG, xie.VersionG)
+	tk.LogWithTimeCompact("os: %v, basePathG: %v, configFileNameG: %v", runtime.GOOS, basePathG, configFileNameG)
+	tk.LogWithTimeCompact("命令行参数（command-line args）: %v", os.Args)
+
+	// tk.Pl("os: %v, basePathG: %v, configFileNameG: %v", runtime.GOOS, basePathG, configFileNameG)
+
+	cfgFileNameT := filepath.Join(basePathG, configFileNameG)
+	if tk.IfFileExists(cfgFileNameT) {
+		fileContentT := tk.LoadSimpleMapFromFile(cfgFileNameT)
+
+		if fileContentT != nil {
+			basePathG = fileContentT["xieBasePath"]
+		}
+	}
+
+	tk.LogWithTimeCompact("服务已启动。（Service started.）")
+	// tk.LogWithTimeCompact("Using config file: %v", cfgFileNameT)
+
+	runAutoRemoveTask := func() {
+		for {
+			taskFileListT := tk.GetFileList(basePathG, "-pattern=autoRemoveTask*.xie", "-sort=asc", "-sortKey=Name")
+
+			if len(taskFileListT) > 0 {
+				for i, v := range taskFileListT {
+
+					fcT := tk.LoadStringFromFile(v["Abs"])
+
+					if tk.IsErrX(fcT) {
+						tk.LogWithTimeCompact("载入自动任务脚本失败（failed to load run-then-remove task） - [%v] %v：%v", i, v["Abs"], tk.GetErrStrX(fcT))
+						continue
+					}
+
+					tk.LogWithTimeCompact("执行运行后即删任务脚本（running run-then-remove task）: %v ...", v["Abs"])
+
+					scriptPathG = v["Abs"]
+
+					rs := xie.RunCode(fcT, map[string]interface{}{"scriptPathG": scriptPathG, "basePathG": basePathG}, nil)
+					if rs != "TXERROR:no result" {
+						tk.LogWithTimeCompact("任务脚本返回（task result）：%v", rs)
+					}
+
+					tk.RemoveFile(v["Abs"])
+				}
+			}
+
+			tk.Sleep(5.0)
+
+		}
+
+	}
+
+	go runAutoRemoveTask()
+
+	taskFileListT := tk.GetFileList(basePathG, "-pattern=task*.xie", "-sort=asc", "-sortKey=Name")
+
+	if len(taskFileListT) > 0 {
+		for i, v := range taskFileListT {
+
+			fcT := tk.LoadStringFromFile(v["Abs"])
+
+			if tk.IsErrX(fcT) {
+				tk.LogWithTimeCompact("载入自动任务脚本失败（failed to load auto task） - [%v] %v：%v", i, v["Abs"], tk.GetErrStrX(fcT))
+				continue
+			}
+
+			tk.LogWithTimeCompact("执行任务脚本（running task）: %v ...", v["Abs"])
+
+			scriptPathG = v["Abs"]
+
+			rs := xie.RunCode(fcT, map[string]interface{}{"scriptPathG": scriptPathG, "basePathG": basePathG}, nil)
+			if rs != "TXERROR:no result" {
+				tk.LogWithTimeCompact("任务脚本返回（auto task result）：%v", rs)
+			}
+		}
+	}
+
+	// c := 0
+	for {
+		tk.Sleep(60.0)
+
+		// c++
+		// tk.Pl("c: %v", c)
+		// tk.LogWithTimeCompact("c: %v", c)
+	}
+
+}
+
+var exitG = make(chan struct{})
+
+func doWork() {
+	serviceModeG = true
+
+	go Svc()
+
+	for {
+		select {
+		case <-exitG:
+			os.Exit(0)
+			return
+		}
+	}
+}
 
 func test() {
 	// fontPaths := findfont.List()
@@ -562,6 +765,200 @@ func main() {
 		return
 	}
 
+	if tk.IfSwitchExistsWhole(argsT, "-service") {
+		tk.Pl("%v V%v 正在服务模式下运行。启动谢语言时带有-service参数时将使其运行在服务模式下。\n%v V%v is in service(server) mode. Running the application with argument \"-service\" will cause it in service mode.\n", serviceNameG, xie.VersionG, serviceNameG, xie.VersionG)
+		serviceModeG = true
+
+		s := initSvc()
+
+		if s == nil {
+			tk.LogWithTimeCompact("Failed to init service")
+			return
+		}
+
+		err := (*s).Run()
+		if err != nil {
+			tk.LogWithTimeCompact("Service \"%s\" failed to run.", (*s).String())
+		}
+
+		return
+	}
+
+	if tk.IfSwitchExistsWhole(argsT, "-installService") {
+		s := initSvc()
+
+		if s == nil {
+			tk.Pl("初始化服务失败（failed to init service）")
+			return
+		}
+
+		tk.Pl("安装服务（installing service） \"%v\"...", (*s).String())
+
+		errT := (*s).Install()
+		if errT != nil {
+			tk.Pl("安装服务失败（failed to install service）: %v", errT)
+			return
+		}
+
+		tk.Pl("服务安装成功（service installed） - \"%s\" .", (*s).String())
+
+		// tk.Pl("启动服务（starting service） \"%v\"...", (*s).String())
+
+		// errT = (*s).Start()
+		// if errT != nil {
+		// 	tk.Pl("启动服务失败（failed to start）: %v", errT)
+		// 	return
+		// }
+
+		// tk.Pl("服务已启动（service started） - \"%s\" .", (*s).String())
+
+		return
+
+	}
+
+	if tk.IfSwitchExistsWhole(argsT, "-startService") {
+		s := initSvc()
+
+		if s == nil {
+			tk.Pl("初始化服务失败（failed to init service）")
+			return
+		}
+
+		tk.Pl("启动服务（starting service） \"%v\"...", (*s).String())
+
+		errT := (*s).Start()
+		if errT != nil {
+			tk.Pl("启动服务失败（failed to start）: %v", errT)
+			return
+		}
+
+		tk.Pl("服务已启动（service started） - \"%s\" .", (*s).String())
+
+		return
+
+	}
+
+	if tk.IfSwitchExistsWhole(argsT, "-stopService") {
+		s := initSvc()
+
+		if s == nil {
+			tk.Pl("初始化服务失败（failed to init service）")
+			return
+		}
+
+		errT := (*s).Stop()
+		if errT != nil {
+			tk.Pl("停止服务失败（failed to stop service）: %s", errT)
+		} else {
+			tk.Pl("服务已停止（service stopped） - \"%s\" .", (*s).String())
+		}
+
+		return
+
+	}
+
+	if tk.IfSwitchExistsWhole(argsT, "-removeService") {
+		s := initSvc()
+
+		if s == nil {
+			tk.Pl("初始化服务失败（failed to init service）")
+			return
+		}
+
+		errT := (*s).Stop()
+		if errT != nil {
+			tk.Pl("停止服务失败（failed to stop service）: %s", errT)
+		} else {
+			tk.Pl("服务已停止（service stopped） - \"%s\" .", (*s).String())
+		}
+
+		errT = (*s).Uninstall()
+		if errT != nil {
+			tk.Pl("服务移除失败（failed to remove service）: %v", errT)
+			return
+		}
+
+		tk.Pl("服务已移除（service removed） - \"%s\" .", (*s).String())
+
+		return
+
+	}
+
+	if tk.IfSwitchExistsWhole(argsT, "-reinstallService") {
+		s := initSvc()
+
+		if s == nil {
+			tk.Pl("初始化服务失败（failed to init service）")
+			return
+		}
+
+		errT := (*s).Stop()
+		if errT != nil {
+			tk.Pl("停止服务失败（failed to stop service）: %s", errT)
+		} else {
+			tk.Pl("服务已停止（service stopped） - \"%s\" .", (*s).String())
+		}
+
+		errT = (*s).Uninstall()
+		if errT != nil {
+			tk.Pl("服务移除失败（failed to remove service）: %v", errT)
+		} else {
+			tk.Pl("服务已移除（service removed） - \"%s\" .", (*s).String())
+		}
+
+		tk.Pl("安装服务（installing service） \"%v\"...", (*s).String())
+
+		errT = (*s).Install()
+		if errT != nil {
+			tk.Pl("安装服务失败（failed to install service）: %v", errT)
+			return
+		}
+
+		tk.Pl("服务安装成功（service installed） - \"%s\" .", (*s).String())
+
+		tk.Pl("启动服务（starting service） \"%v\"...", (*s).String())
+
+		errT = (*s).Start()
+		if errT != nil {
+			tk.Pl("启动服务失败（failed to start）: %v", errT)
+			return
+		}
+
+		tk.Pl("服务已启动（service started） - \"%s\" .", (*s).String())
+
+		return
+
+	}
+
+	if tk.IfSwitchExistsWhole(argsT, "-restartService") {
+		s := initSvc()
+
+		if s == nil {
+			tk.Pl("初始化服务失败（failed to init service）")
+			return
+		}
+
+		errT := (*s).Stop()
+		if errT != nil {
+			tk.Pl("停止服务失败（failed to stop service）: %s", errT)
+		} else {
+			tk.Pl("服务已停止（service stopped） - \"%s\" .", (*s).String())
+		}
+
+		tk.Pl("启动服务（starting service） \"%v\"...", (*s).String())
+
+		errT = (*s).Start()
+		if errT != nil {
+			tk.Pl("启动服务失败（failed to start）: %v", errT)
+			return
+		}
+
+		tk.Pl("服务已启动（service started） - \"%s\" .", (*s).String())
+
+		return
+
+	}
+
 	ifExampleT := tk.IfSwitchExistsWhole(argsT, "-example")
 	ifExamT := tk.IfSwitchExistsWhole(argsT, "-exam")
 	ifGoPathT := tk.IfSwitchExistsWhole(argsT, "-gopath")
@@ -620,16 +1017,16 @@ func main() {
 		if len(fileListT) > 0 {
 			for i, v := range fileListT {
 
-				fcT := tk.LoadStringFromFile(v["Path"])
+				fcT := tk.LoadStringFromFile(v["Abs"])
 
 				if tk.IsErrX(fcT) {
-					tk.Pl("载入自动脚本([%v] %v)失败：%v", i, v["Path"], tk.GetErrStrX(fcT))
+					tk.Pl("载入自动脚本([%v] %v)失败：%v", i, v["Abs"], tk.GetErrStrX(fcT))
 					return
 				}
 
-				scriptPathG = "."
+				scriptPathG = v["Abs"]
 
-				rs := xie.RunCode(fcT, map[string]interface{}{"guiG": guiHandlerG, "scriptPathG": scriptPathG}, nil, argsT...)
+				rs := xie.RunCode(fcT, map[string]interface{}{"guiG": guiHandlerG, "scriptPathG": scriptPathG, "basePathG": basePathG}, nil, argsT...)
 				if rs != "TXERROR:no result" {
 					tk.Pl("%v", rs)
 				}

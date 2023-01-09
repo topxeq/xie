@@ -1,0 +1,6 @@
+joinPath $logPathT $basePathG "xieService.log"
+
+appendText $rs "\ntask001.xie\n" $logPathT
+
+= $outG "task001 returns some result 000"
+

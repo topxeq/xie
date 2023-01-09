@@ -693,6 +693,9 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"loadBytesLimit": 21107, // 从指定文件载入数据（字节列表），不超过指定字节数
 
+	"appendText": 21111, // 追加文本到指定文件末尾
+	"追加文本":       21111,
+
 	"writeStr": 21201, // 写入字符串，可以向文件、字节数组、字符串等写入
 
 	"createFile": 21501, // 新建文件，如果带-return参数，将在成功时返回FILE对象，失败时返回error对象，否则返回error对象，成功为nil，-overwrite有重复文件不会提示。如果需要指定文件标志位等，用openFile指令
@@ -14513,6 +14516,29 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		fcT := tk.LoadBytesFromFile(tk.ToStr(p.GetVarValue(instrT.Params[1])), tk.ToInt(p.GetVarValue(instrT.Params[2])))
 
 		p.SetVarInt(pr, fcT)
+
+		return ""
+
+	case 21111: // appendText
+		if instrT.ParamLen < 2 {
+			return p.ErrStrf("参数不够")
+		}
+
+		pr := -5
+		v1p := 0
+
+		if instrT.ParamLen > 2 {
+			pr = instrT.Params[0].Ref
+			v1p = 1
+		}
+
+		rsT := tk.AppendStringToFile(tk.ToStr(p.GetVarValue(instrT.Params[v1p])), tk.ToStr(p.GetVarValue(instrT.Params[v1p+1])))
+
+		if rsT != "" {
+			p.SetVarInt(pr, fmt.Errorf(tk.GetErrStr(rsT)))
+		} else {
+			p.SetVarInt(pr, "")
+		}
 
 		return ""
 

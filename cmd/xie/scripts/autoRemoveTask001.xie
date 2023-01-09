@@ -1,0 +1,3 @@
+joinPath $logPathT $basePathG "xieService.log"
+
+appendText $rs "\nautoRemoveTask001.xie\n" $logPathT
