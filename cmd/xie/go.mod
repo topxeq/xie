@@ -17,6 +17,8 @@ require (
 	github.com/topxeq/xie v0.0.0
 )
 
+require github.com/topxeq/countingwriter v0.0.0-20230112012023-e109792a7e10 // indirect
+
 require (
 	github.com/aarzilli/sandblast v0.0.0-20151220083925-43f8fb998d06 // indirect
 	github.com/alecthomas/chroma v0.10.0 // indirect
@@ -63,7 +65,7 @@ require (
 	github.com/ssor/bom v0.0.0-20170718123548-6386211fdfcf // indirect
 	github.com/stretchr/testify v1.7.2 // indirect
 	github.com/topxeq/gods v0.0.0-20220125023913-b5718bb0c704 // indirect
-	github.com/topxeq/goph v0.0.0-20221230013617-12d452557b9e // indirect
+	github.com/topxeq/goph v0.0.0-20230113131413-bfce71ff75e9 // indirect
 	github.com/topxeq/mahonia v0.0.0-20190828060648-12b0599ddd1a // indirect
 	github.com/topxeq/regexpx v0.0.0-20200814082553-4bffc7d07029 // indirect
 	github.com/topxeq/socks v0.0.0-20200812112322-24acb126b5f3 // indirect
@@ -88,7 +90,7 @@ require (
 
 replace github.com/topxeq/tk v1.0.1 => ../../../tk
 
-// replace github.com/topxeq/goph v0.0.0-20221226004140-460511aa0dde => ../../../goph
+// replace github.com/topxeq/goph v0.0.0 => ../../../goph
 
 replace github.com/topxeq/xie v0.0.0 => ../..
 

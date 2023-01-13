@@ -2,6 +2,7 @@ package xie
 
 import (
 	"bytes"
+	"compress/gzip"
 	"database/sql"
 	"encoding/base64"
 	"encoding/hex"
@@ -902,6 +903,9 @@ var InstrNameSet map[string]int = map[string]int{
 	// zip related 压缩相关
 	"archiveFilesToZip":   90101, // 添加多个文件到一个新建的zip文件，第一个参数为zip文件名，后缀必须是.zip，可选参数-overwrite（是否覆盖已有文件），-makeDirs（是否根据需要新建目录），其他参数看做是需要添加的文件或目录，目录将递归加入zip文件，如果参数为一个列表，将看作一个文件名列表，其中的文件都将加入
 	"extractFilesFromZip": 90111, // 添加文件到zip文件
+
+	"compressData":   90201, // 压缩数据，用法：compressData $result $data -method=gzip，压缩方法由-method参数指定，默认为gzip，还支持lzw
+	"decompressData": 90203, // 解压缩数据
 
 	// web GUI related 网页界面相关
 	"initWebGUIW":   100001, // 初始化Web图形界面编程环境（Windows下IE11版本），如果没有外嵌式浏览器xiewbr，则将其下载到xie语言目录下
@@ -14346,17 +14350,17 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			return p.ErrStrf("参数不够")
 		}
 
-		var pr int = -5
-		v1p := 0
+		// var pr int = -5
+		// v1p := 0
 
-		if instrT.ParamLen > 1 {
-			pr = instrT.Params[0].Ref
-			v1p = 1
-		}
+		// if instrT.ParamLen > 1 {
+		pr := instrT.Params[0].Ref
+		v1p := 1
+		// }
 
 		v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
 
-		optsA := p.ParamsToStrs(instrT, 2)
+		optsA := p.ParamsToStrs(instrT, v1p+1)
 
 		p.SetVarInt(pr, tk.SystemCmd(v1, optsA...))
 
@@ -17014,6 +17018,62 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 		p.SetVarInt(pr, errT)
 
+		return ""
+
+	case 90201: // compressData
+		if instrT.ParamLen < 2 {
+			return p.ErrStrf("参数不够")
+		}
+
+		pr := instrT.Params[0].Ref
+		v1p := 1
+
+		v1 := p.GetVarValue(instrT.Params[v1p])
+
+		v1vb, ok := v1.([]byte)
+
+		if !ok {
+			v1vs, ok := v1.(string)
+
+			if ok {
+				v1vb = []byte(v1vs)
+			} else {
+				return p.ErrStrf("参数格式错误（invalid param type）：%T(%v)", v1, v1)
+			}
+		}
+
+		vs := p.ParamsToStrs(instrT, v1p+1)
+
+		methodT := p.GetSwitchVarValue(vs, "-method=", "gzip")
+
+		nameT := p.GetSwitchVarValue(vs, "-name=", "")
+		commentT := p.GetSwitchVarValue(vs, "-comment=", "")
+		timeT := tk.ToTime(p.GetSwitchVarValue(vs, "-time=", ""), time.Now()).(time.Time)
+
+		var buf bytes.Buffer
+		zw := gzip.NewWriter(&buf)
+
+		if methodT == "gzip" {
+			zw.Name = nameT
+			zw.Comment = commentT
+			zw.ModTime = timeT
+
+			_, err := zw.Write(v1vb)
+			if err != nil {
+				p.SetVarInt(pr, fmt.Errorf("压缩数据时发生错误（failed to compress data）：%v", err))
+				return ""
+			}
+
+			if err := zw.Close(); err != nil {
+				p.SetVarInt(pr, fmt.Errorf("压缩数据关闭文件时发生错误（failed to compress data file）：%v", err))
+				return ""
+			}
+
+			p.SetVarInt(pr, buf.Bytes())
+			return ""
+		}
+
+		p.SetVarInt(pr, fmt.Errorf("不支持的压缩格式（unsupported compress method）：%v", methodT))
 		return ""
 
 	case 100001: // initWebGUIW/initWebGuiW
