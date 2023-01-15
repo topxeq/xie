@@ -29,6 +29,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/domodwyer/mailyak"
 	"github.com/topxeq/goph"
 	"github.com/topxeq/sqltk"
 	"github.com/topxeq/tk"
@@ -40,7 +41,7 @@ import (
 	excelize "github.com/xuri/excelize/v2"
 )
 
-var VersionG string = "0.6.8"
+var VersionG string = "0.6.9"
 
 var ShellModeG bool = false
 
@@ -939,6 +940,10 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"excelGetSheetList": 210201, // 获取sheet名字列表，结果是字符串数组
 
+	// mail related
+
+	// "mailNewSender": 220001, // 新建一个邮件发送对象，与 new $result "mailSender" 指令效果类似
+
 	// GUI related 图形界面相关
 
 	"guiInit": 400000, // 初始化GUI环境
@@ -952,61 +957,7 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"getConfirm": 400011, // 显示信息，获取用户的确认
 
-	// "guiInit": 210011,
-
-	// "guiNewApp": 210013,
-
-	// "guiSetFont": 210021,
-
 	"guiNewWindow": 400031,
-
-	// "guiSetDelegate": 400053,
-
-	// "guiNewLoop": 210032,
-
-	// "guiCloseWindow": 210033,
-
-	// // "guiSetContent": 210033,
-
-	// "guiRunLoop": 210037,
-
-	// "guiLoopRet": 210038,
-
-	// "guiNewFunc": 210041,
-
-	// "guiLayout": 210051,
-
-	// "guiSetVar": 210101,
-
-	// "guiSetVarByRef": 210102,
-
-	// "guiNewVar": 210103,
-
-	// "guiGetVar": 210105,
-
-	// "guiGetVarByRef": 210107,
-
-	// "guiNewLabel": 211001,
-
-	// "guiStaticLabel": 211002,
-
-	// "guiLabel": 211003,
-
-	// // "guiNewButton": 211011,
-
-	// "guiButton":       211013,
-	// "guiStaticButton": 211014,
-
-	// "guiInput": 211015,
-
-	// "guiRow": 211101,
-
-	// "guiColumn": 211103,
-
-	// "guiSpacing": 211105,
-	// "guiGap":     211105,
-
-	// "guiNewVBox": 211101,
 
 	// misc related 杂项相关
 	"getSeq":   500001, // 获得一个自增长的、唯一的整数，最初从1开始，可以用resetSeq指令重置，getSeq指令是线程安全的
@@ -10785,12 +10736,58 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		case "time":
 			timeT := time.Now()
 			p.SetVarInt(pr, &timeT)
-		case "mutex", "lock":
+		case "mutex", "lock": // 同步锁
 			p.SetVarInt(pr, new(sync.RWMutex))
-		case "mux":
+		case "waitGroup": // 同步等待组
+			// var wg sync.WaitGroup
+			// wg.Add(1)
+			// go func() {
+			// 	defer wg.Done()
+			// 	...
+			// }()
+			// wg.Wait()
+			p.SetVarInt(pr, new(sync.WaitGroup))
+		case "mux": // http请求处理路由器
 			p.SetVarInt(pr, http.NewServeMux())
-		case "seq":
+		case "seq": // 序列生成器（自动增长的整数序列，一般用于需要唯一性ID时）
 			p.SetVarInt(pr, tk.NewSeq())
+		case "messageQueue", "syncQueue": // 线程安全的先进先出队列
+			p.SetVarInt(pr, tk.NewSeq())
+		case "mailSender": // 邮件发送客户端
+			vs := p.ParamsToStrs(instrT, v1p+1)
+
+			hostT := strings.TrimSpace(p.GetSwitchVarValue(vs, "-host=", ""))
+			portT := strings.TrimSpace(p.GetSwitchVarValue(vs, "-port=", "25"))
+			userT := strings.TrimSpace(p.GetSwitchVarValue(vs, "-user=", ""))
+			passT := strings.TrimSpace(p.GetSwitchVarValue(vs, "-pass=", ""))
+			if strings.HasPrefix(passT, "740404") {
+				passT = tk.DecryptStringByTXDEF(passT)
+			}
+
+			if hostT == "" {
+				p.SetVarInt(pr, fmt.Errorf("服务器地址不能为空（empty host）"))
+				return ""
+			}
+
+			if portT == "" {
+				p.SetVarInt(pr, fmt.Errorf("端口不能为空（empty port"))
+				return ""
+			}
+
+			if userT == "" {
+				p.SetVarInt(pr, fmt.Errorf("用户名不能为空（empty user name"))
+				return ""
+			}
+
+			if passT == "" {
+				p.SetVarInt(pr, fmt.Errorf("口令不能为空（empty password"))
+				return ""
+			}
+
+			rs := mailyak.New(hostT+":"+portT, tk.GetLoginAuth(userT, passT))
+
+			p.SetVarInt(pr, rs)
+			// p.SetVarInt(pr, tk.NewQuickObject("-type=mailSender"))
 		case "ssh":
 			v2 := tk.ToStr(p.GetVarValue(instrT.Params[v1p+1]))
 			v3 := tk.ToStr(p.GetVarValue(instrT.Params[v1p+2]))
@@ -11115,6 +11112,8 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 		v2 := tk.ToStr(p.GetVarValue(instrT.Params[2]))
 
+		// v3p := 3
+
 		switch nv := v1.(type) {
 		case string:
 			mapT := memberMapG["string"]
@@ -11127,6 +11126,128 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 				return ""
 			}
+		case *mailyak.MailYak:
+			switch v2 {
+			case "to":
+				vs := p.ParamsToStrs(instrT, 3)
+
+				nv.To(vs...)
+
+				// p.SetVarInt(pr, nil)
+
+				return ""
+			case "from":
+				if instrT.ParamLen < 4 {
+					return p.ErrStrf("参数不够（not enough parameters）")
+				}
+
+				v3 := tk.ToStr(p.GetVarValue(instrT.Params[3]))
+
+				nv.From(v3)
+
+				return ""
+			case "fromName":
+				if instrT.ParamLen < 4 {
+					return p.ErrStrf("参数不够（not enough parameters）")
+				}
+
+				v3 := tk.ToStr(p.GetVarValue(instrT.Params[3]))
+
+				nv.FromName(v3)
+
+				return ""
+			case "subject":
+				if instrT.ParamLen < 4 {
+					return p.ErrStrf("参数不够（not enough parameters）")
+				}
+
+				v3 := tk.ToStr(p.GetVarValue(instrT.Params[3]))
+
+				nv.Subject(v3)
+
+				return ""
+			case "body", "setHtmlBody", "setBody":
+				if instrT.ParamLen < 4 {
+					return p.ErrStrf("参数不够（not enough parameters）")
+				}
+
+				v3 := tk.ToStr(p.GetVarValue(instrT.Params[3]))
+
+				_, errT := io.WriteString(nv.HTML(), v3)
+
+				if errT != nil {
+					p.SetVarInt(pr, fmt.Errorf("邮件格式解析错误（failed to parse mail body）：%v", errT))
+					return ""
+				}
+
+				nv.Plain().Set(v3)
+
+				p.SetVarInt(pr, "")
+				return ""
+			case "setPlainBody":
+				if instrT.ParamLen < 4 {
+					return p.ErrStrf("参数不够（not enough parameters）")
+				}
+
+				v3 := tk.ToStr(p.GetVarValue(instrT.Params[3]))
+
+				_, errT := io.WriteString(nv.HTML(), v3)
+
+				if errT != nil {
+					p.SetVarInt(pr, fmt.Errorf("邮件格式解析错误（failed to parse mail body）：%v", errT))
+					return ""
+				}
+
+				nv.Plain().Set(v3)
+
+				p.SetVarInt(pr, "")
+				return ""
+			case "addHeader":
+				if instrT.ParamLen < 6 {
+					return p.ErrStrf("参数不够（not enough parameters）")
+				}
+
+				v3 := tk.ToStr(p.GetVarValue(instrT.Params[3]))
+				v4 := tk.ToStr(p.GetVarValue(instrT.Params[4]))
+
+				nv.AddHeader(v3, v4)
+
+				return ""
+			case "send":
+				errT := nv.Send()
+
+				if errT != nil {
+					p.SetVarInt(pr, fmt.Errorf("邮件发送失败（failed to send mail）：%v", errT))
+					return ""
+				}
+
+				p.SetVarInt(pr, "")
+				return ""
+			case "info", "string":
+				p.SetVarInt(pr, nv.String())
+				return ""
+			}
+		// case *tk.QuickObject:
+		// 	switch nv.Type {
+		// 	case "mailSender":
+		// 		if nv.Value == nil {
+		// 			nv.Value = make(map[string]interface{})
+		// 		}
+
+		// 		switch v2 {
+		// 		case "setHost":
+		// 			v3 := tk.ToStr(p.GetVarValue(instrT.Params[v3p]))
+
+		// 			valueT := nv.Value.(map[string]interface{})
+
+		// 			valueT["Host"] = v3
+
+		// 			p.SetVarInt(pr, nil)
+
+		// 			return ""
+		// 		}
+
+		// 	}
 		case time.Time:
 			switch v2 {
 			case "toStr":
@@ -11184,8 +11305,9 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 				p.SetVarInt(pr, int(vvv)/1000000)
 				return ""
 			default:
-				p.SetVarInt(pr, fmt.Sprintf("未知方法: %v", v2))
-				return p.ErrStrf("未知方法: %v", v2)
+				break
+				// p.SetVarInt(pr, fmt.Sprintf("未知方法: %v", v2))
+				// return p.ErrStrf("未知方法: %v", v2)
 			}
 		case *sync.RWMutex:
 			switch v2 {
@@ -11202,12 +11324,13 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			case "readUnlock":
 				nv.RUnlock()
 			default:
-				p.SetVarInt(pr, fmt.Sprintf("未知方法: %v", v2))
-				return p.ErrStrf("未知方法: %v", v2)
+				break
+				// p.SetVarInt(pr, fmt.Sprintf("未知方法: %v", v2))
+				// return p.ErrStrf("未知方法: %v", v2)
 			}
 
-			p.SetVarInt(pr, "")
-			return ""
+			// p.SetVarInt(pr, "")
+			// return ""
 		case *goph.Client:
 			switch v2 {
 			case "close":
@@ -11276,12 +11399,13 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 				return ""
 			default:
-				p.SetVarInt(pr, fmt.Sprintf("未知方法: %v", v2))
-				return p.ErrStrf("未知方法: %v", v2)
+				break
+				// p.SetVarInt(pr, fmt.Sprintf("未知方法: %v", v2))
+				// return p.ErrStrf("未知方法: %v", v2)
 			}
 
-			p.SetVarInt(pr, "")
-			return ""
+			// p.SetVarInt(pr, "")
+			// return ""
 		case *strings.Builder:
 
 			switch v2 {
@@ -11391,7 +11515,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 				return ""
 
 			}
-			return ""
+			// return ""
 		}
 
 		mapT := memberMapG[""]
