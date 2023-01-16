@@ -6,7 +6,7 @@ require (
 	github.com/domodwyer/mailyak v3.1.1+incompatible
 	github.com/kbinani/screenshot v0.0.0-20210720154843-7d3a670d8329
 	github.com/mholt/archiver/v3 v3.5.1
-	github.com/topxeq/goph v0.0.0-20230115120321-83c87d1c01f4
+	github.com/topxeq/goph v0.0.0-20230116054750-120b087d86fb
 	github.com/topxeq/sqltk v0.0.0-20221225082143-d6266faebd41
 	github.com/topxeq/tk v1.0.1
 	github.com/xuri/excelize/v2 v2.6.1

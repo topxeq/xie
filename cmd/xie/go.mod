@@ -66,7 +66,7 @@ require (
 	github.com/ssor/bom v0.0.0-20170718123548-6386211fdfcf // indirect
 	github.com/stretchr/testify v1.7.2 // indirect
 	github.com/topxeq/gods v0.0.0-20220125023913-b5718bb0c704 // indirect
-	github.com/topxeq/goph v0.0.0-20230115120321-83c87d1c01f4 // indirect
+	github.com/topxeq/goph v0.0.0-20230116054750-120b087d86fb // indirect
 	github.com/topxeq/mahonia v0.0.0-20190828060648-12b0599ddd1a // indirect
 	github.com/topxeq/regexpx v0.0.0-20200814082553-4bffc7d07029 // indirect
 	github.com/topxeq/socks v0.0.0-20200812112322-24acb126b5f3 // indirect

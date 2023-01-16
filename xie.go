@@ -702,9 +702,13 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"createFile": 21501, // 新建文件，如果带-return参数，将在成功时返回FILE对象，失败时返回error对象，否则返回error对象，成功为nil，-overwrite有重复文件不会提示。如果需要指定文件标志位等，用openFile指令
 
-	"openFile": 21503, // 打开文件，如果带-read参数，则为只读，-write参数可写，-create参数则无该文件时创建一个，-perm=0777可以指定文件权限标志位
+	"openFile": 21503, // 打开文件，如果带-readOnly参数，则为只读，-write参数可写，-create参数则无该文件时创建一个，-perm=0777可以指定文件权限标志位
+
+	"openFileForRead": 21505, // 打开一个文件，仅为读取内容使用
 
 	"closeFile": 21507, // 关闭文件
+
+	"close": 21509, // 关闭文件等具有Close方法的对象
 
 	"cmpBinFile": 21601, // 逐个字节比较二进制文件，用法： cmpBinFile $result $file1 $file2 -identical -verbose，如果带有-identical参数，则只比较文件异同（遇上第一个不同的字节就返回布尔值false，全相同则返回布尔值true），不带-identical参数时，将返回一个比较结果对象
 
@@ -781,8 +785,10 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"base64Encode": 24401, // Base64编码，输入参数是[]byte字节数组或字符串
 	"base64":       24401,
+	"toBase64":     24401,
 	"base64Decode": 24403, // Base64解码
 	"unbase64":     24403,
+	"fromBase64":   24403,
 
 	"htmlEncode": 24501, // HTML编码（&nbsp;等）
 	"htmlDecode": 24503, // HTML解码
@@ -10733,6 +10739,46 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			}
 
 			p.SetVarInt(pr, p1)
+		case "reader": // 读取参数中的类型，自动判断后统一转为Go语言中的io.Reader
+			if instrT.ParamLen < 3 {
+				return p.ErrStrf("参数不够")
+			}
+
+			vs1 := p.GetVarValue(instrT.Params[v1p+1])
+
+			switch nv := vs1.(type) {
+			case string:
+				p.SetVarInt(pr, strings.NewReader(nv))
+				return ""
+			case []byte:
+				p.SetVarInt(pr, bytes.NewReader(nv))
+				return ""
+			case *os.File:
+				p.SetVarInt(pr, nv)
+				return ""
+
+			}
+
+			return p.ErrStrf("不支持的类型(type not supported)：%T(%v)", vs1, vs1)
+
+		case "fileReader": // 打开字符串参数指定的路径名的文件，转为io.Reader/FILE
+			if instrT.ParamLen < 3 {
+				return p.ErrStrf("参数不够")
+			}
+
+			vs1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p+1]))
+
+			fileT, errT := os.Open(vs1)
+
+			if errT != nil {
+				p.SetVarInt(pr, errT)
+				return ""
+			}
+
+			p.SetVarInt(pr, fileT)
+
+			return ""
+
 		case "time":
 			timeT := time.Now()
 			p.SetVarInt(pr, &timeT)
@@ -10810,7 +10856,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			objT := p.GetVar("guiG")
 			p.SetVarInt(pr, objT)
 		case "quickStringDelegate": // quickStringDelegate中，CodePointerM并不跳转（除非有移动其的指令执行）
-			if instrT.ParamLen < 2 {
+			if instrT.ParamLen < 3 {
 				return p.ErrStrf("参数不够")
 			}
 
@@ -10869,7 +10915,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 			p.SetVarInt(pr, deleT)
 		case "quickDelegate": // quickDelegate中，CodePointerM并不跳转（除非有移动其的指令执行）
-			if instrT.ParamLen < 2 {
+			if instrT.ParamLen < 3 {
 				return p.ErrStrf("参数不够")
 			}
 
@@ -10928,7 +10974,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 			p.SetVarInt(pr, deleT)
 		case "delegate": // delegate中，类似callFunc，将使用单独的虚拟机执行代码
-			if instrT.ParamLen < 2 {
+			if instrT.ParamLen < 3 {
 				return p.ErrStrf("参数不够")
 			}
 
@@ -11136,6 +11182,18 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 				// p.SetVarInt(pr, nil)
 
 				return ""
+			case "cc":
+				vs := p.ParamsToStrs(instrT, 3)
+
+				nv.Cc(vs...)
+
+				return ""
+			case "bcc":
+				vs := p.ParamsToStrs(instrT, 3)
+
+				nv.Bcc(vs...)
+
+				return ""
 			case "from":
 				if instrT.ParamLen < 4 {
 					return p.ErrStrf("参数不够（not enough parameters）")
@@ -11164,6 +11222,45 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 				v3 := tk.ToStr(p.GetVarValue(instrT.Params[3]))
 
 				nv.Subject(v3)
+
+				return ""
+			case "attach": // 添加附件(最后一个参数是mime类型，可以省略)，用法：mt $drop $mail attach "imageName1.png" $fr1 "image/png"
+				if instrT.ParamLen < 5 {
+					return p.ErrStrf("参数不够（not enough parameters）")
+				}
+
+				v3 := tk.ToStr(p.GetVarValue(instrT.Params[3]))
+				v4 := p.GetVarValue(instrT.Params[4]).(io.Reader)
+
+				if instrT.ParamLen > 5 {
+					v5 := tk.ToStr(p.GetVarValue(instrT.Params[5]))
+
+					nv.AttachWithMimeType(v3, v4, v5)
+
+					return ""
+				}
+
+				nv.Attach(v3, v4)
+
+				return ""
+			case "attachInline": // （此法未经验证有效）添加内嵌附件以便在html中引用，引用方法是：<img src="cid:myFileName"/>，用法：mt $drop $mail attachInline "imageName1.png" $fr1 "image/png"
+
+				if instrT.ParamLen < 5 {
+					return p.ErrStrf("参数不够（not enough parameters）")
+				}
+
+				v3 := tk.ToStr(p.GetVarValue(instrT.Params[3]))
+				v4 := p.GetVarValue(instrT.Params[4]).(io.Reader)
+
+				if instrT.ParamLen > 5 {
+					v5 := tk.ToStr(p.GetVarValue(instrT.Params[5]))
+
+					nv.AttachInlineWithMimeType(v3, v4, v5)
+
+					return ""
+				}
+
+				nv.AttachInline(v3, v4)
 
 				return ""
 			case "body", "setHtmlBody", "setBody":
@@ -11203,7 +11300,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 				p.SetVarInt(pr, "")
 				return ""
 			case "addHeader":
-				if instrT.ParamLen < 6 {
+				if instrT.ParamLen < 5 {
 					return p.ErrStrf("参数不够（not enough parameters）")
 				}
 
@@ -14752,7 +14849,43 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 		vs := p.ParamsToStrs(instrT, v1p+1)
 
+		if tk.IfSwitchExistsWhole(vs, "-read") {
+			fileT, errT := os.Open(v1)
+
+			if errT != nil {
+				p.SetVarInt(pr, errT)
+
+				return ""
+			}
+
+			p.SetVarInt(pr, fileT)
+
+			return ""
+
+		}
+
 		fileT := tk.OpenFile(v1, vs...)
+
+		p.SetVarInt(pr, fileT)
+
+		return ""
+
+	case 21505: // openFileForRead
+		if instrT.ParamLen < 2 {
+			return p.ErrStrf("参数不够")
+		}
+
+		pr := instrT.Params[0].Ref
+		v1p := 1
+
+		v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
+
+		fileT, errT := os.Open(v1)
+
+		if errT != nil {
+			p.SetVarInt(pr, fileT)
+			return ""
+		}
 
 		p.SetVarInt(pr, fileT)
 
@@ -14778,6 +14911,35 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		p.SetVarInt(pr, errT)
 
 		return ""
+
+	case 21509: // close
+		if instrT.ParamLen < 1 {
+			return p.ErrStrf("参数不够")
+		}
+
+		var pr int = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0].Ref
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(instrT.Params[v1p])
+
+		switch nv := v1.(type) {
+		case *os.File:
+			errT := nv.Close()
+
+			p.SetVarInt(pr, errT)
+
+			return ""
+
+		}
+
+		p.SetVarInt(pr, nil)
+
+		return p.ErrStrf("不支持的类型(type not supported)：%T(%v)", v1, v1)
 
 	case 21601: // cmpBinFile
 		if instrT.ParamLen < 3 {

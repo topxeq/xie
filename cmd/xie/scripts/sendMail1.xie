@@ -1,0 +1,96 @@
+// 使用SMTP协议发送邮件的例子
+// sending a message/email through SMTP server
+
+// 创建一个邮件发送对象（mailSender）放入变量mail中，参数包括SMTP服务器地址、端口、用户名，口令等
+new $mail mailSender -host=mail.example.com -port=587 -user=tom@example.com -pass=abc123
+
+// 检查是否创建成功
+checkErrX $mail
+
+// 调用mail对象的成员方法to，用于设置邮件发往的邮件地址（接收方），可以有多个地址
+// 因为to这个成员方法并没有返回值，但mt指令必须要指定接收结果的参数，因此使用drop变量将其丢弃
+mt $drop $mail to topget@txmadarin.com
+
+# // 设置抄送地址，可以有多个地址
+# mt $drop $mail cc topget@topget.org kind@txmadarin.com
+
+# // 设置密送地址，可以有多个地址
+# mt $drop $mail cc kind1@txmadarin.com
+
+// 设置发送方地址
+mt $drop $mail from abc@abc.com
+
+// 设置发送方显示名称
+mt $drop $mail fromName Dr.文闻
+
+// 设置自定义邮件头
+mt $drop $mail addHeader "X-TOTALLY-NOT-A-SCAM" "true"
+
+// 设置邮件标题
+mt $drop $mail subject "【请注意】memo for today's coversation"
+
+// 设置邮件内容（HTML格式，也可以是纯文本）
+assign $htmlT `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+</head>
+<body style="font-family: Helvetica">
+    <div>&nbsp;
+        <br />
+        <br /><br />
+            今天大家谈了很多，但归根结底一个字：Just do it.
+
+        <br />
+        <br />
+
+        <img width="160px" src="data:image/jpg;base64,TX_imageBase64Data_XT">
+
+        <br />
+
+        <img width="160px" src="cid:imageName1.png"/>
+
+    </div>
+</body>
+</html>
+`
+
+// 读取一个图片文件，将其内容转换为Base64格式后放入HTML中img标签的src中
+// 实现邮件中加入图像而无需嵌入附件
+// 注意，此法有时候会失效
+loadBytes $imageFileNameT `c:\test\points.png`
+
+toBase64 $imageDataT $imageFileNameT
+
+strReplace $htmlT $htmlT "TX_imageBase64Data_XT" $imageDataT
+
+// 内嵌一个资源文件，在邮件中引用它（一般也可以用于邮件中嵌入图片、logo等，与上一方法可以选用）
+
+openFileForRead $fr1 `c:\test\points.png`
+
+checkErrX $fr1
+
+defer closeFile $fr1
+
+mt $drop $mail attachInline "imageName1.png" $fr1 "image/png"
+
+// 添加一个附件
+new $fr2 fileReader `c:\test\points.zip`
+
+checkErrX $fr2
+
+defer close $fr2
+
+mt $drop $mail attach "points.zip" $fr2 "application/zip"
+
+// 设置邮件内容为htmlT，html中可以是THTML格式，也可以是纯文本格式的字符串
+mt $drop $mail body $htmlT
+
+// 发送邮件
+mt $rs $mail send
+
+// 输出发送结果
+pl "send result: %v" $rs
+
+
