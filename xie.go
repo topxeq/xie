@@ -11224,6 +11224,20 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 				nv.Subject(v3)
 
 				return ""
+			case "replyTo":
+				if instrT.ParamLen < 4 {
+					return p.ErrStrf("参数不够（not enough parameters）")
+				}
+
+				v3 := tk.ToStr(p.GetVarValue(instrT.Params[3]))
+
+				nv.ReplyTo(v3)
+
+				return ""
+			case "clearAttachments":
+				nv.ClearAttachments()
+
+				return ""
 			case "attach": // 添加附件(最后一个参数是mime类型，可以省略)，用法：mt $drop $mail attach "imageName1.png" $fr1 "image/png"
 				if instrT.ParamLen < 5 {
 					return p.ErrStrf("参数不够（not enough parameters）")
