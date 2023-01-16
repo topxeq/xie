@@ -11234,6 +11234,16 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 				nv.ReplyTo(v3)
 
 				return ""
+			case "writeBccHeader":
+				if instrT.ParamLen < 4 {
+					return p.ErrStrf("参数不够（not enough parameters）")
+				}
+
+				v3 := tk.ToBool(p.GetVarValue(instrT.Params[3]))
+
+				nv.WriteBccHeader(v3)
+
+				return ""
 			case "clearAttachments":
 				nv.ClearAttachments()
 
