@@ -1,0 +1,26 @@
+mt $p1 $guiG showProcess -title=处理进度 -noCancel -modl -ok=确认
+
+plo $p1
+
+defer guiMt $drop $p1 close
+
+= $i #i0
+
+:for1
+    spr $textT "正在进行计算（%v%%）……" $i
+
+    guiMt $drop $p1 text $textT
+
+    guiMt $drop $p1 value $i
+
+    + $i $i #i10
+
+    sleep 1.0
+
+    if @`$i > #i100` :+1 :for1
+        guiMt $rs1 $p1 complete
+
+        plo $p1
+
+        getInput $rs "处理完毕，请按任意键结束……"
+        exit

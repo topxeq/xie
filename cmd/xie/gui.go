@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"runtime"
 
+	"github.com/ncruces/zenity"
 	"github.com/topxeq/dlgs"
 	"github.com/topxeq/xie"
 
@@ -76,6 +77,66 @@ func guiHandler(actionA string, objA interface{}, dataA interface{}, paramsA ...
 	case "lockOSThread":
 		runtime.LockOSThread()
 		return nil
+	case "method", "mt":
+		if len(paramsA) < 2 {
+			return fmt.Errorf("参数不够")
+		}
+
+		objT := paramsA[0]
+
+		methodNameT := tk.ToStr(paramsA[1])
+
+		v1p := 2
+
+		switch nv := objT.(type) {
+		case zenity.ProgressDialog:
+			switch methodNameT {
+			case "close":
+				rs := nv.Close()
+				return rs
+			case "complete":
+				rs := nv.Complete()
+				return rs
+			case "text":
+				if len(paramsA) < v1p+1 {
+					return fmt.Errorf("参数不够")
+				}
+
+				v1 := tk.ToStr(paramsA[v1p])
+
+				rs := nv.Text(v1)
+				return rs
+			case "value":
+				if len(paramsA) < v1p+1 {
+					return fmt.Errorf("参数不够")
+				}
+
+				v1 := tk.ToInt(paramsA[v1p])
+
+				rs := nv.Value(v1)
+				return rs
+			case "maxValue":
+				rs := nv.MaxValue()
+				return rs
+			}
+		}
+
+		rvr := tk.ReflectCallMethod(objT, methodNameT, paramsA[2:]...)
+
+		return rvr
+
+	case "close":
+		if len(paramsA) < 1 {
+			return fmt.Errorf("参数不够")
+		}
+
+		switch nv := paramsA[0].(type) {
+		case zenity.ProgressDialog:
+			nv.Close()
+		}
+
+		return ""
+
 	case "showInfo":
 		if len(paramsA) < 2 {
 			return fmt.Errorf("参数不够")
@@ -121,6 +182,58 @@ func guiHandler(actionA string, objA interface{}, dataA interface{}, paramsA ...
 		}
 
 		return []interface{}{rectT.Max.X, rectT.Max.Y}
+	case "showProcess":
+		var paraArgsT []string = []string{}
+
+		for i := 0; i < len(paramsA); i++ {
+			paraArgsT = append(paraArgsT, tk.ToStr(paramsA[i]))
+		}
+
+		optionsT := []zenity.Option{}
+
+		titleT := tk.GetSwitch(paraArgsT, "-title=", "")
+
+		if titleT != "" {
+			optionsT = append(optionsT, zenity.Title(titleT))
+		}
+
+		okButtonT := tk.GetSwitch(paraArgsT, "-ok=", "")
+
+		if titleT != "" {
+			optionsT = append(optionsT, zenity.OKLabel(okButtonT))
+		}
+
+		cancelButtonT := tk.GetSwitch(paraArgsT, "-cancel=", "")
+
+		if titleT != "" {
+			optionsT = append(optionsT, zenity.CancelLabel(cancelButtonT))
+		}
+
+		if tk.IfSwitchExistsWhole(paraArgsT, "-noCancel") {
+			optionsT = append(optionsT, zenity.NoCancel())
+		}
+
+		if tk.IfSwitchExistsWhole(paraArgsT, "-modal") {
+			optionsT = append(optionsT, zenity.Modal())
+		}
+
+		if tk.IfSwitchExistsWhole(paraArgsT, "-pulsate") {
+			optionsT = append(optionsT, zenity.Pulsate())
+		}
+
+		maxT := tk.GetSwitch(paraArgsT, "-max=", "")
+
+		if maxT != "" {
+			optionsT = append(optionsT, zenity.MaxValue(tk.ToInt(maxT, 100)))
+		}
+
+		dlg, errT := zenity.Progress(optionsT...)
+		if errT != nil {
+			return fmt.Errorf("创建进度框失败（failed to create progress dialog）：%v", errT)
+		}
+
+		return dlg
+
 	case "newWindowSciter":
 		if len(paramsA) < 3 {
 			return fmt.Errorf("参数不够")

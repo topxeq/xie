@@ -965,6 +965,9 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"guiNewWindow": 400031,
 
+	"guiMethod": 410001, // 调用GUI生成的对象的方法
+	"guiMt":     410001,
+
 	// misc related 杂项相关
 	"getSeq":   500001, // 获得一个自增长的、唯一的整数，最初从1开始，可以用resetSeq指令重置，getSeq指令是线程安全的
 	"resetSeq": 500003, // 重置自增长唯一整数序列，这样下次使用getSeq时获得的序号值为1
@@ -1045,6 +1048,240 @@ type FuncContext struct {
 	// StackM []interface{}
 }
 
+// type Context struct {
+// 	VarsM map[string]interface{}
+
+// 	ParentM *Context
+
+// 	CodePointerM int
+
+// 	StackM *tk.SimpleStack
+
+// 	DeferStackM *tk.SimpleStack
+// }
+
+// type XieVM2 struct {
+// 	SourceM        []string
+// 	CodeListM      []string
+// 	CodeSourceMapM map[int]int
+
+// 	LabelsM    map[string]int
+// 	InstrListM []Instr
+
+// 	CurrentContextM *Context
+
+// 	VerboseM bool
+// }
+
+// func (p *XieVM2) ErrStrf(formatA string, argsA ...interface{}) string {
+// 	if p.VerboseM {
+// 		tk.Pl(fmt.Sprintf("TXERROR:(Line %v: %v) ", p.CodeSourceMapM[p.CurrentContextM.CodePointerM]+1, tk.LimitString(p.SourceM[p.CodeSourceMapM[p.CurrentContextM.CodePointerM]], 50))+formatA, argsA...)
+// 	}
+
+// 	return fmt.Sprintf(fmt.Sprintf("TXERROR:(Line %v: %v) ", p.CodeSourceMapM[p.CurrentContextM.CodePointerM]+1, tk.LimitString(p.SourceM[p.CodeSourceMapM[p.CurrentContextM.CodePointerM]], 50))+formatA, argsA...)
+// }
+
+// func (p *XieVM2) ParseLine(commandA string) ([]string, string, error) {
+// 	var args []string
+// 	var lineT string
+
+// 	firstT := true
+
+// 	// state: 1 - start, quotes - 2, arg - 3
+// 	state := 1
+// 	current := ""
+// 	quote := "`"
+// 	// escapeNext := false
+
+// 	command := []rune(commandA)
+
+// 	for i := 0; i < len(command); i++ {
+// 		c := command[i]
+
+// 		// if escapeNext {
+// 		// 	current += string(c)
+// 		// 	escapeNext = false
+// 		// 	continue
+// 		// }
+
+// 		// if c == '\\' {
+// 		// 	current += string(c)
+// 		// 	escapeNext = true
+// 		// 	continue
+// 		// }
+
+// 		if state == 2 {
+// 			if string(c) != quote {
+// 				current += string(c)
+// 			} else {
+// 				current += string(c) // add it
+
+// 				args = append(args, current)
+// 				if firstT {
+// 					firstT = false
+// 					lineT = string(command[i:])
+// 				}
+// 				current = ""
+// 				state = 1
+// 			}
+// 			continue
+// 		}
+
+// 		// tk.Pln(string(c), c, c == '`', '`')
+// 		if c == '"' || c == '\'' || c == '`' {
+// 			state = 2
+// 			quote = string(c)
+
+// 			current += string(c) // add it
+
+// 			continue
+// 		}
+
+// 		if state == 3 {
+// 			if c == ' ' || c == '\t' {
+// 				args = append(args, current)
+// 				if firstT {
+// 					firstT = false
+// 					lineT = string(command[i:])
+// 				}
+// 				current = ""
+// 				state = 1
+// 			} else {
+// 				current += string(c)
+// 			}
+// 			// Pl("state: %v, current: %v, args: %v", state, current, args)
+// 			continue
+// 		}
+
+// 		if c != ' ' && c != '\t' {
+// 			state = 3
+// 			current += string(c)
+// 		}
+// 	}
+
+// 	if state == 2 {
+// 		return []string{}, lineT, fmt.Errorf("指令中含有未闭合的引号： %v", string(command))
+// 	}
+
+// 	if current != "" {
+// 		args = append(args, current)
+// 		if firstT {
+// 			firstT = false
+// 			lineT = ""
+// 		}
+// 	}
+
+// 	return args, lineT, nil
+// }
+
+// func (p *XieVM2) Compile(codeA string) string {
+// 	originCodeLenT := len(p.CodeListM)
+
+// 	sourceT := tk.SplitLines(codeA)
+
+// 	p.SourceM = append(p.SourceM, sourceT...)
+
+// 	pointerT := originCodeLenT
+
+// 	for i := 0; i < len(sourceT); i++ {
+// 		v := strings.TrimSpace(sourceT[i])
+
+// 		if tk.StartsWith(v, "//") || tk.StartsWith(v, "#") {
+// 			continue
+// 		}
+
+// 		if tk.StartsWith(v, ":") {
+// 			labelT := strings.TrimSpace(v[1:])
+
+// 			_, ok := p.LabelsM[labelT]
+
+// 			if !ok {
+// 				p.LabelsM[labelT] = pointerT
+// 			} else {
+// 				return tk.ErrStrf("编译错误(行 %v %v): 重复的标号", i+1, tk.LimitString(p.SourceM[i], 50))
+// 			}
+
+// 			continue
+// 		}
+
+// 		iFirstT := i
+// 		if tk.Contains(v, "`") {
+// 			if strings.Count(v, "`")%2 != 0 {
+// 				foundT := false
+// 				var j int
+// 				for j = i + 1; j < len(sourceT); j++ {
+// 					if tk.Contains(sourceT[j], "`") {
+// 						v = tk.JoinLines(sourceT[i : j+1])
+// 						foundT = true
+// 						break
+// 					}
+// 				}
+
+// 				if !foundT {
+// 					return tk.ErrStrf("代码解析错误: ` 未成对(%v)", i)
+// 				}
+
+// 				i = j
+// 			}
+// 		}
+
+// 		v = strings.TrimSpace(v)
+
+// 		if v == "" {
+// 			continue
+// 		}
+
+// 		p.CodeListM = append(p.CodeListM, v)
+// 		p.CodeSourceMapM[pointerT] = originCodeLenT + iFirstT
+// 		pointerT++
+// 	}
+
+// 	for i := originCodeLenT; i < len(p.CodeListM); i++ {
+// 		// listT := strings.SplitN(v, " ", 3)
+// 		v := p.CodeListM[i]
+// 		listT, lineT, errT := p.ParseLine(v)
+// 		if errT != nil {
+// 			return p.ErrStrf("参数解析失败：%v", errT)
+// 		}
+
+// 		lenT := len(listT)
+
+// 		instrNameT := strings.TrimSpace(listT[0])
+
+// 		codeT, ok := InstrNameSet[instrNameT]
+
+// 		if !ok {
+// 			instrT := Instr{Code: codeT, Cmd: InstrCodeSet[codeT], ParamLen: 1, Params: []VarRef{VarRef{Ref: -3, Value: v}}, Line: lineT} //&([]VarRef{})}
+// 			p.InstrListM = append(p.InstrListM, instrT)
+
+// 			return tk.ErrStrf("编译错误(行 %v/%v %v): 未知指令", i, p.CodeSourceMapM[i]+1, tk.LimitString(p.SourceM[p.CodeSourceMapM[i]], 50))
+// 		}
+
+// 		instrT := Instr{Code: codeT, Cmd: InstrCodeSet[codeT], Params: make([]VarRef, 0, lenT-1), Line: lineT} //&([]VarRef{})}
+
+// 		list3T := []VarRef{}
+
+// 		for j, jv := range listT {
+// 			if j == 0 {
+// 				continue
+// 			}
+
+// 			list3T = append(list3T, p.ParseVar(jv, i))
+// 		}
+
+// 		instrT.Params = append(instrT.Params, list3T...)
+// 		instrT.ParamLen = lenT - 1
+
+// 		p.InstrListM = append(p.InstrListM, instrT)
+// 	}
+
+// 	// tk.Plv(p.SourceM)
+// 	// tk.Plv(p.CodeListM)
+// 	// tk.Plv(p.CodeSourceMapM)
+
+// 	return tk.ToStr(originCodeLenT)
+// }
+
 type XieVM struct {
 	SourceM        []string
 	CodeListM      []string
@@ -1091,7 +1328,7 @@ type XieVM struct {
 
 	SeqM tk.Seq
 
-	GuiM map[string]interface{}
+	// GuiM map[string]interface{}
 	// GuiStrVarsM   []string
 	// GuiIntVarsM   []int
 	// GuiFloatVarsM []int
@@ -1487,7 +1724,7 @@ func (p *XieVM) InitVM(sharedMapA *tk.SyncMap, globalsA ...map[string]interface{
 		p.SharedMapM = sharedMapA
 	}
 
-	p.GuiM = make(map[string]interface{}, 10)
+	// p.GuiM = make(map[string]interface{}, 10)
 	// p.GuiStrVarsM = make([]string, 0, 10)
 	// p.GuiIntVarsM = make([]int, 0, 10)
 	// p.GuiFloatVarsM = make([]int, 0, 10)
@@ -18357,6 +18594,35 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 		p.SetVarInt(pr, rs)
 		return ""
+	case 410001: // guiMethod/guiMt
+		if instrT.ParamLen < 2 {
+			return p.ErrStrf("参数不够")
+		}
+
+		pr := instrT.Params[0].Ref
+		v1p := 1
+
+		v0, ok := p.GetVarValue(p.ParseVar("$guiG")).(tk.TXDelegate)
+
+		if !ok {
+			return p.ErrStrf("全局变量guiG不存在（$guiG not exists）")
+		}
+
+		// v1p := 0
+
+		// v1 := p.GetVarValue(instrT.Params[v1p])
+		// v2 := p.GetVarValue(instrT.Params[v1p+1])
+
+		vs := p.ParamsToList(instrT, v1p)
+
+		rs := v0("method", p, instrT, vs...)
+
+		// if tk.IsErrX(rs) {
+		// 	return p.ErrStrf(tk.GetErrStrX(rs))
+		// }
+
+		p.SetVarInt(pr, rs)
+		return ""
 
 	// case 400053: // guiSetDelegate
 	// 	if instrT.ParamLen < 2 {
@@ -18425,813 +18691,6 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		return ""
 
 		//// ------ cmd end
-
-		// case 400051: // guiCallWindowFunc
-		// if instrT.ParamLen < 2 {
-		// 	return p.ErrStrf("参数不够")
-		// }
-
-		// // pr := -5
-		// // v1p := 0
-
-		// // if instrT.ParamLen > 1 {
-		// pr := instrT.Params[0].Ref
-		// v1p := 1
-		// // }
-
-		// v0, ok := p.GetVarValue(p.ParseVar("$guiG")).(tk.TXDelegate)
-
-		// if !ok {
-		// 	return p.ErrStrf("全局变量guiG不存在（$guiG not exists）")
-		// }
-
-		// // v1p := 0
-
-		// // v1 := p.GetVarValue(instrT.Params[v1p])
-		// // v2 := p.GetVarValue(instrT.Params[v1p+1])
-
-		// vs := p.ParamsToList(instrT, v1p)
-
-		// rs := v0("call", p, nil, vs...)
-
-		// // if tk.IsErrX(rs) {
-		// // 	return p.ErrStrf(tk.GetErrStrX(rs))
-		// // }
-
-		// p.SetVarInt(pr, rs)
-		// return ""
-
-		// pa := p.ParamsToStrs(instrT, v1p)
-
-		// case 210011: // guiInit
-		// 	p.GuiM = make(map[string]interface{}, 10)
-
-		// 	return ""
-		// case 210013: // guiNewApp
-		// 	pr := -5
-
-		// 	if instrT.ParamLen > 0 {
-		// 		pr = instrT.Params[0].Ref
-		// 	}
-
-		// 	fontPaths := findfont.List()
-		// 	for _, path := range fontPaths {
-		// 		// fmt.Println(path)
-		// 		//楷体:simkai.ttf
-		// 		//黑体:simhei.ttf
-		// 		if strings.Contains(path, "simhei.ttf") {
-		// 			os.Setenv("FYNE_FONT", path)
-		// 			break
-		// 		}
-		// 	}
-
-		// 	a := app.New()
-
-		// 	p.SetVarInt(pr, a) // Z...
-		// 	return ""
-
-		// case 210021: // guiSetFont
-		// 	// pr := -5
-		// 	v1p := 0
-
-		// 	if instrT.ParamLen > 1 {
-		// 		// pr = instrT.Params[0].Ref
-		// 		v1p = 1
-		// 	}
-
-		// 	v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
-
-		// 	os.Setenv("FYNE_FONT", v1)
-
-		// 	// p.SetVarInt(pr, a)
-
-		// 	return ""
-
-		// case 210031: // guiNewWindow
-		// 	pr := -5
-		// 	v1p := 0
-
-		// 	if instrT.ParamLen > 4 {
-		// 		pr = instrT.Params[0].Ref
-		// 		v1p = 1
-		// 	}
-
-		// 	v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
-
-		// 	v2 := tk.ToInt(p.GetVarValue(instrT.Params[v1p+1]))
-		// 	v3 := tk.ToInt(p.GetVarValue(instrT.Params[v1p+2]))
-
-		// 	v4 := p.GetVarValue(instrT.Params[v1p+3])
-
-		// 	vc, ok := v4.(int)
-
-		// 	if !ok {
-		// 		vc = 0
-
-		// 		vs := tk.ToStr(v4)
-
-		// 		if strings.Contains(vs, "otResiz") {
-		// 			vc += int(giu.MasterWindowFlagsNotResizable)
-		// 		}
-
-		// 		if strings.Contains(vs, "float") {
-		// 			vc += int(giu.MasterWindowFlagsFloating)
-		// 		}
-
-		// 		if strings.Contains(vs, "aximiz") {
-		// 			vc += int(giu.MasterWindowFlagsMaximized)
-		// 		}
-
-		// 		if strings.Contains(vs, "rameless") {
-		// 			vc += int(giu.MasterWindowFlagsFrameless)
-		// 		}
-
-		// 		if strings.Contains(vs, "ransparent") {
-		// 			vc += int(giu.MasterWindowFlagsTransparent)
-		// 		}
-
-		// 	}
-
-		// 	wnd := giu.NewMasterWindow(v1, v2, v3, giu.MasterWindowFlags(vc)) //giu.MasterWindowFlagsNotResizable)
-
-		// 	p.SetVarInt(pr, wnd)
-
-		// 	p.GuiM["window"] = wnd
-
-		// 	return ""
-
-		// case 210032: // guiNewLoop
-		// 	pr := instrT.Params[0].Ref
-		// 	v1p := 1
-
-		// 	// v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
-
-		// 	// v2 := tk.ToInt(p.GetVarValue(instrT.Params[v1p+1]))
-		// 	// v3 := tk.ToInt(p.GetVarValue(instrT.Params[v1p+2]))
-		// 	// vs := p.ParamsToList(instrT, v1p)
-
-		// 	lenT := len(instrT.Params)
-
-		// 	sl := make([]giu.Widget, 0, lenT)
-
-		// 	for i := v1p; i < lenT; i++ {
-		// 		sl = append(sl, p.GetVarValue(instrT.Params[i]).(giu.Widget))
-		// 	}
-
-		// 	// tk.Plv(sl)
-
-		// 	f := func() {
-		// 		giu.SingleWindow().Layout(sl...)
-		// 	}
-
-		// 	p.SetVarInt(pr, f)
-
-		// 	return ""
-
-		// case 210033: // guiCloseWindow
-		// 	// pr := instrT.Params[0].Ref
-		// 	// v1p := 0
-
-		// 	var wnd *giu.MasterWindow
-
-		// 	if instrT.ParamLen > 0 {
-		// 		wnd = p.GetVarValue(instrT.Params[0]).(*giu.MasterWindow)
-		// 	} else {
-		// 		wnd = p.GuiM["window"].(*giu.MasterWindow)
-		// 	}
-
-		// 	wnd.Close()
-
-		// 	return ""
-
-		// // case 210033: // guiSetContent
-
-		// // 	if instrT.ParamLen < 2 {
-		// // 		return p.ErrStrf("参数不够")
-		// // 	}
-
-		// // 	v1 := p.GetVarValue(instrT.Params[0]).(fyne.Window)
-		// // 	v2 := p.GetVarValue(instrT.Params[1]).(fyne.CanvasObject)
-
-		// // 	v1.SetContent(v2)
-
-		// // 	return ""
-
-		// case 210037: // guiRunLoop
-
-		// 	if instrT.ParamLen < 2 {
-		// 		return p.ErrStrf("参数不够")
-		// 	}
-
-		// 	v1 := p.GetVarValue(instrT.Params[0]).(*giu.MasterWindow)
-		// 	// v2 := p.GetVarValue(instrT.Params[1]).(func())
-
-		// 	// v1.Run(v2)
-
-		// 	pointerT := p.CodePointerM
-		// 	v2 := p.GetVarValue(instrT.Params[1])
-
-		// 	tmpPointerT, ok := v2.(int)
-
-		// 	if !ok {
-		// 		tmps, ok := v2.(string)
-
-		// 		if !ok {
-		// 			return p.ErrStrf("参数类型错误")
-		// 		}
-
-		// 		if !strings.HasPrefix(tmps, ":") {
-		// 			return p.ErrStrf("标号格式错误：%v", tmps)
-		// 		}
-
-		// 		tmps = tmps[1:]
-
-		// 		varIndexT, ok := p.VarIndexMapM[tmps]
-
-		// 		if !ok {
-		// 			return p.ErrStrf("无效的标号：%v", tmps)
-		// 		}
-
-		// 		tmpPointerT, ok = p.LabelsM[varIndexT]
-
-		// 		if !ok {
-		// 			return p.ErrStrf("无效的标号序号：%v(%v)", varIndexT, tmps)
-		// 		}
-
-		// 		p.InstrListM[lineA].Params[0].Value = tmpPointerT
-		// 		// instrT = VarRef{Ref: instrT.Params[0].Ref, Value: tmpPointerT}
-		// 		// tk.Plv(instrT.Params[0])
-		// 	}
-
-		// 	// tk.Pln(tmpPointerT)
-
-		// 	beginT := tmpPointerT
-
-		// 	f := func() {
-		// 		tmpPointerT = beginT
-		// 		// tk.Pln("tmpPointerT", tmpPointerT)
-		// 		// for ii := 0; ii < (instrT.ParamLen - 1); ii++ {
-		// 		// 	p.Push(p.GetVarValue(instrT.Params[ii+1]))
-		// 		// }
-
-		// 		for {
-		// 			rs := p.RunLine(tmpPointerT)
-		// 			if p.VerboseM {
-		// 				if rs != "" && rs != "ret" {
-		// 					tk.Pln("rs:", rs)
-		// 				}
-		// 			}
-
-		// 			nv, ok := rs.(int)
-
-		// 			if ok {
-		// 				tmpPointerT = nv
-		// 				continue
-		// 			}
-
-		// 			nsv, ok := rs.(string)
-
-		// 			if ok {
-		// 				if tk.IsErrStr(nsv) {
-		// 					if p.VerboseM {
-		// 						tk.PlSimpleErrorString(p.ErrStrf("failed to get cmd result: %v", tk.GetErrStr(nsv)))
-		// 					}
-
-		// 					return
-		// 				}
-
-		// 				if nsv == "ret" {
-		// 					return
-		// 				} else if nsv == "br" {
-		// 					break
-		// 				}
-		// 			}
-
-		// 			tmpPointerT++
-		// 		}
-
-		// 		return
-
-		// 	}
-
-		// 	v1.Run(f)
-
-		// 	return pointerT + 1
-
-		// case 210038: // guiLoopRet
-
-		// 	return "ret"
-
-		// case 210041: // guiNewFunc
-		// 	pr := instrT.Params[0].Ref
-		// 	v1p := 1
-
-		// 	// v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
-
-		// 	// v2 := tk.ToInt(p.GetVarValue(instrT.Params[v1p+1]))
-		// 	// v3 := tk.ToInt(p.GetVarValue(instrT.Params[v1p+2]))
-		// 	// vs := p.ParamsToList(instrT, v1p)
-
-		// 	f := func() {
-		// 		vmT := NewXie(p.SharedMapM)
-
-		// 		vmT.GuiM = p.GuiM
-		// 		// vmT.GuiStrVarsM = p.GuiStrVarsM
-		// 		// vmT.GuiIntVarsM = p.GuiIntVarsM
-		// 		// vmT.GuiFloatVarsM = p.GuiFloatVarsM
-
-		// 		argCountT := instrT.ParamLen - 2
-
-		// 		for i := 0; i < argCountT; i++ {
-		// 			vmT.Push(p.GetVarValue(instrT.Params[v1p+i]))
-		// 		}
-
-		// 		vLast := tk.ToStr(p.GetVarValue(instrT.Params[instrT.ParamLen-1]))
-
-		// 		lrs := vmT.Load(vLast)
-
-		// 		if tk.IsErrStr(lrs) {
-		// 			if p.VerboseM {
-		// 				tk.PlSimpleErrorString(lrs)
-		// 			}
-
-		// 			return
-		// 		}
-
-		// 		rs := vmT.Run()
-
-		// 		// tk.Plv(rs)
-
-		// 		if tk.IsErrStr(rs) {
-		// 			if p.VerboseM {
-		// 				tk.PlSimpleErrorString(rs)
-		// 			}
-
-		// 			return
-		// 		}
-
-		// 		return
-		// 	}
-
-		// 	p.SetVarInt(pr, f)
-
-		// 	return ""
-
-		// case 210051: // guiLayout
-		// 	if instrT.ParamLen < 2 {
-		// 		return p.ErrStrf("参数不够")
-		// 	}
-
-		// 	pr := instrT.Params[0].Ref
-		// 	v1p := 1
-
-		// 	lenT := len(instrT.Params)
-
-		// 	sl := make([]giu.Widget, 0, lenT)
-
-		// 	for i := v1p + 1; i < lenT; i++ {
-		// 		sl = append(sl, p.GetVarValue(instrT.Params[i]).(giu.Widget))
-		// 	}
-
-		// 	// tk.Plv(sl)
-
-		// 	v0 := p.GetVarValue(instrT.Params[v1p])
-		// 	switch nv := v0.(type) {
-		// 	case string:
-		// 		if nv == "singleWindow" || nv == "window" {
-		// 			giu.SingleWindow().Layout(sl...)
-		// 		} else if nv == "singleWindowWithMenuBar" {
-		// 			giu.SingleWindowWithMenuBar().Layout(sl...)
-		// 		}
-
-		// 		p.SetVarInt(pr, nil)
-		// 	default:
-		// 		return p.ErrStrf("未知可布局对象类型：%T(%v)", v0, v0)
-		// 	}
-
-		// 	// tk.Pln("z")
-
-		// 	return ""
-
-		// case 210101: // guiSetVar
-		// 	if instrT.ParamLen < 2 {
-		// 		return p.ErrStrf("参数不够")
-		// 	}
-
-		// 	v1p := 0
-
-		// 	v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
-
-		// 	v2 := p.GetVarValue(instrT.Params[v1p+1])
-
-		// 	p.GuiM[v1] = v2
-
-		// 	// idxT := tk.ToInt(p.GuiM[v1])
-
-		// 	// p.GuiStrVarsM[idxT] = v2
-
-		// 	// tk.Pl("p.GuiStrVarsM[idxT]: %v", p.GuiStrVarsM[idxT])
-
-		// 	return ""
-
-		// case 210102: // guiSetVarByRef
-		// 	if instrT.ParamLen < 3 {
-		// 		return p.ErrStrf("参数不够")
-		// 	}
-
-		// 	v1p := 0
-
-		// 	v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
-
-		// 	v2 := p.GetVarValue(instrT.Params[v1p+1])
-
-		// 	v3 := p.GetVarValue(instrT.Params[v1p+2])
-
-		// 	p.GuiM[v1] = v2
-
-		// 	switch v2 {
-		// 	case "int":
-		// 		*(p.GuiM[v1].(*int)) = tk.ToInt(v3)
-		// 		break
-		// 	case "float":
-		// 		*(p.GuiM[v1].(*float64)) = tk.ToFloat(v3)
-		// 		break
-		// 	case "bool":
-		// 		*(p.GuiM[v1].(*bool)) = tk.ToBool(v3)
-		// 		break
-		// 	case "str":
-		// 		*(p.GuiM[v1].(*string)) = tk.ToStr(v3)
-		// 		break
-		// 	default:
-		// 		return p.ErrStrf("未知的数据类型")
-		// 	}
-
-		// 	return ""
-
-		// case 210103: // guiNewVar
-		// 	if instrT.ParamLen < 2 {
-		// 		return p.ErrStrf("参数不够")
-		// 	}
-		// 	// pr := -5
-		// 	v1p := 0
-
-		// 	// if instrT.ParamLen > 1 {
-		// 	// 	pr = instrT.Params[0].Ref
-		// 	// 	v1p = 1
-		// 	// }
-
-		// 	v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
-
-		// 	v2 := tk.ToStr(p.GetVarValue(instrT.Params[v1p+1]))
-
-		// 	switch v2 {
-		// 	case "int":
-		// 		p.GuiM[v1] = new(int)
-		// 		// p.SetVarInt(pr, new(int))
-		// 		break
-		// 	case "float":
-		// 		p.GuiM[v1] = new(float64)
-		// 		// p.SetVarInt(pr, new(float64))
-		// 		break
-		// 	case "bool":
-		// 		p.GuiM[v1] = new(bool)
-		// 		// p.SetVarInt(pr, new(bool))
-		// 		break
-		// 	case "str":
-		// 		p.GuiM[v1] = new(string)
-		// 		// p.SetVarInt(pr, new(string))
-		// 		break
-		// 	default:
-		// 		return p.ErrStrf("未知的数据类型")
-		// 	}
-
-		// 	return ""
-
-		// case 210105: // guiGetVar
-		// 	if instrT.ParamLen < 1 {
-		// 		return p.ErrStrf("参数不够")
-		// 	}
-
-		// 	pr := -5
-		// 	v1p := 0
-
-		// 	if instrT.ParamLen > 1 {
-		// 		pr = instrT.Params[0].Ref
-		// 		v1p = 1
-		// 	}
-
-		// 	v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
-
-		// 	p.SetVarInt(pr, p.GuiM[v1])
-
-		// 	return ""
-
-		// case 210107: // guiGetVarByRef
-		// 	if instrT.ParamLen < 2 {
-		// 		return p.ErrStrf("参数不够")
-		// 	}
-
-		// 	pr := -5
-		// 	v1p := 0
-
-		// 	if instrT.ParamLen > 2 {
-		// 		pr = instrT.Params[0].Ref
-		// 		v1p = 1
-		// 	}
-
-		// 	v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
-
-		// 	v2 := tk.ToStr(p.GetVarValue(instrT.Params[v1p+1]))
-
-		// 	switch v2 {
-		// 	case "int":
-		// 		p.SetVarInt(pr, *(p.GuiM[v1].(*int)))
-		// 		break
-		// 	case "float":
-		// 		p.SetVarInt(pr, *(p.GuiM[v1].(*float64)))
-		// 		break
-		// 	case "bool":
-		// 		p.SetVarInt(pr, *(p.GuiM[v1].(*bool)))
-		// 		break
-		// 	case "str":
-		// 		p.SetVarInt(pr, *(p.GuiM[v1].(*string)))
-		// 		break
-		// 	default:
-		// 		return p.ErrStrf("未知的数据类型")
-		// 	}
-
-		// 	return ""
-
-		// // case 211001: // guiNewLabel
-		// // 	pr := -5
-		// // 	v1p := 0
-
-		// // 	if instrT.ParamLen > 2 {
-		// // 		pr = instrT.Params[0].Ref
-		// // 		v1p = 1
-		// // 	}
-
-		// // 	v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
-
-		// // 	v2 := tk.ToStr(p.GetVarValue(instrT.Params[v1p+1]))
-
-		// // 	// p.GuiStrVarsM = append(p.GuiStrVarsM, v2)
-
-		// // 	p.GuiM[v1] = v2 //len(p.GuiStrVarsM) - 1
-
-		// // 	vr := giu.Label(v2)
-
-		// // 	p.SetVarInt(pr, vr)
-
-		// // 	return ""
-
-		// case 211002: // guiStaticLabel
-		// 	pr := -5
-		// 	v1p := 0
-
-		// 	if instrT.ParamLen > 1 {
-		// 		pr = instrT.Params[0].Ref
-		// 		v1p = 1
-		// 	}
-
-		// 	v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
-
-		// 	vr := giu.Label(v1)
-
-		// 	p.SetVarInt(pr, vr)
-
-		// 	return ""
-
-		// case 211003: // guiLabel
-		// 	pr := -5
-		// 	v1p := 0
-
-		// 	if instrT.ParamLen > 1 {
-		// 		pr = instrT.Params[0].Ref
-		// 		v1p = 1
-		// 	}
-
-		// 	v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
-
-		// 	// v2 := tk.ToStr(p.GetVarValue(instrT.Params[v1p+1]))
-
-		// 	// p.GuiStrVarsM = append(p.GuiStrVarsM, v2)
-
-		// 	// p.GuiM[v1] = v2 //len(p.GuiStrVarsM) - 1
-
-		// 	vr := giu.Label(tk.ToStr(p.GuiM[v1]))
-
-		// 	p.SetVarInt(pr, vr)
-
-		// 	return ""
-
-		// // case 211011: // guiNewButton
-		// // 	pr := -5
-		// // 	v1p := 0
-
-		// // 	if instrT.ParamLen > 3 {
-		// // 		pr = instrT.Params[0].Ref
-		// // 		v1p = 1
-		// // 	}
-
-		// // 	v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
-
-		// // 	v2 := tk.ToStr(p.GetVarValue(instrT.Params[v1p+1]))
-
-		// // 	v3 := p.GetVarValue(instrT.Params[v1p+2]).(func())
-
-		// // 	p.GuiStrVarsM = append(p.GuiStrVarsM, v2)
-
-		// // 	p.GuiM[v1] = len(p.GuiStrVarsM) - 1
-
-		// // 	vr := giu.Button(func() string { return p.GuiStrVarsM[p.GuiM[v1].(int)] }()).OnClick(v3)
-
-		// // 	p.SetVarInt(pr, vr)
-
-		// // 	return ""
-
-		// case 211013: // guiButton
-		// 	pr := -5
-		// 	v1p := 0
-
-		// 	if instrT.ParamLen > 2 {
-		// 		pr = instrT.Params[0].Ref
-		// 		v1p = 1
-		// 	}
-
-		// 	v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
-
-		// 	// v2 := tk.ToStr(p.GetVarValue(instrT.Params[v1p+1]))
-
-		// 	v2 := p.GetVarValue(instrT.Params[v1p+1]).(func())
-
-		// 	// p.GuiStrVarsM = append(p.GuiStrVarsM, v2)
-
-		// 	// p.GuiM[v1] = len(p.GuiStrVarsM) - 1
-
-		// 	vr := giu.Button(tk.ToStr(p.GuiM[v1])).OnClick(v2)
-
-		// 	p.SetVarInt(pr, vr)
-
-		// 	return ""
-
-		// case 211014: // guiStaticButton
-		// 	pr := -5
-		// 	v1p := 0
-
-		// 	if instrT.ParamLen > 2 {
-		// 		pr = instrT.Params[0].Ref
-		// 		v1p = 1
-		// 	}
-
-		// 	v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
-
-		// 	v2 := p.GetVarValue(instrT.Params[v1p+1]).(func())
-
-		// 	vr := giu.Button(v1).OnClick(v2)
-
-		// 	p.SetVarInt(pr, vr)
-
-		// 	return ""
-
-		// case 211015: // guiInput
-		// 	if instrT.ParamLen < 2 {
-		// 		return p.ErrStrf("参数不够")
-		// 	}
-
-		// 	pr := instrT.Params[0].Ref
-		// 	v1p := 1
-
-		// 	v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
-
-		// 	vs := p.ParamsToStrs(instrT, v1p+1)
-
-		// 	// v2 := tk.ToStr(p.GetVarValue(instrT.Params[v1p+1]))
-
-		// 	// v2 := tk.ToStr(p.GetVarValue(instrT.Params[v1p+1]))
-
-		// 	// p.GuiStrVarsM = append(p.GuiStrVarsM, v2)
-
-		// 	// p.GuiM[v1] = len(p.GuiStrVarsM) - 1
-
-		// 	vr := giu.InputText(p.GuiM[v1].(*string)) //.Label(tk.ToStr(p.GuiM[v2]))
-
-		// 	widthT := tk.GetSwitch(vs, "-width=", "")
-
-		// 	if widthT != "" {
-		// 		vr = vr.Size(float32(tk.ToFloat(widthT, 0)))
-		// 	}
-
-		// 	labelT := tk.GetSwitch(vs, "-label=", "")
-
-		// 	if labelT != "" {
-		// 		vr = vr.Label(labelT)
-		// 	}
-
-		// 	hintT := tk.GetSwitch(vs, "-hint=", "")
-
-		// 	if hintT != "" {
-		// 		vr = vr.Hint(hintT)
-		// 	}
-
-		// 	p.SetVarInt(pr, vr)
-
-		// 	return ""
-
-		// case 211101: // guiRow
-		// 	pr := instrT.Params[0].Ref
-		// 	v1p := 1
-
-		// 	lenT := len(instrT.Params)
-
-		// 	sl := make([]giu.Widget, 0, lenT)
-
-		// 	for i := v1p; i < lenT; i++ {
-		// 		sl = append(sl, p.GetVarValue(instrT.Params[i]).(giu.Widget))
-		// 	}
-		// 	// v2 := tk.ToStr(p.GetVarValue(instrT.Params[v1p+1]))
-
-		// 	// p.GuiStrVarsM = append(p.GuiStrVarsM, v2)
-
-		// 	// p.GuiM[v1] = v2 //len(p.GuiStrVarsM) - 1
-
-		// 	vr := giu.Row(sl...)
-
-		// 	// tk.Plv(vr)
-
-		// 	p.SetVarInt(pr, vr)
-
-		// 	return ""
-
-		// case 211103: // guiColumn
-		// 	pr := instrT.Params[0].Ref
-		// 	v1p := 1
-
-		// 	lenT := len(instrT.Params)
-
-		// 	sl := make([]giu.Widget, 0, lenT)
-
-		// 	for i := v1p; i < lenT; i++ {
-		// 		sl = append(sl, p.GetVarValue(instrT.Params[i]).(giu.Widget))
-		// 	}
-		// 	// v2 := tk.ToStr(p.GetVarValue(instrT.Params[v1p+1]))
-
-		// 	// p.GuiStrVarsM = append(p.GuiStrVarsM, v2)
-
-		// 	// p.GuiM[v1] = v2 //len(p.GuiStrVarsM) - 1
-
-		// 	vr := giu.Column(sl...)
-
-		// 	// tk.Plv(vr)
-
-		// 	p.SetVarInt(pr, vr)
-
-		// 	return ""
-
-		// case 211105: // guiSpacing/guiGap
-		// 	pr := -5
-		// 	v1p := 0
-
-		// 	if instrT.ParamLen > 2 {
-		// 		pr = instrT.Params[0].Ref
-		// 		v1p = 1
-		// 	}
-
-		// 	v1 := tk.ToFloat(p.GetVarValue(instrT.Params[v1p]))
-		// 	v2 := tk.ToFloat(p.GetVarValue(instrT.Params[v1p+1]))
-
-		// 	vr := giu.Dummy(float32(v1), float32(v2))
-
-		// 	p.SetVarInt(pr, vr)
-
-		// 	return ""
-
-		// case 211101: // guiNewVBox
-		// 	pr := instrT.Params[0].Ref
-		// 	v1p := 1
-
-		// 	vs := p.ParamsToList(instrT, v1p)
-
-		// 	// var aryT []fyne.CanvasObject = make([]fyne.CanvasObject, 0, len(vs))
-
-		// 	tk.Pln(9)
-
-		// 	vr := container.NewVBox()
-
-		// 	tk.Pln(10)
-
-		// 	for _, v := range vs {
-		// 		tk.Plv(v)
-		// 		vr.Add(v.(fyne.CanvasObject))
-		// 	}
-
-		// 	tk.Pln(11)
-
-		// 	p.SetVarInt(pr, vr)
-
-		// 	tk.Pln(12)
-
-		// 	return ""
 
 		// end of switch
 	}
