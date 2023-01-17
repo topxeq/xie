@@ -118,6 +118,8 @@ func guiHandler(actionA string, objA interface{}, dataA interface{}, paramsA ...
 			case "maxValue":
 				rs := nv.MaxValue()
 				return rs
+			case "done":
+				return nv.Done()
 			}
 		}
 

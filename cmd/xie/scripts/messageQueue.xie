@@ -1,0 +1,51 @@
+// 本例演示消息队列（messageQueue）对象的使用方法
+// 消息队列支持并发访问，是线程安全的，支持add/put、quickGet、get、clear、size等成员方法
+
+new $msgQ messageQueue
+
+// 启动一个线程，每个2.5秒钟往消息队列中放入一个对象（由JSON解析而来）
+goFunc 0 `
+    [] $msgQ $inputG 0
+
+:loop1
+
+    sleep 2.5
+
+    pl "put message..."
+
+    // goFunc指令指定的线程代码中，如果会用到反引号，需要替换成三个连续的波浪号
+    fromJson $tmp ~~~{"Status": "success", "Value": "Work done."}~~~
+
+    mt $drop $msgQ put $tmp
+
+    goto :loop1
+` $msgQ
+
+// 主线程，每隔1秒钟检查一次消息队列，如果有则将其获取后输出
+// quickGet方法将从消息队列快速获取一条消息，如果消息队列为空时则返回nil
+// 循环10次后退出程序
+
+= $i #i0
+
+:processMsg
+    if @`$i > #i9` :+1 :+2
+        exit
+
+    pl "process message..."
+
+    {} $items $msgQ Items
+
+    mt $rs $msgQ quickGet
+
+    if @`{isNil $rs}` :+2 :+1
+        pl "got message: %v" $rs
+
+    sleep 1.0
+
+    ++ $i
+
+goto :processMsg
+
+
+
+

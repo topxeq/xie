@@ -46,5 +46,8 @@ systemCmd $rs "xie" "-gopath" "go1.xie"
 
 test $rs "start...\n0\n1\n2\n3\n4\n" $seq "go1.xie"
 
+systemCmd $rs "xie" "-gopath" "messageQueue.xie"
+
+test $rs "process message...\nprocess message...\nprocess message...\nput message...\nprocess message...\ngot message: [map[Status:success Value:Work done.]]\nprocess message...\nput message...\nprocess message...\ngot message: [map[Status:success Value:Work done.]]\nprocess message...\nprocess message...\nput message...\nprocess message...\ngot message: [map[Status:success Value:Work done.]]\nprocess message...\nput message...\n" $seq "messageQueue.xie"
 
 

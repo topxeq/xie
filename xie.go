@@ -41,7 +41,7 @@ import (
 	excelize "github.com/xuri/excelize/v2"
 )
 
-var VersionG string = "0.6.9"
+var VersionG string = "0.7.0"
 
 var ShellModeG bool = false
 
@@ -129,6 +129,8 @@ var InstrNameSet map[string]int = map[string]int{
 	"goto": 180, // 无条件跳转到指定标号处
 	"jmp":  180,
 	"转到":   180,
+
+	"wait": 191, // 等待可等待的对象，例如waitGroup或chan，如果没有指定，则无限循环等待（中间会周期性休眠），用于等待用户按键退出或需要静止等待等场景；如果给出一个字符串，则输出字符串后等待输入（回车确认）后继续；如果是整数或浮点数则休眠相应的秒数后继续；
 
 	"exit": 199, // 退出程序运行
 	"终止":   199,
@@ -338,10 +340,10 @@ var InstrNameSet map[string]int = map[string]int{
 	"ret": 1020, // 函数内返回
 	"返回":  1020,
 
-	"callFunc": 1050, // 封装调用函数，一个参数是传入参数（压栈值）的个数（可省略），第二个参数是字符串类型的源代码
+	"callFunc": 1050, // 封装调用函数，第一个参数是传入参数（压栈值）的个数（可省略），第二个参数是字符串类型的源代码，如果后续还有参数，将合并为数组传入调用函数（新虚拟机）的inputG变量中，封装函数体内需要通过outG返回值
 	"封装调用":     1050,
 
-	"goFunc": 1060, // 并发调用函数，一个参数是传入参数（压栈值）的个数（可省略），第二个参数是字符串类型的源代码
+	"goFunc": 1060, // 并发调用函数，第一个参数是传入参数（压栈值）的个数（可省略），第二个参数是字符串类型的源代码，如果后续还有参数，将合并为数组传入调用函数（新虚拟机）的inputG变量中，并发函数体内需要通过outG返回值
 
 	"go": 1063, // 快速并发调用一个标号处的代码，该段代码应该使用exit命令仅表示退出该线程
 
@@ -954,14 +956,18 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"guiInit": 400000, // 初始化GUI环境
 
-	"alert": 400001, // 类似JavaScript中的alert，弹出对话框，显示一个字符串或任意数字、对象的字符串表达
+	"alert":    400001, // 类似JavaScript中的alert，弹出对话框，显示一个字符串或任意数字、对象的字符串表达
+	"guiAlert": 400001,
 
-	"msgBox":   400003, // 类似Delphi、VB中的msgBox，弹出带标题的对话框，显示一个字符串，第一个参数是标题，第二个是字符串
-	"showInfo": 400003,
+	"msgBox":      400003, // 类似Delphi、VB中的msgBox，弹出带标题的对话框，显示一个字符串，第一个参数是标题，第二个是字符串
+	"showInfo":    400003,
+	"guiShowInfo": 400003,
 
-	"showError": 400005, // 弹框显示错误信息
+	"showError":    400005, // 弹框显示错误信息
+	"guiShowError": 400005,
 
-	"getConfirm": 400011, // 显示信息，获取用户的确认
+	"getConfirm":    400011, // 显示信息，获取用户的确认
+	"guiGetConfirm": 400011,
 
 	"guiNewWindow": 400031,
 
@@ -5978,6 +5984,53 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		}
 
 		return p.ErrStrf("无效的标号：%v", v1)
+	case 191: // wait
+		if instrT.ParamLen < 1 {
+			return p.ErrStrf("参数不够")
+		}
+
+		v1 := p.GetVarValue(instrT.Params[0])
+
+		c, ok := v1.(int)
+
+		if ok {
+			tk.Sleep(tk.ToFloat(c))
+			return ""
+		}
+
+		f, ok := v1.(float64)
+
+		if ok {
+			tk.Sleep(f)
+			return ""
+		}
+
+		s2, ok := v1.(string)
+
+		if ok {
+			tk.GetInputf(s2)
+			return ""
+		}
+
+		wg1, ok := v1.(*sync.WaitGroup)
+
+		if ok {
+			wg1.Wait()
+			return ""
+		}
+
+		ch1, ok := v1.(<-chan struct{})
+
+		if ok {
+			<-ch1
+			return ""
+		}
+
+		for {
+			tk.Sleep(1.0)
+		}
+
+		return p.ErrStrf("不支持的数据类型（unsupported type）：%T(%v)", v1, v1)
 	case 199: // exit
 		if instrT.ParamLen < 1 {
 			return "exit"
@@ -9212,7 +9265,9 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 		codeT = strings.ReplaceAll(codeT, "~~~", "`")
 
-		return p.CallFunc(codeT, argCountT)
+		vs := p.ParamsToList(instrT, 2)
+
+		return p.CallFunc(codeT, argCountT, vs...)
 
 	case 1060: // goFunc
 		if instrT.ParamLen < 1 {
@@ -9231,9 +9286,11 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			codeT = p.GetVarValue(instrT.Params[0]).(string)
 		}
 
+		vs := p.ParamsToList(instrT, 2)
+
 		codeT = strings.ReplaceAll(codeT, "~~~", "`")
 
-		return p.GoFunc(codeT, argCountT)
+		return p.GoFunc(codeT, argCountT, vs...)
 	case 1063: // go
 		if instrT.ParamLen < 1 {
 			return p.ErrStrf("参数不够")
@@ -10839,7 +10896,11 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		case map[string]map[string]interface{}:
 			rv, ok = nv[v2]
 		default:
-			return p.ErrStrf("参数类型错误")
+			rv := tk.ReflectGetMember(v1, v2)
+			p.SetVarInt(pr, rv)
+
+			return ""
+			// return p.ErrStrf("参数类型错误：%T（%v）", v1, v1)
 		}
 
 		if !ok {
@@ -11035,7 +11096,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		case "seq": // 序列生成器（自动增长的整数序列，一般用于需要唯一性ID时）
 			p.SetVarInt(pr, tk.NewSeq())
 		case "messageQueue", "syncQueue": // 线程安全的先进先出队列
-			p.SetVarInt(pr, tk.NewSeq())
+			p.SetVarInt(pr, tk.NewSyncQueue())
 		case "mailSender": // 邮件发送客户端
 			vs := p.ParamsToStrs(instrT, v1p+1)
 
@@ -11395,7 +11456,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 		v2 := tk.ToStr(p.GetVarValue(instrT.Params[2]))
 
-		// v3p := 3
+		v3p := 3
 
 		switch nv := v1.(type) {
 		case string:
@@ -11404,9 +11465,41 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			funcT, ok := mapT[v2]
 
 			if ok {
-				rsT := callGoFunc(funcT, nv, p.ParamsToList(instrT, 3)...)
+				rsT := callGoFunc(funcT, nv, p.ParamsToList(instrT, v3p)...)
 				p.SetVarInt(pr, rsT)
 
+				return ""
+			}
+		case *tk.SyncQueue:
+			switch v2 {
+			case "add", "put":
+				v3 := p.ParamsToStrs(instrT, v3p)
+
+				nv.Add(v3)
+				return ""
+			case "clearAdd":
+				v3 := p.ParamsToStrs(instrT, v3p)
+
+				nv.ClearAdd(v3)
+				return ""
+			case "clear":
+				nv.Clear()
+				return ""
+			case "size":
+				p.SetVarInt(pr, nv.Size())
+				return ""
+			case "quickGet":
+				p.SetVarInt(pr, nv.QuickGet())
+				return ""
+			case "get":
+				rs, ok := nv.Get()
+
+				if !ok {
+					p.SetVarInt(pr, fmt.Errorf("队列空（queue empty）"))
+					return ""
+				}
+
+				p.SetVarInt(pr, rs)
 				return ""
 			}
 		case *mailyak.MailYak:
@@ -18698,7 +18791,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 	return p.ErrStrf("未知命令")
 }
 
-func (p *XieVM) CallFunc(codeA string, argCountA int) string {
+func (p *XieVM) CallFunc(codeA string, argCountA int, inputA ...interface{}) string {
 	vmT := NewXie(p.SharedMapM)
 
 	// argCountT := p.Pop()
@@ -18709,6 +18802,10 @@ func (p *XieVM) CallFunc(codeA string, argCountA int) string {
 
 	for i := 0; i < argCountA; i++ {
 		vmT.Push(p.Pop())
+	}
+
+	if len(inputA) > 0 {
+		vmT.SetVar("inputG", inputA)
 	}
 
 	lrs := vmT.Load(codeA)
@@ -18732,7 +18829,7 @@ func (p *XieVM) CallFunc(codeA string, argCountA int) string {
 	return ""
 }
 
-func (p *XieVM) GoFunc(codeA string, argCountA int) string {
+func (p *XieVM) GoFunc(codeA string, argCountA int, inputA ...interface{}) string {
 	vmT := NewXie(p.SharedMapM)
 
 	vmT.VerboseM = true
@@ -18745,6 +18842,10 @@ func (p *XieVM) GoFunc(codeA string, argCountA int) string {
 
 	for i := 0; i < argCountA; i++ {
 		vmT.Push(p.Pop())
+	}
+
+	if len(inputA) > 0 {
+		vmT.SetVar("inputG", inputA)
 	}
 
 	lrs := vmT.Load(codeA)
