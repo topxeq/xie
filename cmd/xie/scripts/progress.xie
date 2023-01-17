@@ -2,6 +2,20 @@ mt $p1 $guiG showProcess -title=处理进度 -noCancel -modl -ok=确认
 
 plo $p1
 
+guiMt $doneT $p1 done
+
+goFunc 0 `
+    [] $doneT $inputG 0
+
+    plo $doneT
+
+    wait $doneT
+
+    pl "process dialog done"
+
+
+` $doneT
+
 defer guiMt $drop $p1 close
 
 = $i #i0
