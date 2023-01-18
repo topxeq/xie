@@ -1,0 +1,143 @@
+// 本例演示使用随机落点法计算圆周率Pi时将落点即时画在图形界面上
+// 使用HTML5中的画布（canvas）对象来实现
+
+new $msgQ messageQueue
+
+setSharedMapItem msgQ $msgQ
+
+# getSharedMapSize $pln 
+
+# getSharedMap $pln
+
+# getSharedMapItem $pln msgQ $nilG
+
+# exit
+
+guiNew $w window "-title=圆周率计算" -width=1024 -height=768 -center -debug
+
+// 如果出错则停止执行
+checkErrX $w
+
+// 调用窗口对象的setDelegate方法来指定代理函数
+mt $rs $w setDelegate `
+pln 1
+    getArrayItem $cmdT $inputG 0
+
+    ifEqual $cmdT "start" :+1 :inext1
+
+        goFunc 0 ~~~
+pln 2
+        :for1
+            getSharedMapItem $msgQ msgQ $nilG
+
+            mt $rs $msgQ get
+
+            pl "get result: %v" $rs
+
+            sleep 1.0
+        
+            goto :for1
+        ~~~
+
+        = $outG "started"
+
+        exit
+
+    :inext1
+    ifEqual $cmdT "pl" :+1 :inext2
+        getArrayItem $formatT $inputG 1
+
+        slice $list1 $inputG 2 -
+
+        pl $formatT $list1...
+
+        = $outG ""
+
+        exit
+
+    :inext2
+    pl "unknown command: %v" $cmdT
+
+    spr $outG "unknown command: %v" $cmdT
+
+    exit
+`
+
+pl "set dele: %v" $rs
+
+= $htmlT `
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+<script>
+    var ctxG;
+
+	window.onload = function (){
+        var canvas = document.getElementById('mainCanvasId');
+        ctxG = canvas.getContext('2d');
+
+        ctxG.strokeStyle = "rgb(0,0,0)";
+        ctxG.beginPath();
+        ctxG.arc(150, 150, 150, 0, 2 * Math.PI);
+        ctxG.closePath();
+        ctxG.stroke();
+
+        ctxG.setLineDash([20, 5]);
+        ctxG.strokeStyle = "rgb(200,0,0)";
+        ctxG.strokeRect(0, 0, 300, 300);
+
+        drawPoint(150, 150, false);
+        drawPoint(10, 20, true);
+	};
+
+    function drawPoint(x, y, red) {
+        if (!red) {
+            ctxG.strokeStyle = "rgb(0,0,0)";
+        } else {
+            ctxG.strokeStyle = "rgb(200,0,0)";
+        }
+
+        ctxG.fillRect(x,y,1,1);
+    }
+
+	function start() {
+        console.log("start...");
+        delegateDo("start");
+	}
+
+	function test() {
+		var rs = delegateDo("showNav", "userAgent", navigator.userAgent);
+
+		// 返回的结果是一个Promise，因此要用相应的方式获取
+		rs.then(res => {
+			alert("test2: "+res);
+		});
+	}
+</script>
+</head>
+<body>
+<div id="div1">
+	<button onclick="javascript:start();">开始绘制<br>（start drawing）</button>
+</div>
+<div id="div3" style="margin-top: 1.0em; text-align: center;">
+    <canvas id="mainCanvasId" width="300" height="300"></canvas>
+</div>
+</body>
+</html>
+`
+
+mt $rs $w setHtml $htmlT
+
+checkErrX $rs
+
+mt $rs $w show
+
+checkErrX $rs
+
+mt $rs $w close
+
+exit
+
+

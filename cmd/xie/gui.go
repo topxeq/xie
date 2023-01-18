@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/ncruces/zenity"
 	"github.com/topxeq/dlgs"
@@ -69,6 +70,245 @@ import (
 // return browser.Interface().(*edge.Chromium)
 // }
 
+func newWindowWebView2(objA interface{}, paramsA []interface{}) interface{} {
+	var paraArgsT []string = []string{}
+
+	for i := 0; i < len(paramsA); i++ {
+		paraArgsT = append(paraArgsT, tk.ToStr(paramsA[i]))
+	}
+
+	p := objA.(*xie.XieVM)
+
+	titleT := p.GetSwitchVarValue(paraArgsT, "-title=", "dialog")
+	widthT := p.GetSwitchVarValue(paraArgsT, "-width=", "800")
+	heightT := p.GetSwitchVarValue(paraArgsT, "-height=", "600")
+	iconT := p.GetSwitchVarValue(paraArgsT, "-icon=", "2")
+	debugT := tk.IfSwitchExistsWhole(paraArgsT, "-debug")
+	centerT := tk.IfSwitchExistsWhole(paraArgsT, "-center")
+	fixT := tk.IfSwitchExistsWhole(paraArgsT, "-fix")
+	maxT := tk.IfSwitchExistsWhole(paraArgsT, "-max")
+	minT := tk.IfSwitchExistsWhole(paraArgsT, "-min")
+
+	if maxT {
+		// windowStyleT = webview2.HintMax
+
+		rectT := screenshot.GetDisplayBounds(0)
+
+		widthT = tk.ToStr(rectT.Max.X)
+		heightT = tk.ToStr(rectT.Max.Y)
+	}
+
+	if minT {
+		// windowStyleT = webview2.HintMin
+
+		widthT = "0"
+		heightT = "0"
+	}
+
+	w := webview2.NewWithOptions(webview2.WebViewOptions{
+		Debug:     debugT,
+		AutoFocus: true,
+		WindowOptions: webview2.WindowOptions{
+			Title:  titleT,
+			Width:  uint(tk.ToInt(widthT, 800)),
+			Height: uint(tk.ToInt(heightT, 600)),
+			IconId: uint(tk.ToInt(iconT, 2)), // icon resource id
+			Center: centerT,
+		},
+	})
+
+	if w == nil {
+		return fmt.Errorf("创建窗口失败：%v", "N/A")
+	}
+
+	windowStyleT := webview2.HintNone
+
+	if fixT {
+		windowStyleT = webview2.HintFixed
+	}
+
+	w.SetSize(tk.ToInt(widthT, 800), tk.ToInt(heightT, 600), windowStyleT)
+
+	var handlerT tk.TXDelegate
+
+	handlerT = func(actionA string, objA interface{}, dataA interface{}, paramsA ...interface{}) interface{} {
+		switch actionA {
+		case "show":
+			w.Run()
+			return nil
+		case "navigate":
+			len1T := len(paramsA)
+			if len1T < 1 {
+				return fmt.Errorf("参数不够")
+			}
+
+			if len1T > 0 {
+				w.Navigate(tk.ToStr(paramsA[0]))
+			}
+
+			return nil
+		case "setHtml":
+			len1T := len(paramsA)
+			if len1T < 1 {
+				return fmt.Errorf("参数不够")
+			}
+
+			if len1T > 0 {
+				w.SetHtml(tk.ToStr(paramsA[0]))
+			}
+
+			return nil
+		case "call", "eval":
+			len1T := len(paramsA)
+			if len1T < 1 {
+				return fmt.Errorf("参数不够")
+			}
+
+			if len1T > 0 {
+				w.Dispatch(func() {
+					w.Eval(tk.ToStr(paramsA[0]))
+				})
+			}
+
+			return nil
+		case "close":
+			w.Destroy()
+			return nil
+		case "setQuickDelegate":
+			var deleT tk.QuickVarDelegate = paramsA[0].(tk.QuickVarDelegate)
+
+			w.Bind("quickDelegateDo", func(args ...interface{}) interface{} {
+				// args是WebView2中调用谢语言函数时传入的参数
+				// 可以是多个，谢语言中按位置索引进行访问
+				// strT := args[0].String()
+
+				rsT := deleT(args...)
+
+				// 最后一定要返回一个值，空字符串也可以
+				return rsT
+			})
+
+			return nil
+		case "setDelegate":
+			var codeT string = tk.ToStr(paramsA[0])
+
+			codeT = strings.ReplaceAll(codeT, "~~~", "`")
+
+			p := objA.(*xie.XieVM)
+
+			w.Bind("delegateDo", func(argsA ...interface{}) interface{} {
+				// args是WebView2中调用谢语言函数时传入的参数
+				// 可以是多个，谢语言中按位置索引进行访问
+				// strT := args[0].String()
+
+				vmT := xie.NewXie(p.SharedMapM)
+
+				vmT.SetVar("inputG", argsA)
+
+				lrs := vmT.Load(codeT)
+
+				if tk.IsErrStr(lrs) {
+					return lrs
+				}
+
+				rs := vmT.Run()
+
+				if !tk.IsErrStr(rs) {
+					outIndexT, ok := vmT.VarIndexMapM["outG"]
+					if !ok {
+						return tk.ErrStrf("no result")
+					}
+
+					return tk.ToStr((*vmT.FuncContextM.VarsM)[vmT.FuncContextM.VarsLocalMapM[outIndexT]])
+				}
+
+				// 最后一定要返回一个值，空字符串也可以
+				return rs
+			})
+
+			return nil
+		case "setGoDelegate":
+			var codeT string = tk.ToStr(paramsA[0])
+
+			p := objA.(*xie.XieVM)
+
+			w.Bind("goDelegateDo", func(args ...interface{}) interface{} {
+				// args是WebView2中调用谢语言函数时传入的参数
+				// 可以是多个，谢语言中按位置索引进行访问
+				// strT := args[0].String()
+
+				vmT := xie.NewXie(p.SharedMapM)
+
+				vmT.VerboseM = true
+
+				vmT.SetVar("inputG", args)
+
+				// argCountT := p.Pop()
+
+				// if argCountT == Undefined {
+				// 	return tk.ErrStrf()
+				// }
+
+				// for i := 0; i < argCountA; i++ {
+				// 	vmT.Push(p.Pop())
+				// }
+
+				lrs := vmT.Load(codeT)
+
+				if tk.IsErrStr(lrs) {
+					return lrs
+				}
+
+				go vmT.Run()
+
+				// 最后一定要返回一个值，空字符串也可以
+				return ""
+			})
+
+			return nil
+		// case "call":
+		// 	len1T := len(paramsA)
+		// 	if len1T < 1 {
+		// 		return fmt.Errorf("参数不够")
+		// 	}
+
+		// 	if len1T > 1 {
+		// 		aryT := make([]*sciter.Value, 0, 10)
+
+		// 		for i := 1; i < len1T; i++ {
+		// 			aryT = append(aryT, sciter.NewValue(paramsA[i]))
+		// 		}
+
+		// 		rsT, errT := w.Call(tk.ToStr(paramsA[0]), aryT...)
+
+		// 		if errT != nil {
+		// 			return fmt.Errorf("调用方法时发生错误：%v", errT)
+		// 		}
+
+		// 		return rsT.String()
+		// 	}
+
+		// 	rsT, errT := w.Call(tk.ToStr(paramsA[0]))
+
+		// 	if errT != nil {
+		// 		return fmt.Errorf("调用方法时发生错误：%v", errT)
+		// 	}
+
+		// 	return rsT.String()
+		default:
+			return fmt.Errorf("未知操作：%v", actionA)
+		}
+
+		return nil
+	}
+
+	// w.Show()
+	// w.Run()
+
+	return handlerT
+
+}
+
 func guiHandler(actionA string, objA interface{}, dataA interface{}, paramsA ...interface{}) interface{} {
 	switch actionA {
 	case "init":
@@ -126,6 +366,22 @@ func guiHandler(actionA string, objA interface{}, dataA interface{}, paramsA ...
 		rvr := tk.ReflectCallMethod(objT, methodNameT, paramsA[2:]...)
 
 		return rvr
+
+	case "new":
+		if len(paramsA) < 1 {
+			return fmt.Errorf("参数不够")
+		}
+
+		vs1 := tk.ToStr(paramsA[0])
+
+		p := objA.(*xie.XieVM)
+
+		switch vs1 {
+		case "window", "webView2":
+			return newWindowWebView2(p, paramsA[1:])
+		}
+
+		return fmt.Errorf("不支持的创建类型：%v", vs1)
 
 	case "close":
 		if len(paramsA) < 1 {
@@ -387,243 +643,7 @@ func guiHandler(actionA string, objA interface{}, dataA interface{}, paramsA ...
 		return handlerT
 
 	case "newWindow":
-		// if len(paramsA) < 3 {
-		// 	return fmt.Errorf("参数不够：%v", paramsA)
-		// }
-
-		var paraArgsT []string = []string{}
-
-		for i := 0; i < len(paramsA); i++ {
-			paraArgsT = append(paraArgsT, tk.ToStr(paramsA[i]))
-		}
-
-		p := objA.(*xie.XieVM)
-
-		titleT := p.GetSwitchVarValue(paraArgsT, "-title=", "dialog")
-		widthT := p.GetSwitchVarValue(paraArgsT, "-width=", "800")
-		heightT := p.GetSwitchVarValue(paraArgsT, "-height=", "600")
-		iconT := p.GetSwitchVarValue(paraArgsT, "-icon=", "2")
-		debugT := tk.IfSwitchExistsWhole(paraArgsT, "-debug")
-		centerT := tk.IfSwitchExistsWhole(paraArgsT, "-center")
-		fixT := tk.IfSwitchExistsWhole(paraArgsT, "-fix")
-		maxT := tk.IfSwitchExistsWhole(paraArgsT, "-max")
-		minT := tk.IfSwitchExistsWhole(paraArgsT, "-min")
-
-		if maxT {
-			// windowStyleT = webview2.HintMax
-
-			rectT := screenshot.GetDisplayBounds(0)
-
-			widthT = tk.ToStr(rectT.Max.X)
-			heightT = tk.ToStr(rectT.Max.Y)
-		}
-
-		if minT {
-			// windowStyleT = webview2.HintMin
-
-			widthT = "0"
-			heightT = "0"
-		}
-
-		w := webview2.NewWithOptions(webview2.WebViewOptions{
-			Debug:     debugT,
-			AutoFocus: true,
-			WindowOptions: webview2.WindowOptions{
-				Title:  titleT,
-				Width:  uint(tk.ToInt(widthT, 800)),
-				Height: uint(tk.ToInt(heightT, 600)),
-				IconId: uint(tk.ToInt(iconT, 2)), // icon resource id
-				Center: centerT,
-			},
-		})
-
-		if w == nil {
-			return fmt.Errorf("创建窗口失败：%v", "N/A")
-		}
-
-		windowStyleT := webview2.HintNone
-
-		if fixT {
-			windowStyleT = webview2.HintFixed
-		}
-
-		w.SetSize(tk.ToInt(widthT, 800), tk.ToInt(heightT, 600), windowStyleT)
-
-		var handlerT tk.TXDelegate
-
-		handlerT = func(actionA string, objA interface{}, dataA interface{}, paramsA ...interface{}) interface{} {
-			switch actionA {
-			case "show":
-				w.Run()
-				return nil
-			case "navigate":
-				len1T := len(paramsA)
-				if len1T < 1 {
-					return fmt.Errorf("参数不够")
-				}
-
-				if len1T > 0 {
-					w.Navigate(tk.ToStr(paramsA[0]))
-				}
-
-				return nil
-			case "setHtml":
-				len1T := len(paramsA)
-				if len1T < 1 {
-					return fmt.Errorf("参数不够")
-				}
-
-				if len1T > 0 {
-					w.SetHtml(tk.ToStr(paramsA[0]))
-				}
-
-				return nil
-			case "call", "eval":
-				len1T := len(paramsA)
-				if len1T < 1 {
-					return fmt.Errorf("参数不够")
-				}
-
-				if len1T > 0 {
-					w.Dispatch(func() {
-						w.Eval(tk.ToStr(paramsA[0]))
-					})
-				}
-
-				return nil
-			case "close":
-				w.Destroy()
-				return nil
-			case "setQuickDelegate":
-				var deleT tk.QuickVarDelegate = paramsA[0].(tk.QuickVarDelegate)
-
-				w.Bind("quickDelegateDo", func(args ...interface{}) interface{} {
-					// args是WebView2中调用谢语言函数时传入的参数
-					// 可以是多个，谢语言中按位置索引进行访问
-					// strT := args[0].String()
-
-					rsT := deleT(args...)
-
-					// 最后一定要返回一个值，空字符串也可以
-					return rsT
-				})
-
-				return nil
-			case "setDelegate":
-				var codeT string = tk.ToStr(paramsA[0])
-
-				p := objA.(*xie.XieVM)
-
-				w.Bind("delegateDo", func(argsA ...interface{}) interface{} {
-					// args是WebView2中调用谢语言函数时传入的参数
-					// 可以是多个，谢语言中按位置索引进行访问
-					// strT := args[0].String()
-
-					vmT := xie.NewXie(p.SharedMapM)
-
-					vmT.SetVar("inputG", argsA)
-
-					lrs := vmT.Load(codeT)
-
-					if tk.IsErrStr(lrs) {
-						return lrs
-					}
-
-					rs := vmT.Run()
-
-					if !tk.IsErrStr(rs) {
-						outIndexT, ok := vmT.VarIndexMapM["outG"]
-						if !ok {
-							return tk.ErrStrf("no result")
-						}
-
-						return tk.ToStr((*vmT.FuncContextM.VarsM)[vmT.FuncContextM.VarsLocalMapM[outIndexT]])
-					}
-
-					// 最后一定要返回一个值，空字符串也可以
-					return rs
-				})
-
-				return nil
-			case "setGoDelegate":
-				var codeT string = tk.ToStr(paramsA[0])
-
-				p := objA.(*xie.XieVM)
-
-				w.Bind("goDelegateDo", func(args ...interface{}) interface{} {
-					// args是WebView2中调用谢语言函数时传入的参数
-					// 可以是多个，谢语言中按位置索引进行访问
-					// strT := args[0].String()
-
-					vmT := xie.NewXie(p.SharedMapM)
-
-					vmT.VerboseM = true
-
-					vmT.SetVar("inputG", args)
-
-					// argCountT := p.Pop()
-
-					// if argCountT == Undefined {
-					// 	return tk.ErrStrf()
-					// }
-
-					// for i := 0; i < argCountA; i++ {
-					// 	vmT.Push(p.Pop())
-					// }
-
-					lrs := vmT.Load(codeT)
-
-					if tk.IsErrStr(lrs) {
-						return lrs
-					}
-
-					go vmT.Run()
-
-					// 最后一定要返回一个值，空字符串也可以
-					return ""
-				})
-
-				return nil
-			// case "call":
-			// 	len1T := len(paramsA)
-			// 	if len1T < 1 {
-			// 		return fmt.Errorf("参数不够")
-			// 	}
-
-			// 	if len1T > 1 {
-			// 		aryT := make([]*sciter.Value, 0, 10)
-
-			// 		for i := 1; i < len1T; i++ {
-			// 			aryT = append(aryT, sciter.NewValue(paramsA[i]))
-			// 		}
-
-			// 		rsT, errT := w.Call(tk.ToStr(paramsA[0]), aryT...)
-
-			// 		if errT != nil {
-			// 			return fmt.Errorf("调用方法时发生错误：%v", errT)
-			// 		}
-
-			// 		return rsT.String()
-			// 	}
-
-			// 	rsT, errT := w.Call(tk.ToStr(paramsA[0]))
-
-			// 	if errT != nil {
-			// 		return fmt.Errorf("调用方法时发生错误：%v", errT)
-			// 	}
-
-			// 	return rsT.String()
-			default:
-				return fmt.Errorf("未知操作：%v", actionA)
-			}
-
-			return nil
-		}
-
-		// w.Show()
-		// w.Run()
-
-		return handlerT
+		return newWindowWebView2(objA, paramsA)
 
 	default:
 		return fmt.Errorf("未知方法")

@@ -41,7 +41,7 @@ import (
 	excelize "github.com/xuri/excelize/v2"
 )
 
-var VersionG string = "0.7.0"
+var VersionG string = "0.7.1"
 
 var ShellModeG bool = false
 
@@ -187,6 +187,7 @@ var InstrNameSet map[string]int = map[string]int{
 	// "regInt#": 312, // from number
 
 	// shared sync map(cross-VM) related 全局同步映射相关（跨虚拟机）
+	"getSharedMap":           300, // 获取所有的列表项
 	"getSharedMapItem":       301, // 获取全局映射变量，用法：getSharedMapItem $result key default，其中key是键名，default是可以省略的默认值（省略时如果没有值将返回undefined）
 	"getSharedMapSize":       302,
 	"tryGetSharedMapItem":    303,
@@ -969,6 +970,8 @@ var InstrNameSet map[string]int = map[string]int{
 	"getConfirm":    400011, // 显示信息，获取用户的确认
 	"guiGetConfirm": 400011,
 
+	"guiNew": 400021, // GUI版的new，可以新建一系列GUI有关的对象
+
 	"guiNewWindow": 400031,
 
 	"guiMethod": 410001, // 调用GUI生成的对象的方法
@@ -1704,6 +1707,7 @@ func (p *XieVM) InitVM(sharedMapA *tk.SyncMap, globalsA ...map[string]interface{
 
 	p.SetVar("backQuoteG", "`")
 	p.SetVar("undefined", Undefined)
+	p.SetVar("nilG", nil)
 	p.SetVar("newLineG", "\n")
 	p.SetVar("tmp", "")
 
@@ -6833,6 +6837,20 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 	// 	p.CurrentFuncContextM.RegsM.IntsM[v1] = v2
 
 	// 	return ""
+
+	case 300: // getSharedMap
+
+		pr := -5
+		// v1p := 0
+
+		if instrT.ParamLen > 0 {
+			pr = instrT.Params[0].Ref
+			// v1p = 1
+		}
+
+		p.SetVarInt(pr, p.SharedMapM.GetList())
+
+		return ""
 
 	case 301: // getSharedMapItem
 		if instrT.ParamLen < 2 {
@@ -18653,6 +18671,26 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		p.SetVarInt(pr, rs)
 		return ""
 
+	case 400021: // guiNew
+		if instrT.ParamLen < 2 {
+			return p.ErrStrf("参数不够")
+		}
+
+		pr := instrT.Params[0].Ref
+		v1p := 1
+
+		v0, ok := p.GetVarValue(p.ParseVar("$guiG")).(tk.TXDelegate)
+
+		if !ok {
+			return p.ErrStrf("全局变量guiG不存在（$guiG not exists）")
+		}
+
+		vs := p.ParamsToList(instrT, v1p)
+
+		rs := v0("new", p, instrT, vs...)
+
+		p.SetVarInt(pr, rs)
+		return ""
 	case 400031: // guiNewWindow
 		if instrT.ParamLen < 2 {
 			return p.ErrStrf("参数不够")
@@ -18679,7 +18717,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 		vs := p.ParamsToList(instrT, v1p)
 
-		rs := v0("newWindow", p, nil, vs...)
+		rs := v0("newWindow", p, instrT, vs...)
 
 		// if tk.IsErrX(rs) {
 		// 	return p.ErrStrf(tk.GetErrStrX(rs))
