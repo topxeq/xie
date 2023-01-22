@@ -41,7 +41,7 @@ import (
 	excelize "github.com/xuri/excelize/v2"
 )
 
-var VersionG string = "0.7.1"
+var VersionG string = "0.7.2"
 
 var ShellModeG bool = false
 
@@ -168,6 +168,8 @@ var InstrNameSet map[string]int = map[string]int{
 	"pop":  224, // 弹出栈顶数值，结果参数如果省略相当于丢弃栈顶值
 	"出栈":   224,
 	"pop$": 225,
+
+	"getStackSize": 230,
 
 	// "peek*": 226, // from reg
 	// "pop*":  227, // from reg
@@ -4931,6 +4933,10 @@ func (p *XieVM) Peek() interface{} {
 	return rs
 }
 
+func (p *XieVM) GetStackSize() int {
+	return p.StackPointerM
+}
+
 // func (p *XieVM) GetName(nameA string) string {
 // 	if tk.StartsWith(nameA, "$") {
 // 		return nameA[1:]
@@ -4997,7 +5003,7 @@ func (p *XieVM) ParamsToRefList(v *Instr, fromA int) []interface{} {
 
 func (p *XieVM) ErrStrf(formatA string, argsA ...interface{}) string {
 	// tk.Pl("dbg: %v", tk.ToJSONX(p, "-sort"))
-	if p.VerboseM {
+	if p.VerbosePlusM {
 		tk.Pl(fmt.Sprintf("TXERROR:(Line %v: %v) ", p.CodeSourceMapM[p.CodePointerM]+1, tk.LimitString(p.SourceM[p.CodeSourceMapM[p.CodePointerM]], 50))+formatA, argsA...)
 	}
 
@@ -6042,7 +6048,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 		valueT := p.GetVarValue(instrT.Params[0])
 
-		p.SetVar("outG", valueT)
+		p.SetVarGlobal("outG", valueT)
 
 		return "exit"
 	case 201: // global
@@ -6730,6 +6736,22 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		// (*(p.CurrentVarsM))[p1] = p.Pop()
 
 		return ""
+	case 230: // getStackSize
+		pr := -5
+		if instrT.ParamLen < 1 {
+			p.SetVarInt(pr, p.GetStackSize())
+			return ""
+		}
+
+		pr = instrT.Params[0].Ref
+
+		// if p1 < 0 {
+		// 	return p.ErrStrf("invalid var name")
+		// }
+
+		p.SetVarInt(pr, p.GetStackSize())
+
+		return ""
 	// case 226: // peek*
 	// 	v1 := instrT.Params[0].Value.(int)
 
@@ -6829,6 +6851,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 	case 240: // clearStack
 		// p.StackM = make([]interface{}, 0, 10)
 		p.StackPointerM = 0
+		return ""
 
 	// case 312: // regInt#  from value
 	// 	v1 := instrT.Params[0].Value.(int)
@@ -7426,7 +7449,9 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 		} else {
 			tmpv := p.GetVarValue(instrT.Params[0])
-			// tk.Pl("tmpv: %v", tmpv)
+			if p.VerbosePlusM {
+				tk.Pl("if %v -> %v", instrT.Params[0], tmpv)
+			}
 			condT, ok0 = tmpv.(bool)
 			v2 = p.GetVarValue(instrT.Params[1])
 
@@ -18846,6 +18871,9 @@ func (p *XieVM) CallFunc(codeA string, argCountA int, inputA ...interface{}) str
 		vmT.SetVar("inputG", inputA)
 	}
 
+	vmT.VerboseM = p.VerboseM
+	vmT.VerbosePlusM = p.VerbosePlusM
+
 	lrs := vmT.Load(codeA)
 
 	if tk.IsErrStr(lrs) {
@@ -18870,7 +18898,8 @@ func (p *XieVM) CallFunc(codeA string, argCountA int, inputA ...interface{}) str
 func (p *XieVM) GoFunc(codeA string, argCountA int, inputA ...interface{}) string {
 	vmT := NewXie(p.SharedMapM)
 
-	vmT.VerboseM = true
+	vmT.VerboseM = p.VerboseM
+	vmT.VerbosePlusM = p.VerbosePlusM
 
 	// argCountT := p.Pop()
 
@@ -19308,7 +19337,7 @@ func (p *XieVM) RunDefer() interface{} {
 			return fmt.Errorf("无效的指令：%v", instrT)
 		}
 
-		if p.VerboseM {
+		if p.VerbosePlusM {
 			tk.Pl("延迟执行：%v", nv)
 		}
 
@@ -19351,7 +19380,7 @@ func (p *XieVM) RunDeferUpToRoot() interface{} {
 			return fmt.Errorf("无效的指令：%v", instrT)
 		}
 
-		if p.VerboseM {
+		if p.VerbosePlusM {
 			tk.Pl("延迟执行：%v", nv)
 		}
 

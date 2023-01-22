@@ -239,7 +239,8 @@ func newWindowWebView2(objA interface{}, paramsA []interface{}) interface{} {
 
 				vmT := xie.NewXie(p.SharedMapM)
 
-				vmT.VerboseM = true
+				vmT.VerboseM = p.VerboseM
+				vmT.VerbosePlusM = p.VerbosePlusM
 
 				vmT.SetVar("inputG", args)
 
