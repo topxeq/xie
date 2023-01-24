@@ -194,14 +194,14 @@ func newWindowWebView2(objA interface{}, paramsA []interface{}) interface{} {
 
 			codeT = strings.ReplaceAll(codeT, "~~~", "`")
 
-			p := objA.(*xie.XieVM)
+			// p := objA.(*xie.XieVM)
 
 			w.Bind("delegateDo", func(argsA ...interface{}) interface{} {
 				// args是WebView2中调用谢语言函数时传入的参数
 				// 可以是多个，谢语言中按位置索引进行访问
 				// strT := args[0].String()
 
-				vmT := xie.NewXie(p.SharedMapM)
+				vmT := xie.NewXie()
 
 				vmT.SetVar("inputG", argsA)
 
@@ -230,17 +230,17 @@ func newWindowWebView2(objA interface{}, paramsA []interface{}) interface{} {
 		case "setGoDelegate":
 			var codeT string = tk.ToStr(paramsA[0])
 
-			p := objA.(*xie.XieVM)
+			// p := objA.(*xie.XieVM)
 
 			w.Bind("goDelegateDo", func(args ...interface{}) interface{} {
 				// args是WebView2中调用谢语言函数时传入的参数
 				// 可以是多个，谢语言中按位置索引进行访问
 				// strT := args[0].String()
 
-				vmT := xie.NewXie(p.SharedMapM)
+				vmT := xie.NewXie()
 
-				vmT.VerboseM = p.VerboseM
-				vmT.VerbosePlusM = p.VerbosePlusM
+				// vmT.VerboseM = p.VerboseM
+				// vmT.VerbosePlusM = p.VerbosePlusM
 
 				vmT.SetVar("inputG", args)
 

@@ -161,7 +161,7 @@ func Svc() {
 
 					scriptPathG = v["Abs"]
 
-					rs := xie.RunCode(fcT, map[string]interface{}{"scriptPathG": scriptPathG, "basePathG": basePathG}, nil)
+					rs := xie.RunCode(fcT, map[string]interface{}{"scriptPathG": scriptPathG, "basePathG": basePathG})
 					if rs != "TXERROR:no result" {
 						tk.LogWithTimeCompact("任务脚本返回（task result）：%v", rs)
 					}
@@ -194,7 +194,7 @@ func Svc() {
 
 			scriptPathG = v["Abs"]
 
-			rs := xie.RunCode(fcT, map[string]interface{}{"scriptPathG": scriptPathG, "basePathG": basePathG}, nil)
+			rs := xie.RunCode(fcT, map[string]interface{}{"scriptPathG": scriptPathG, "basePathG": basePathG})
 			if rs != "TXERROR:no result" {
 				tk.LogWithTimeCompact("任务脚本返回（auto task result）：%v", rs)
 			}
@@ -263,7 +263,7 @@ func runInteractiveShell() int {
 	var source string
 	scanner := bufio.NewScanner(os.Stdin)
 
-	vmT := xie.NewXie(nil)
+	vmT := xie.NewXie()
 
 	vmT.SetVar("argsG", os.Args)
 	vmT.SetVar("全局参数", os.Args)
@@ -360,7 +360,7 @@ func serveStaticDirHandler(w http.ResponseWriter, r *http.Request) {
 
 	old := r.URL.Path
 
-	if verboseG {
+	if xie.GlobalsG.VerboseLevel > 0 {
 		tk.PlNow("URL: %v", r.URL.Path)
 	}
 
@@ -461,7 +461,7 @@ func doXms(res http.ResponseWriter, req *http.Request) {
 
 	reqT := tk.GetFormValueWithDefaultValue(req, "xms", "")
 
-	if verboseG {
+	if xie.GlobalsG.VerboseLevel > 0 {
 		tk.Pl("请求URI： %v", req.RequestURI)
 	}
 
@@ -496,7 +496,7 @@ func doXms(res http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	if verboseG {
+	if xie.GlobalsG.VerboseLevel > 0 {
 		tk.Pl("[%v] REQ: %#v (%#v)", tk.GetNowTimeStringFormal(), reqT, paraMapT)
 	}
 
@@ -517,7 +517,7 @@ func doXms(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	vmT := xie.NewXie(nil)
+	vmT := xie.NewXie()
 
 	vmT.SetVar("paraMapG", paraMapT)
 	vmT.SetVar("requestG", req)
@@ -593,7 +593,7 @@ func doXmsContent(res http.ResponseWriter, req *http.Request) {
 
 	reqT := tk.GetFormValueWithDefaultValue(req, "xc", "")
 
-	if verboseG {
+	if xie.GlobalsG.VerboseLevel > 0 {
 		tk.Pl("请求URI： %v", req.RequestURI)
 	}
 
@@ -628,7 +628,7 @@ func doXmsContent(res http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	if verboseG {
+	if xie.GlobalsG.VerboseLevel > 0 {
 		tk.Pl("[%v] REQ: %#v (%#v)", tk.GetNowTimeStringFormal(), reqT, paraMapT)
 	}
 
@@ -649,7 +649,7 @@ func doXmsContent(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	vmT := xie.NewXie(nil)
+	vmT := xie.NewXie()
 
 	vmT.SetVar("paraMapG", paraMapT)
 	vmT.SetVar("requestG", req)
@@ -756,9 +756,19 @@ func main() {
 		return
 	}
 
-	verboseG = tk.IfSwitchExistsWhole(argsT, "-verbose")
+	xie.GlobalsG.VerboseLevel = 0
 
-	verbosePlusG = tk.IfSwitchExistsWhole(argsT, "-vv")
+	verboseT := tk.IfSwitchExistsWhole(argsT, "-verbose")
+
+	if verboseT {
+		xie.GlobalsG.VerboseLevel = 1
+	}
+
+	verbosePlusT := tk.IfSwitchExistsWhole(argsT, "-vv")
+
+	if verbosePlusT {
+		xie.GlobalsG.VerboseLevel = 2
+	}
 
 	if tk.IfSwitchExistsWhole(argsT, "-server") {
 		RunServer()
@@ -1026,7 +1036,7 @@ func main() {
 
 				scriptPathG = v["Abs"]
 
-				rs := xie.RunCode(fcT, map[string]interface{}{"guiG": guiHandlerG, "scriptPathG": scriptPathG, "basePathG": basePathG}, nil, argsT...)
+				rs := xie.RunCode(fcT, map[string]interface{}{"guiG": guiHandlerG, "scriptPathG": scriptPathG, "basePathG": basePathG}, argsT...)
 				if rs != "TXERROR:no result" {
 					tk.Pl("%v", rs)
 				}
@@ -1261,7 +1271,7 @@ func main() {
 
 	var guiHandlerG tk.TXDelegate = guiHandler
 
-	rs := xie.RunCode(scriptT, map[string]interface{}{"guiG": guiHandlerG, "scriptPathG": scriptPathG}, nil, argsT...)
+	rs := xie.RunCode(scriptT, map[string]interface{}{"guiG": guiHandlerG, "scriptPathG": scriptPathG}, argsT...)
 	if rs != "TXERROR:no result" {
 		tk.Pl("%v", rs)
 	}

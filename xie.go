@@ -41,7 +41,7 @@ import (
 	excelize "github.com/xuri/excelize/v2"
 )
 
-var VersionG string = "0.7.2"
+var VersionG string = "0.7.3"
 
 var ShellModeG bool = false
 
@@ -559,7 +559,7 @@ var InstrNameSet map[string]int = map[string]int{
 	"pln": 10410, // 相当于其它语言的println函数
 	"输出行": 10410,
 
-	"plo":   10411, // 输出一个变量或数值的类型和值
+	"plo":   10411, // 输出一个（或多个，会分行输出）变量或数值的类型和值
 	"输出值类型": 10411,
 
 	"plos": 10412, // 输出多个变量或数值的类型和值
@@ -1305,6 +1305,8 @@ type XieVM struct {
 
 	CodePointerM int
 
+	PointerStack *tk.SimpleStack
+
 	StackM        []interface{}
 	StackPointerM int
 
@@ -1329,15 +1331,15 @@ type XieVM struct {
 
 	TmpM interface{} // 预制全局变量$tmp，一般用于临时存储
 
-	SharedMapM *tk.SyncMap // 预设全局共享映射，线程安全，可用于存储各个虚拟机需共享的内容
+	// SharedMapM *tk.SyncMap // 预设全局共享映射，线程安全，可用于存储各个虚拟机需共享的内容
 
 	ErrorHandlerM int
 
-	VerboseM bool
+	// VerboseM bool
 
-	VerbosePlusM bool
+	// VerbosePlusM bool
 
-	SeqM tk.Seq
+	// SeqM tk.Seq
 
 	// GuiM map[string]interface{}
 	// GuiStrVarsM   []string
@@ -1665,15 +1667,17 @@ func fnASRSE(fn func(string) (string, error)) func(args ...interface{}) interfac
 	}
 }
 
-func NewXie(sharedMapA *tk.SyncMap, globalsA ...map[string]interface{}) *XieVM {
+func NewXie(globalsA ...map[string]interface{}) *XieVM {
+	// func NewXie(sharedMapA *tk.SyncMap, globalsA ...map[string]interface{}) *XieVM {
 	vmT := &XieVM{}
 
-	vmT.InitVM(sharedMapA, globalsA...)
+	vmT.InitVM(globalsA...)
 
 	return vmT
 }
 
-func (p *XieVM) InitVM(sharedMapA *tk.SyncMap, globalsA ...map[string]interface{}) {
+func (p *XieVM) InitVM(globalsA ...map[string]interface{}) {
+	// func (p *XieVM) InitVM(sharedMapA *tk.SyncMap, globalsA ...map[string]interface{}) {
 	if InstrCodeSet == nil {
 		InstrCodeSet = make(map[int]string, 0)
 
@@ -1684,6 +1688,8 @@ func (p *XieVM) InitVM(sharedMapA *tk.SyncMap, globalsA ...map[string]interface{
 	}
 
 	p.ErrorHandlerM = -1
+
+	p.PointerStack = tk.NewSimpleStack()
 
 	p.StackM = make([]interface{}, 0, 10)
 	p.StackPointerM = 0
@@ -1730,24 +1736,40 @@ func (p *XieVM) InitVM(sharedMapA *tk.SyncMap, globalsA ...map[string]interface{
 
 	p.CodeSourceMapM = make(map[int]int, 100)
 
-	if sharedMapA == nil {
-		p.SharedMapM = tk.NewSyncMap()
-	} else {
-		p.SharedMapM = sharedMapA
-	}
+	// if sharedMapA == nil {
+	// 	p.SharedMapM = tk.NewSyncMap()
+	// } else {
+	// 	p.SharedMapM = sharedMapA
+	// }
 
 	// p.GuiM = make(map[string]interface{}, 10)
 	// p.GuiStrVarsM = make([]string, 0, 10)
 	// p.GuiIntVarsM = make([]int, 0, 10)
 	// p.GuiFloatVarsM = make([]int, 0, 10)
 
-	if tk.IfSwitchExistsWhole(os.Args, "-vv") {
-		p.VerbosePlusM = true
-	}
+	// argsT := os.Args
 
-	if tk.IfSwitchExistsWhole(os.Args, "-verbose") {
-		p.VerboseM = true
-	}
+	// GlobalsG.VerboseLevel = 0
+
+	// verboseT := tk.IfSwitchExistsWhole(argsT, "-verbose")
+
+	// if verboseT {
+	// 	GlobalsG.VerboseLevel = 1
+	// }
+
+	// verbosePlusT := tk.IfSwitchExistsWhole(argsT, "-vv")
+
+	// if verbosePlusT {
+	// 	GlobalsG.VerboseLevel = 2
+	// }
+
+	// if tk.IfSwitchExistsWhole(os.Args, "-vv") {
+	// 	p.VerbosePlusM = true
+	// }
+
+	// if tk.IfSwitchExistsWhole(os.Args, "-verbose") {
+	// 	p.VerboseM = true
+	// }
 
 }
 
@@ -3421,8 +3443,7 @@ func (p *XieVM) GetVarValue(vA VarRef) interface{} {
 	}
 
 	if idxT == -11 {
-		// p.SeqM++
-		return p.SeqM.Get()
+		return GlobalsG.SyncSeq.Get()
 	}
 
 	if idxT == -8 {
@@ -3553,8 +3574,7 @@ func (p *XieVM) GetVarValueWithLayer(vA VarRef) (interface{}, int) {
 	}
 
 	if idxT == -11 {
-		// p.SeqM++
-		return p.SeqM.Get(), -2
+		return GlobalsG.SyncSeq.Get(), -2
 	}
 
 	if idxT == -8 {
@@ -3791,7 +3811,7 @@ func (p *XieVM) GetVarRefNative(vA VarRef) interface{} {
 	}
 
 	if idxT == -11 {
-		return tk.GetRef(&p.SeqM)
+		return nil
 	}
 
 	if idxT == -6 {
@@ -3958,8 +3978,7 @@ func (p *XieVM) GetVarValueGlobal(vA VarRef) interface{} {
 	}
 
 	if idxT == -11 {
-		// p.SeqM++
-		return p.SeqM.Get()
+		return GlobalsG.SyncSeq.Get()
 	}
 
 	if idxT == -8 {
@@ -4385,7 +4404,7 @@ func (p *XieVM) SetVarInt(keyA int, vA interface{}) error {
 	}
 
 	if keyA == -11 {
-		p.SeqM.Reset(tk.ToInt(vA, 0))
+		GlobalsG.SyncSeq.Reset(tk.ToInt(vA, 0))
 		return nil
 	}
 
@@ -4464,7 +4483,8 @@ func (p *XieVM) SetVarIntLocal(keyA int, vA interface{}) error {
 	}
 
 	if keyA == -11 {
-		p.SeqM.Reset(tk.ToInt(vA, 0))
+		GlobalsG.SyncSeq.Reset(tk.ToInt(vA, 0))
+		// p.SeqM.Reset(tk.ToInt(vA, 0))
 		return nil
 	}
 
@@ -4544,7 +4564,8 @@ func (p *XieVM) SetVarIntGlobal(keyA int, vA interface{}) error {
 	}
 
 	if keyA == -11 {
-		p.SeqM.Reset(tk.ToInt(vA, 0))
+		GlobalsG.SyncSeq.Reset(tk.ToInt(vA, 0))
+		// p.SeqM.Reset(tk.ToInt(vA, 0))
 		return nil
 	}
 
@@ -5003,7 +5024,7 @@ func (p *XieVM) ParamsToRefList(v *Instr, fromA int) []interface{} {
 
 func (p *XieVM) ErrStrf(formatA string, argsA ...interface{}) string {
 	// tk.Pl("dbg: %v", tk.ToJSONX(p, "-sort"))
-	if p.VerbosePlusM {
+	if GlobalsG.VerboseLevel > 1 {
 		tk.Pl(fmt.Sprintf("TXERROR:(Line %v: %v) ", p.CodeSourceMapM[p.CodePointerM]+1, tk.LimitString(p.SourceM[p.CodeSourceMapM[p.CodePointerM]], 50))+formatA, argsA...)
 	}
 
@@ -5560,7 +5581,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		instrT = p.InstrListM[lineA]
 	}
 
-	if p.VerbosePlusM {
+	if GlobalsG.VerboseLevel > 1 {
 		tk.Plv(instrT)
 	}
 
@@ -5785,7 +5806,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			v3 = tk.ToStr(p.GetVarValue(instrT.Params[2]))
 		} else {
 			// p.SeqM++
-			v3 = tk.ToStr(p.SeqM.Get())
+			v3 = tk.ToStr(GlobalsG.SyncSeq.Get())
 		}
 
 		if v1 == v2 {
@@ -5814,7 +5835,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			v3 = tk.ToStr(p.GetVarValue(instrT.Params[2]))
 		} else {
 			// p.SeqM++
-			v3 = tk.ToStr(p.SeqM.Get())
+			v3 = tk.ToStr(GlobalsG.SyncSeq.Get())
 		}
 
 		if strings.HasPrefix(tk.ToStr(v1), tk.ToStr(v2)) {
@@ -5843,7 +5864,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			v3 = tk.ToStr(p.GetVarValue(instrT.Params[2]))
 		} else {
 			// p.SeqM++
-			v3 = tk.ToStr(p.SeqM.Get())
+			v3 = tk.ToStr(GlobalsG.SyncSeq.Get())
 		}
 
 		if tk.RegMatchX(tk.ToStr(v1), tk.ToStr(v2)) {
@@ -6871,7 +6892,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			// v1p = 1
 		}
 
-		p.SetVarInt(pr, p.SharedMapM.GetList())
+		p.SetVarInt(pr, GlobalsG.SyncMap.GetList())
 
 		return ""
 
@@ -6902,7 +6923,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			defaultT = p.GetVarValue(instrT.Params[2])
 		}
 
-		p.SetVarInt(pr, p.SharedMapM.Get(v1, defaultT))
+		p.SetVarInt(pr, GlobalsG.SyncMap.Get(v1, defaultT))
 
 		return ""
 
@@ -6914,7 +6935,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			pr = instrT.Params[0].Ref
 		}
 
-		p.SetVarInt(pr, p.SharedMapM.Size())
+		p.SetVarInt(pr, GlobalsG.SyncMap.Size())
 
 		return ""
 
@@ -6945,7 +6966,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			defaultT = p.GetVarValue(instrT.Params[2])
 		}
 
-		p.SetVarInt(pr, p.SharedMapM.TryGet(v1, defaultT))
+		p.SetVarInt(pr, GlobalsG.SyncMap.TryGet(v1, defaultT))
 
 		return ""
 
@@ -6956,7 +6977,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			pr = instrT.Params[0].Ref
 		}
 
-		vr := p.SharedMapM.TrySize()
+		vr := GlobalsG.SyncMap.TrySize()
 
 		if vr < 0 {
 			p.SetVarInt(pr, fmt.Errorf("获取大小失败"))
@@ -6985,7 +7006,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
 		v2 := p.GetVarValue(instrT.Params[v1p+1])
 
-		p.SharedMapM.Set(v1, v2)
+		GlobalsG.SyncMap.Set(v1, v2)
 		// p.SetVarInt(pr, true)
 
 		return ""
@@ -7009,7 +7030,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
 		v2 := p.GetVarValue(instrT.Params[v1p+1])
 
-		p.SetVarInt(pr, p.SharedMapM.TrySet(v1, v2))
+		p.SetVarInt(pr, GlobalsG.SyncMap.TrySet(v1, v2))
 
 		return ""
 
@@ -7031,7 +7052,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 		v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
 
-		p.SharedMapM.Delete(v1)
+		GlobalsG.SyncMap.Delete(v1)
 		// p.SetVarInt(pr, true)
 
 		return ""
@@ -7054,7 +7075,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 		v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
 
-		p.SetVarInt(pr, p.SharedMapM.TryDelete(v1))
+		p.SetVarInt(pr, GlobalsG.SyncMap.TryDelete(v1))
 
 		return ""
 
@@ -7076,7 +7097,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 		// v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
 
-		p.SharedMapM.Clear()
+		GlobalsG.SyncMap.Clear()
 		// p.SetVarInt(pr, true)
 
 		return ""
@@ -7099,42 +7120,42 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 		// v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
 
-		p.SetVarInt(pr, p.SharedMapM.TryClear())
+		p.SetVarInt(pr, GlobalsG.SyncMap.TryClear())
 
 		return ""
 
 	case 341: // lockSharedMap
-		p.SharedMapM.Lock()
+		GlobalsG.SyncMap.Lock()
 
 		return ""
 
 	case 342: // tryLockSharedMap
-		p.SharedMapM.TryLock()
+		GlobalsG.SyncMap.TryLock()
 
 		return ""
 
 	case 343: // unlockSharedMap
-		p.SharedMapM.Unlock()
+		GlobalsG.SyncMap.Unlock()
 
 		return ""
 
 	case 346: // readLockSharedMap
-		p.SharedMapM.RLock()
+		GlobalsG.SyncMap.RLock()
 
 		return ""
 
 	case 347: // tryReadLockSharedMap
-		p.SharedMapM.TryRLock()
+		GlobalsG.SyncMap.TryRLock()
 
 		return ""
 
 	case 348: // readUnlockSharedMap
-		p.SharedMapM.RUnlock()
+		GlobalsG.SyncMap.RUnlock()
 
 		return ""
 
 	case 351: // quickClearSharedMap
-		p.SharedMapM.QuickClear()
+		GlobalsG.SyncMap.QuickClear()
 
 		return ""
 
@@ -7154,7 +7175,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			defaultT = p.GetVarValue(instrT.Params[2])
 		}
 
-		p.SetVarInt(pr, p.SharedMapM.QuickGet(v1, defaultT))
+		p.SetVarInt(pr, GlobalsG.SyncMap.QuickGet(v1, defaultT))
 
 		return ""
 
@@ -7165,7 +7186,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			pr = instrT.Params[0].Ref
 		}
 
-		p.SetVarInt(pr, p.SharedMapM)
+		p.SetVarInt(pr, GlobalsG.SyncMap)
 
 		return ""
 
@@ -7179,7 +7200,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 		v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
 		v2 := p.GetVarValue(instrT.Params[v1p+1])
 
-		p.SharedMapM.QuickSet(v1, v2)
+		GlobalsG.SyncMap.QuickSet(v1, v2)
 
 		return ""
 
@@ -7192,7 +7213,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 		v1 := tk.ToStr(p.GetVarValue(instrT.Params[v1p]))
 
-		p.SharedMapM.QuickDelete(v1)
+		GlobalsG.SyncMap.QuickDelete(v1)
 
 		return ""
 	case 359: // quickSizeSharedMap
@@ -7203,7 +7224,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			pr = instrT.Params[0].Ref
 		}
 
-		p.SetVarInt(pr, p.SharedMapM.QuickSize())
+		p.SetVarInt(pr, GlobalsG.SyncMap.QuickSize())
 
 		return ""
 
@@ -7449,7 +7470,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 		} else {
 			tmpv := p.GetVarValue(instrT.Params[0])
-			if p.VerbosePlusM {
+			if GlobalsG.VerboseLevel > 1 {
 				tk.Pl("if %v -> %v", instrT.Params[0], tmpv)
 			}
 			condT, ok0 = tmpv.(bool)
@@ -7617,19 +7638,6 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 	// 	condT := p.CurrentFuncContextM.RegsM.CondsM[0]
 
 	// 	if condT {
-	// 		return p.GetVarValue(instrT.Params[0]).(int)
-	// 	}
-
-	// 	return ""
-
-	// case 621: // ifNot$
-	// 	if instrT.ParamLen < 1 {
-	// 		return p.ErrStrf("参数不够")
-	// 	}
-
-	// 	condT := p.Pop().(bool)
-
-	// 	if !condT {
 	// 		return p.GetVarValue(instrT.Params[0]).(int)
 	// 	}
 
@@ -10409,6 +10417,17 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			}
 
 			p.SetVarInt(pr, nv[v2])
+		case []map[string]interface{}:
+			if (v2 < 0) || (v2 >= len(nv)) {
+				if instrT.ParamLen > 3 {
+					p.SetVarInt(pr, p.GetVarValue(instrT.Params[3]))
+					return ""
+				} else {
+					return p.ErrStrf("索引超出范围：%v/%v", v2, len(nv))
+				}
+			}
+
+			p.SetVarInt(pr, nv[v2])
 		default:
 			if instrT.ParamLen > 3 {
 				p.SetVarInt(pr, p.GetVarValue(instrT.Params[3]))
@@ -11323,7 +11342,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 			// like callFunc
 			deleT := func(argsA ...interface{}) interface{} {
-				vmT := NewXie(p.SharedMapM)
+				vmT := NewXie()
 
 				// argCountT := p.Pop()
 
@@ -13341,9 +13360,9 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			return ""
 		}
 
-		valueT := p.GetVarValue(instrT.Params[0])
+		vs := p.ParamsToList(instrT, 0)
 
-		tk.Plo(valueT)
+		tk.Plo(vs...)
 
 		return ""
 	case 10412: // plos
@@ -16877,12 +16896,12 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			nv, ok := v3.([]string)
 
 			if ok {
-				rs = RunCode(v1, inputT, p.SharedMapM, nv...)
+				rs = RunCode(v1, inputT, nv...)
 			} else {
-				rs = RunCode(v1, inputT, p.SharedMapM, p.ParamsToStrs(instrT, v1p+2)...)
+				rs = RunCode(v1, inputT, p.ParamsToStrs(instrT, v1p+2)...)
 			}
 		} else {
-			rs = RunCode(v1, inputT, p.SharedMapM)
+			rs = RunCode(v1, inputT)
 		}
 
 		p.SetVarInt(pr, rs)
@@ -17566,12 +17585,12 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			nv, ok := v3.([]string)
 
 			if ok {
-				rs = RunCode(v1, inputT, p.SharedMapM, nv...)
+				rs = RunCode(v1, inputT, nv...)
 			} else {
-				rs = RunCode(v1, inputT, p.SharedMapM, p.ParamsToStrs(instrT, v1p+1)...)
+				rs = RunCode(v1, inputT, p.ParamsToStrs(instrT, v1p+1)...)
 			}
 		} else {
-			rs = RunCode(v1, inputT, p.SharedMapM)
+			rs = RunCode(v1, inputT)
 		}
 
 		p.SetVarInt(pr, rs)
@@ -18826,7 +18845,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 			// v1p = 1
 		}
 
-		p.SetVarInt(pr, p.SeqM.Get())
+		p.SetVarInt(pr, GlobalsG.SyncSeq.Get())
 
 		return ""
 
@@ -18837,9 +18856,11 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 
 		if instrT.ParamLen > 0 {
 			// pr = instrT.Params[0].Ref
-			p.SeqM.Reset(tk.ToInt(p.GetVarValue(instrT.Params[v1p]), 0))
+			// p.SeqM.Reset(tk.ToInt(p.GetVarValue(instrT.Params[v1p]), 0))
+			GlobalsG.SyncSeq.Reset(tk.ToInt(p.GetVarValue(instrT.Params[v1p]), 0))
 		} else {
-			p.SeqM.Reset()
+			// p.SeqM.Reset()
+			GlobalsG.SyncSeq.Reset()
 		}
 
 		p.SetVarInt(pr, nil)
@@ -18855,7 +18876,7 @@ func (p *XieVM) RunLine(lineA int, codeA ...Instr) (resultR interface{}) {
 }
 
 func (p *XieVM) CallFunc(codeA string, argCountA int, inputA ...interface{}) string {
-	vmT := NewXie(p.SharedMapM)
+	vmT := NewXie()
 
 	// argCountT := p.Pop()
 
@@ -18871,8 +18892,8 @@ func (p *XieVM) CallFunc(codeA string, argCountA int, inputA ...interface{}) str
 		vmT.SetVar("inputG", inputA)
 	}
 
-	vmT.VerboseM = p.VerboseM
-	vmT.VerbosePlusM = p.VerbosePlusM
+	// vmT.VerboseM = p.VerboseM
+	// vmT.VerbosePlusM = p.VerbosePlusM
 
 	lrs := vmT.Load(codeA)
 
@@ -18896,10 +18917,10 @@ func (p *XieVM) CallFunc(codeA string, argCountA int, inputA ...interface{}) str
 }
 
 func (p *XieVM) GoFunc(codeA string, argCountA int, inputA ...interface{}) string {
-	vmT := NewXie(p.SharedMapM)
+	vmT := NewXie()
 
-	vmT.VerboseM = p.VerboseM
-	vmT.VerbosePlusM = p.VerbosePlusM
+	// vmT.VerboseM = p.VerboseM
+	// vmT.VerbosePlusM = p.VerbosePlusM
 
 	// argCountT := p.Pop()
 
@@ -19074,19 +19095,6 @@ func (p *XieVM) GoFunc(codeA string, argCountA int, inputA ...interface{}) strin
 // 		rs := regexp.MustCompile(p2).ReplaceAllString(p3, p1)
 
 // 		p.Push(rs)
-
-// 		return ""
-// 	} else if cmdT == "plv" {
-// 		p1, errT := p.Get1Param(paramsT)
-// 		if errT != nil {
-// 			tk.Plv(p.Pop())
-// 			return ""
-// 			// return p.ErrStrf("参数不够")
-// 		}
-
-// 		valueT := p.GetValue(p1)
-
-// 		tk.Plv(valueT)
 
 // 		return ""
 // 	} else if cmdT == "popInt" {
@@ -19337,7 +19345,7 @@ func (p *XieVM) RunDefer() interface{} {
 			return fmt.Errorf("无效的指令：%v", instrT)
 		}
 
-		if p.VerbosePlusM {
+		if GlobalsG.VerboseLevel > 1 {
 			tk.Pl("延迟执行：%v", nv)
 		}
 
@@ -19380,7 +19388,7 @@ func (p *XieVM) RunDeferUpToRoot() interface{} {
 			return fmt.Errorf("无效的指令：%v", instrT)
 		}
 
-		if p.VerbosePlusM {
+		if GlobalsG.VerboseLevel > 1 {
 			tk.Pl("延迟执行：%v", nv)
 		}
 
@@ -19478,8 +19486,9 @@ func (p *XieVM) Run(posA ...int) string {
 
 }
 
-func RunCode(codeA string, objA interface{}, sharedMapA *tk.SyncMap, optsA ...string) interface{} {
-	vmT := NewXie(sharedMapA)
+// func RunCode(codeA string, objA interface{}, sharedMapA *tk.SyncMap, optsA ...string) interface{} {
+func RunCode(codeA string, objA interface{}, optsA ...string) interface{} {
+	vmT := NewXie()
 
 	if len(optsA) > 0 {
 		vmT.SetVar("argsG", optsA)
@@ -19522,4 +19531,34 @@ func RunCode(codeA string, objA interface{}, sharedMapA *tk.SyncMap, optsA ...st
 	rs := vmT.Run()
 
 	return rs
+}
+
+type GlobalContext struct {
+	SyncMap   tk.SyncMap
+	SyncQueue tk.SyncQueue
+	SyncStack tk.SyncStack
+
+	SyncSeq tk.Seq
+
+	Vars map[string]interface{}
+
+	VerboseLevel int
+}
+
+var GlobalsG *GlobalContext
+
+func init() {
+	// tk.Pl("init")
+
+	InstrCodeSet = make(map[int]string, 0)
+
+	for k, v := range InstrNameSet {
+		InstrCodeSet[v] = k
+	}
+
+	GlobalsG = &GlobalContext{}
+
+	GlobalsG.Vars = make(map[string]interface{}, 0)
+
+	GlobalsG.Vars["backQuote"] = "`"
 }
