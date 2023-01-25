@@ -2,9 +2,8 @@
 // 相当于C/C++/Java语言的代码类似（由于语言差异，不一定完全一致。仅作示意）：
 // for (int i = 0; i < 5; i ++) {
 //   println(i, ":", i + 10);
-//   for (int j = i; j < 10; i ++) {
+//   for (int j = i; j < 10; j ++) {
 //        println("j:", j);
-//        j ++
 //   }
 // }
 
