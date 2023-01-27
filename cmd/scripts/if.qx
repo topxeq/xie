@@ -1,0 +1,38 @@
+// assign integer value 11 to variable $i
+assign $i #i11
+
+// compare if $i > 10(integer)
+// then put the result to $a
+> $a $i #i10
+
+// check if $a == true(bool value)
+// if true jump to :label2(label)
+if $a :label2
+    // if not met, continue to run the following
+    pln "else branch"
+
+// terminate the program
+exit
+
+// label named label2
+:label2
+    // output "if branch" for reference
+    pln "if branch"
+
+    // assign a local variable $b(since there are no variabes with this name in global context) to integer value 8
+    assign $b #i8
+
+    // check if $b <= $i
+    // the result variable is omitted, so the result will be put into global variable $tmp
+    <= $b $i
+
+    // check if $tmp is not true
+    // if true($tmp is false), jump to label3
+    ifNot $tmp :label3
+        // else branch
+        pln "label3 else"
+    // terminate
+    exit
+
+    :label3
+        pln "label3 if"

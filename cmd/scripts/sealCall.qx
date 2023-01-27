@@ -1,0 +1,28 @@
+// prepare 2 values to be input paramaters of the function
+assign $a #f1.62
+push #f2.8
+
+// sealCall will start a new VM to run the code string or compiled code
+// any parameters can follow the first result variable and the second code/compiled object
+sealCall $rs `
+    // inputG is an array/list contains all the input parameters
+    getArrayItem $num1 $inputG 0
+    getArrayItem $num2 $inputG 1
+
+    // output 2 values for reference
+    pln num1= $num1
+    pln num2= $num2
+
+    // multiply 2 values and put the result to $result
+    mul $result $num1 $num2
+
+    // print the result value for reference
+    pln $result
+
+    // return values in the global variable $outG
+    // if more than one result, use array/list
+    assign $outG $result
+` $a $pop
+
+// print the result from the function
+pl "seal-function result: %v" $rs

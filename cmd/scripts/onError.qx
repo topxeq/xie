@@ -1,0 +1,34 @@
+
+// set error handler to the code block at label :handler1
+// onError instruction with no parameters will clear the defined error handlers
+onError :handler1
+
+// trigger an error on purpose
+var $array1 array
+getArrayItem $item $array1 1
+
+// the code below will not run normally
+// but the error handler will redirect to this label
+:next1
+
+// output a piece of message for reference
+pln "calculation completed(and the error handler)"
+
+// terminate the program
+exit
+
+// error handler
+:handler1
+    // the error info will in 3 global variables: $lastLineG, $errorMessageG, $errorDetailG
+    // error handler can handle them
+
+    // output the message
+    pl "error occurred while running to line %v: %v, detail: %v" $lastLineG $errorMessageG $errorDetailG
+
+    // jump to the specific position(label)
+    goto :next1
+
+
+
+
+

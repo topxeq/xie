@@ -79,10 +79,10 @@ func newWindowWebView2(objA interface{}, paramsA []interface{}) interface{} {
 
 	p := objA.(*xie.XieVM)
 
-	titleT := p.GetSwitchVarValue(paraArgsT, "-title=", "dialog")
-	widthT := p.GetSwitchVarValue(paraArgsT, "-width=", "800")
-	heightT := p.GetSwitchVarValue(paraArgsT, "-height=", "600")
-	iconT := p.GetSwitchVarValue(paraArgsT, "-icon=", "2")
+	titleT := p.GetSwitchVarValue(p.Running, paraArgsT, "-title=", "dialog")
+	widthT := p.GetSwitchVarValue(p.Running, paraArgsT, "-width=", "800")
+	heightT := p.GetSwitchVarValue(p.Running, paraArgsT, "-height=", "600")
+	iconT := p.GetSwitchVarValue(p.Running, paraArgsT, "-icon=", "2")
 	debugT := tk.IfSwitchExistsWhole(paraArgsT, "-debug")
 	centerT := tk.IfSwitchExistsWhole(paraArgsT, "-center")
 	fixT := tk.IfSwitchExistsWhole(paraArgsT, "-fix")
@@ -201,26 +201,26 @@ func newWindowWebView2(objA interface{}, paramsA []interface{}) interface{} {
 				// 可以是多个，谢语言中按位置索引进行访问
 				// strT := args[0].String()
 
-				vmT := xie.NewXie()
+				vmT := xie.NewVMQuick()
 
-				vmT.SetVar("inputG", argsA)
+				vmT.SetVar(p.Running, "inputG", argsA)
 
-				lrs := vmT.Load(codeT)
+				lrs := vmT.Load(vmT.Running, codeT)
 
-				if tk.IsErrStr(lrs) {
+				if tk.IsErrX(lrs) {
 					return lrs
 				}
 
 				rs := vmT.Run()
 
-				if !tk.IsErrStr(rs) {
-					outIndexT, ok := vmT.VarIndexMapM["outG"]
-					if !ok {
-						return tk.ErrStrf("no result")
-					}
+				// if !tk.IsErrX(rs) {
+				// 	outIndexT, ok := vmT.VarIndexMapM["outG"]
+				// 	if !ok {
+				// 		return tk.ErrStrf("no result")
+				// 	}
 
-					return tk.ToStr((*vmT.FuncContextM.VarsM)[vmT.FuncContextM.VarsLocalMapM[outIndexT]])
-				}
+				// 	return tk.ToStr((*vmT.FuncContextM.VarsM)[vmT.FuncContextM.VarsLocalMapM[outIndexT]])
+				// }
 
 				// 最后一定要返回一个值，空字符串也可以
 				return rs
@@ -237,12 +237,12 @@ func newWindowWebView2(objA interface{}, paramsA []interface{}) interface{} {
 				// 可以是多个，谢语言中按位置索引进行访问
 				// strT := args[0].String()
 
-				vmT := xie.NewXie()
+				vmT := xie.NewVMQuick()
 
-				// vmT.VerboseM = p.VerboseM
+				// xie.GlobalsG.Vars["verbose"]. = p.VerboseM
 				// vmT.VerbosePlusM = p.VerbosePlusM
 
-				vmT.SetVar("inputG", args)
+				vmT.SetVar(vmT.Running, "inputG", args)
 
 				// argCountT := p.Pop()
 
@@ -254,9 +254,9 @@ func newWindowWebView2(objA interface{}, paramsA []interface{}) interface{} {
 				// 	vmT.Push(p.Pop())
 				// }
 
-				lrs := vmT.Load(codeT)
+				lrs := vmT.Load(vmT.Running, codeT)
 
-				if tk.IsErrStr(lrs) {
+				if tk.IsErrX(lrs) {
 					return lrs
 				}
 
@@ -424,9 +424,9 @@ func guiHandler(actionA string, objA interface{}, dataA interface{}, paramsA ...
 
 		pT := objA.(*xie.XieVM)
 
-		formatT := pT.GetSwitchVarValue(paraArgsT, "-format=", "")
+		formatT := pT.GetSwitchVarValue(pT.Running, paraArgsT, "-format=", "")
 
-		idxStrT := pT.GetSwitchVarValue(paraArgsT, "-index=", "0")
+		idxStrT := pT.GetSwitchVarValue(pT.Running, paraArgsT, "-index=", "0")
 
 		idxT := tk.StrToInt(idxStrT, 0)
 

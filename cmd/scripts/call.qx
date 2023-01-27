@@ -1,0 +1,36 @@
+// use function inputL and outL for input and output
+// and cal Fibonacci numbers(the 18th) by recursive function
+
+call $rs :fib #i18
+pln $rs
+
+exit
+
+:fib
+    // define local variables
+    // if not, may be confused with the up level function in the recursion
+    var $n1
+    var $outL
+    var $rs1
+    var $rs2
+
+    getArrayItem $n1 $inputL 0
+
+    < $tmpL $n1 #i2
+
+    if $tmpL :label1
+
+    :else
+        dec $n1
+        call $rs1 :fib $n1
+
+        dec $n1
+        call $rs2 :fib $n1
+
+        add $outL $rs1 $rs2
+
+        ret
+
+    :label1
+        ret $n1
+

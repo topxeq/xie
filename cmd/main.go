@@ -14,19 +14,55 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/topxeq/tk"
-	"github.com/topxeq/xie"
-
 	"github.com/kardianos/service"
-
-	_ "github.com/denisenkom/go-mssqldb"
-
-	_ "github.com/godror/godror"
-	_ "github.com/sijms/go-ora/v2"
-
-	_ "github.com/go-sql-driver/mysql"
-	_ "github.com/mattn/go-sqlite3"
+	"github.com/topxeq/xie"
+	"github.com/topxeq/tk"
 )
+
+// func main() {
+
+// 	// v := tk.Undefined
+
+// 	// tk.Pl("is: %v", tk.IsUndefined(0))
+
+// 	// tk.Pl("is2: %v", tk.IsUndefined(v))
+
+// 	codeT := `
+// 	= $s1 qqq
+
+// 	pln abc $s1
+
+// 	= $outG 10
+// 	`
+
+// 	// compiledT := xie.Compile(codeT)
+
+// 	// if tk.IsErrX(compiledT) {
+// 	// 	tk.Pl("failed to compile: %v", compiledT)
+// 	// 	os.Exit(1)
+// 	// }
+
+// 	// tk.Pl("compiled: %#v", compiledT)
+
+// 	vmT := xie.NewVM(codeT)
+
+// 	if tk.IsError(vmT) {
+// 		tk.Pl("failed to create VM: %v", vmT)
+// 		tk.Exit()
+// 	}
+
+// 	// rs1 := vmT.LoadCompiled(compiledT.(*xie.CompiledCode))
+
+// 	// tk.Pl("rs1: %v", rs1)
+// 	nv := vmT.(*xie.XieVM)
+
+// 	rs := nv.Run(0)
+
+// 	if !tk.IsUndefined(rs) {
+// 		tk.Pl("running result: %v", rs)
+// 	}
+
+// }
 
 var serviceNameG = "xieService"
 var configFileNameG = serviceNameG + ".cfg"
@@ -89,7 +125,7 @@ func initSvc() *service.Service {
 	var s, err = service.New(prgT, svcConfigT)
 
 	if err != nil {
-		tk.LogWithTimeCompact("%v 无法启动服务（unable to init servcie）: %v\n", svcConfigT.DisplayName, err)
+		tk.LogWithTimeCompact("%v unable to init servcie: %v\n", svcConfigT.DisplayName, err)
 		return nil
 	}
 
@@ -119,7 +155,7 @@ func Svc() {
 
 	defer func() {
 		if v := recover(); v != nil {
-			tk.LogWithTimeCompact("服务异常（panic in svc）： %v", v)
+			tk.LogWithTimeCompact("panic in service: %v", v)
 		}
 	}()
 
@@ -127,7 +163,7 @@ func Svc() {
 
 	tk.LogWithTimeCompact("%v V%v", serviceNameG, xie.VersionG)
 	tk.LogWithTimeCompact("os: %v, basePathG: %v, configFileNameG: %v", runtime.GOOS, basePathG, configFileNameG)
-	tk.LogWithTimeCompact("命令行参数（command-line args）: %v", os.Args)
+	tk.LogWithTimeCompact("command-line args: %v", os.Args)
 
 	// tk.Pl("os: %v, basePathG: %v, configFileNameG: %v", runtime.GOOS, basePathG, configFileNameG)
 
@@ -140,7 +176,7 @@ func Svc() {
 		}
 	}
 
-	tk.LogWithTimeCompact("服务已启动。（Service started.）")
+	tk.LogWithTimeCompact("Service started.")
 	// tk.LogWithTimeCompact("Using config file: %v", cfgFileNameT)
 
 	runAutoRemoveTask := func() {
@@ -153,17 +189,17 @@ func Svc() {
 					fcT := tk.LoadStringFromFile(v["Abs"])
 
 					if tk.IsErrX(fcT) {
-						tk.LogWithTimeCompact("载入自动任务脚本失败（failed to load run-then-remove task） - [%v] %v：%v", i, v["Abs"], tk.GetErrStrX(fcT))
+						tk.LogWithTimeCompact("failed to load run-then-remove task - [%v] %v: %v", i, v["Abs"], tk.GetErrStrX(fcT))
 						continue
 					}
 
-					tk.LogWithTimeCompact("执行运行后即删任务脚本（running run-then-remove task）: %v ...", v["Abs"])
+					tk.LogWithTimeCompact("running run-then-remove task: %v ...", v["Abs"])
 
 					scriptPathG = v["Abs"]
 
-					rs := xie.RunCode(fcT, map[string]interface{}{"scriptPathG": scriptPathG, "basePathG": basePathG})
-					if rs != "TXERROR:no result" {
-						tk.LogWithTimeCompact("任务脚本返回（task result）：%v", rs)
+					rs := xie.RunCode(fcT, nil, map[string]interface{}{"scriptPathG": scriptPathG, "basePathG": basePathG})
+					if !tk.IsUndefined(rs) {
+						tk.LogWithTimeCompact("task result: %v", rs)
 					}
 
 					tk.RemoveFile(v["Abs"])
@@ -186,17 +222,17 @@ func Svc() {
 			fcT := tk.LoadStringFromFile(v["Abs"])
 
 			if tk.IsErrX(fcT) {
-				tk.LogWithTimeCompact("载入自动任务脚本失败（failed to load auto task） - [%v] %v：%v", i, v["Abs"], tk.GetErrStrX(fcT))
+				tk.LogWithTimeCompact("failed to load auto task - [%v] %v: %v", i, v["Abs"], tk.GetErrStrX(fcT))
 				continue
 			}
 
-			tk.LogWithTimeCompact("执行任务脚本（running task）: %v ...", v["Abs"])
+			tk.LogWithTimeCompact("running task: %v ...", v["Abs"])
 
 			scriptPathG = v["Abs"]
 
-			rs := xie.RunCode(fcT, map[string]interface{}{"scriptPathG": scriptPathG, "basePathG": basePathG})
-			if rs != "TXERROR:no result" {
-				tk.LogWithTimeCompact("任务脚本返回（auto task result）：%v", rs)
+			rs := xie.RunCode(fcT, nil, map[string]interface{}{"scriptPathG": scriptPathG, "basePathG": basePathG})
+			if !tk.IsUndefined(rs) {
+				tk.LogWithTimeCompact("auto task result: %v", rs)
 			}
 		}
 	}
@@ -229,48 +265,126 @@ func doWork() {
 }
 
 func test() {
-	// fontPaths := findfont.List()
-	// for _, path := range fontPaths {
-	// 	// fmt.Println(path)
-	// 	//楷体:simkai.ttf
-	// 	//黑体:simhei.ttf
-	// 	if strings.Contains(path, "simhei.ttf") {
-	// 		os.Setenv("FYNE_FONT", path)
-	// 		break
-	// 	}
-	// }
+	iter := tk.NewCompactIterator(10, 5, 10, 2, 0)
 
-	// a := app.New()
-	// w := a.NewWindow("Hello今天")
+	for {
+		_, ki, item, ok := iter.Next()
+		if !ok {
+			break
+		}
+		fmt.Println(ki, item)
+	}
 
-	// hello := widget.NewLabel("Hello Fyne我们!")
-	// w.SetContent(container.NewVBox(
-	// 	hello,
-	// 	widget.NewButton("Hi!", func() {
-	// 		hello.SetText("Welcome大家 :)")
-	// 	}),
-	// ))
+	iter0 := tk.NewCompactIterator(5)
 
-	// w.ShowAndRun()
+	for {
+		_, ki, item, ok := iter0.Next()
+		if !ok {
+			break
+		}
+		fmt.Println(ki, item)
+	}
+
+	iter1 := tk.NewCompactIterator(5.0, 5, 10, 2.3, 0)
+
+	for {
+		_, ki, item, ok := iter1.Next()
+		if !ok {
+			break
+		}
+		fmt.Println(ki, item)
+	}
+
+	iter2 := tk.NewCompactIterator("abc123", 0, -1, 1, 0)
+
+	for {
+		_, k, item, ok := iter2.Next()
+		if !ok {
+			break
+		}
+		fmt.Println(k, item)
+	}
+
+	iter3 := tk.NewCompactIterator("abc123", -1, 0, -1, 3)
+
+	for {
+		_, k, item, ok := iter3.Next()
+		if !ok {
+			break
+		}
+		fmt.Println(k, item)
+	}
+
+	iter4 := tk.NewCompactIterator([]map[string]string{map[string]string{"a": "avalue", "b": "bvalue", "c": "cvalue"}, map[string]string{"1": "1v", "2": "2v", "3": "3v"}}, 0, -1, 1, 0)
+
+	for {
+		_, k, item, ok := iter4.Next()
+		if !ok {
+			break
+		}
+		fmt.Println(k, item)
+	}
+
+	iter5 := tk.NewCompactIterator(map[string]string{"a": "avalue", "b": "bvalue", "c": "cvalue"}, 0, -1, 1, 0)
+
+	for {
+		_, k, item, ok := iter5.Next()
+		if !ok {
+			break
+		}
+		fmt.Println(k, item)
+	}
+
+	iter6 := tk.NewCompactIterator([]bool{false, true, true, false, true})
+
+	for {
+		_, k, item, ok := iter6.Next()
+		if !ok {
+			break
+		}
+		fmt.Println(k, item)
+	}
+
+	iter7 := tk.NewCompactIterator(map[string]byte{"a": byte(1), "b": byte(2)})
+
+	if iter7 == nil {
+		tk.Pl("failed to create iterator")
+		return
+	}
+
+	for {
+		_, k, item, ok := iter7.Next()
+		if !ok {
+			break
+		}
+		fmt.Println(k, item)
+	}
+
 }
 
 func runInteractiveShell() int {
-	tk.Pl(`谢语言（Xielang）版本（ver.） %v`, xie.VersionG)
-	xie.ShellModeG = true
-	xie.SetLeVSilent(true)
+	tk.Pl(`Xie V%v`, xie.VersionG)
+	xie.GlobalsG.Vars["ShellModeG"] = true
+	xie.GlobalsG.Vars["leSilentG"] = true
 
 	var following bool
 	var source string
 	scanner := bufio.NewScanner(os.Stdin)
 
-	vmT := xie.NewXie()
+	vm0T := xie.NewVM()
 
-	vmT.SetVar("argsG", os.Args)
-	vmT.SetVar("全局参数", os.Args)
+	if tk.IsErrX(vm0T) {
+		tk.Pl("failed to initialize VM: %v", tk.GetErrStrX(vm0T))
+		os.Exit(1)
+	}
+
+	vmT := vm0T.(*xie.XieVM)
+
+	vmT.SetVar(vmT.Running, "argsG", os.Args)
 
 	var guiHandlerG tk.TXDelegate = guiHandler
 
-	vmT.SetVar("guiG", guiHandlerG)
+	vmT.SetVar(vmT.Running, "guiG", guiHandlerG)
 
 	for {
 		if following {
@@ -288,7 +402,7 @@ func runInteractiveShell() int {
 			continue
 		}
 
-		if source == "quit" || source == "退出" {
+		if source == "quit" {
 			break
 		} else if source == "#debug" {
 			vmT.Debug()
@@ -299,21 +413,23 @@ func runInteractiveShell() int {
 
 		retG := ""
 
-		lrs := vmT.Load(source)
+		originalCodeLenT := vmT.GetCodeLen(vmT.Running)
 
-		if tk.IsErrStr(lrs) {
+		lrs := vmT.Load(vmT.Running, source)
+
+		if tk.IsErrX(lrs) {
 			following = false
 			source = ""
-			fmt.Println("载入源码失败：", tk.GetErrStr(lrs))
+			fmt.Println("failed to load source code of the script: ", tk.GetErrStrX(lrs))
 			continue
 		}
 
-		rs := vmT.Run(tk.StrToInt(lrs))
+		rs := vmT.Run(originalCodeLenT)
 
-		noResultT := (rs == "TXERROR:no result")
+		noResultT := tk.IsUndefined(rs) // == "TXERROR:no result")
 
-		if tk.IsErrStrX(rs) && !noResultT {
-			fmt.Fprintln(os.Stderr, "运行失败："+tk.GetErrStr(rs))
+		if tk.IsErrX(rs) {
+			fmt.Fprintln(os.Stderr, "failed to run: "+tk.GetErrStrX(rs))
 			following = false
 			source = ""
 			continue
@@ -329,7 +445,7 @@ func runInteractiveShell() int {
 
 	if err := scanner.Err(); err != nil {
 		if err != io.EOF {
-			fmt.Fprintln(os.Stderr, "读取字符串失败：", err)
+			fmt.Fprintln(os.Stderr, "failed to read char:", err)
 			return 12
 		}
 	}
@@ -343,8 +459,9 @@ var sslPortG = ":443"
 var basePathG = "."
 var webPathG = "."
 var certPathG = "."
-var verboseG = false
-var verbosePlusG = false
+
+// var verboseG = false
+// var verbosePlusG = false
 var scriptPathG = ""
 
 var staticFS http.Handler = nil
@@ -393,7 +510,7 @@ func startHttpsServer(portA string) {
 
 	err := http.ListenAndServeTLS(portA, filepath.Join(certPathG, "server.crt"), filepath.Join(certPathG, "server.key"), muxG)
 	if err != nil {
-		tk.PlNow("启动https服务失败：%v", err)
+		tk.PlNow("failed to start https service: %v", err)
 	}
 
 }
@@ -403,7 +520,7 @@ func genFailCompact(titleA, msgA string, optsA ...string) string {
 		"msgTitle":    titleA,
 		"msg":         msgA,
 		"subMsg":      "",
-		"actionTitle": "返回",
+		"actionTitle": "back",
 		"actionHref":  "javascript:history.back();",
 	}
 
@@ -462,7 +579,7 @@ func doXms(res http.ResponseWriter, req *http.Request) {
 	reqT := tk.GetFormValueWithDefaultValue(req, "xms", "")
 
 	if xie.GlobalsG.VerboseLevel > 0 {
-		tk.Pl("请求URI： %v", req.RequestURI)
+		tk.Pl("RequestURI: %v", req.RequestURI)
 	}
 
 	if reqT == "" {
@@ -491,7 +608,7 @@ func doXms(res http.ResponseWriter, req *http.Request) {
 		paraMapT, errT = tk.MSSFromJSON(vo)
 
 		if errT != nil {
-			res.Write([]byte(genFailCompact("操作失败", "参数格式错误", "-compact")))
+			res.Write([]byte(genFailCompact("action failed", "invalid parameter format", "-compact")))
 			return
 		}
 	}
@@ -513,31 +630,31 @@ func doXms(res http.ResponseWriter, req *http.Request) {
 	// tk.Pln("loading", absT)
 	fcT := tk.LoadStringFromFile(filepath.Join(basePathG, fileNameT))
 	if tk.IsErrStr(fcT) {
-		res.Write([]byte(genFailCompact("操作失败", tk.GetErrStr(fcT), "-compact")))
+		res.Write([]byte(genFailCompact("action failed", tk.GetErrStr(fcT), "-compact")))
 		return
 	}
 
-	vmT := xie.NewXie()
+	vmT := xie.NewVMQuick()
 
-	vmT.SetVar("paraMapG", paraMapT)
-	vmT.SetVar("requestG", req)
-	vmT.SetVar("responseG", res)
-	vmT.SetVar("reqNameG", reqT)
-	vmT.SetVar("basePathG", basePathG)
+	vmT.SetVar(vmT.Running, "paraMapG", paraMapT)
+	vmT.SetVar(vmT.Running, "requestG", req)
+	vmT.SetVar(vmT.Running, "responseG", res)
+	vmT.SetVar(vmT.Running, "reqNameG", reqT)
+	vmT.SetVar(vmT.Running, "basePathG", basePathG)
 
 	// vmT.SetVar("inputG", objA)
 
-	lrs := vmT.Load(fcT)
+	lrs := vmT.Load(vmT.Running, fcT)
 
 	contentTypeT := res.Header().Get("Content-Type")
 
-	if tk.IsErrStr(lrs) {
+	if tk.IsError(lrs) {
 		if tk.StartsWith(contentTypeT, "text/json") {
-			res.Write([]byte(tk.GenerateJSONPResponse("fail", tk.Spr("操作失败：%v", tk.GetErrStr(lrs)), req)))
+			res.Write([]byte(tk.GenerateJSONPResponse("fail", tk.Spr("action failed: %v", tk.GetErrStrX(lrs)), req)))
 			return
 		}
 
-		res.Write([]byte(genFailCompact("操作失败", tk.GetErrStr(lrs), "-compact")))
+		res.Write([]byte(genFailCompact("action failed", tk.GetErrStrX(lrs), "-compact")))
 		return
 	}
 
@@ -557,17 +674,17 @@ func doXms(res http.ResponseWriter, req *http.Request) {
 	// 	return
 	// }
 
-	if tk.IsErrStr(rs) {
+	if tk.IsErrX(rs) {
 		if tk.StartsWith(contentTypeT, "text/json") {
-			res.Write([]byte(tk.GenerateJSONPResponse("fail", tk.Spr("操作失败：%v", tk.GetErrStr(rs)), req)))
+			res.Write([]byte(tk.GenerateJSONPResponse("fail", tk.Spr("action failed: %v", tk.GetErrStrX(rs)), req)))
 			return
 		}
 
-		res.Write([]byte(genFailCompact("操作失败", tk.GetErrStr(rs), "-compact")))
+		res.Write([]byte(genFailCompact("action failed", tk.GetErrStrX(rs), "-compact")))
 		return
 	}
 
-	toWriteT = rs
+	toWriteT = tk.ToStr(rs)
 
 	if toWriteT == "TX_END_RESPONSE_XT" {
 		return
@@ -594,7 +711,7 @@ func doXmsContent(res http.ResponseWriter, req *http.Request) {
 	reqT := tk.GetFormValueWithDefaultValue(req, "xc", "")
 
 	if xie.GlobalsG.VerboseLevel > 0 {
-		tk.Pl("请求URI： %v", req.RequestURI)
+		tk.Pl("RequestURI: %v", req.RequestURI)
 	}
 
 	if reqT == "" {
@@ -623,7 +740,7 @@ func doXmsContent(res http.ResponseWriter, req *http.Request) {
 		paraMapT, errT = tk.MSSFromJSON(vo)
 
 		if errT != nil {
-			res.Write([]byte(genFailCompact("操作失败", "参数格式错误", "-compact")))
+			res.Write([]byte(genFailCompact("action failed", "invalid parameter format", "-compact")))
 			return
 		}
 	}
@@ -645,31 +762,31 @@ func doXmsContent(res http.ResponseWriter, req *http.Request) {
 	// tk.Pln("loading", absT)
 	fcT := tk.LoadStringFromFile(filepath.Join(basePathG, fileNameT))
 	if tk.IsErrStr(fcT) {
-		res.Write([]byte(genFailCompact("操作失败", tk.GetErrStr(fcT), "-compact")))
+		res.Write([]byte(genFailCompact("action failed", tk.GetErrStr(fcT), "-compact")))
 		return
 	}
 
-	vmT := xie.NewXie()
+	vmT := xie.NewVMQuick(nil)
 
-	vmT.SetVar("paraMapG", paraMapT)
-	vmT.SetVar("requestG", req)
-	vmT.SetVar("responseG", res)
-	vmT.SetVar("reqNameG", reqT)
-	vmT.SetVar("basePathG", basePathG)
+	vmT.SetVar(nil, "paraMapG", paraMapT)
+	vmT.SetVar(nil, "requestG", req)
+	vmT.SetVar(nil, "responseG", res)
+	vmT.SetVar(nil, "reqNameG", reqT)
+	vmT.SetVar(nil, "basePathG", basePathG)
 
 	// vmT.SetVar("inputG", objA)
 
-	lrs := vmT.Load(fcT)
+	lrs := vmT.Load(nil, fcT)
 
 	contentTypeT := res.Header().Get("Content-Type")
 
-	if tk.IsErrStr(lrs) {
+	if tk.IsErrX(lrs) {
 		if tk.StartsWith(contentTypeT, "text/json") {
-			res.Write([]byte(tk.GenerateJSONPResponse("fail", tk.Spr("操作失败：%v", tk.GetErrStr(lrs)), req)))
+			res.Write([]byte(tk.GenerateJSONPResponse("fail", tk.Spr("action failed: %v", tk.GetErrStrX(lrs)), req)))
 			return
 		}
 
-		res.Write([]byte(genFailCompact("操作失败", tk.GetErrStr(lrs), "-compact")))
+		res.Write([]byte(genFailCompact("action failed", tk.GetErrStrX(lrs), "-compact")))
 		return
 	}
 
@@ -677,17 +794,17 @@ func doXmsContent(res http.ResponseWriter, req *http.Request) {
 
 	contentTypeT = res.Header().Get("Content-Type")
 
-	if tk.IsErrStr(rs) {
+	if tk.IsErrX(rs) {
 		if tk.StartsWith(contentTypeT, "text/json") {
-			res.Write([]byte(tk.GenerateJSONPResponse("fail", tk.Spr("操作失败：%v", tk.GetErrStr(rs)), req)))
+			res.Write([]byte(tk.GenerateJSONPResponse("fail", tk.Spr("action failed: %v", tk.GetErrStrX(rs)), req)))
 			return
 		}
 
-		res.Write([]byte(genFailCompact("操作失败", tk.GetErrStr(rs), "-compact")))
+		res.Write([]byte(genFailCompact("action failed", tk.GetErrStrX(rs), "-compact")))
 		return
 	}
 
-	toWriteT = rs
+	toWriteT = tk.ToStr(rs)
 
 	if toWriteT == "TX_END_RESPONSE_XT" {
 		return
@@ -725,18 +842,18 @@ func RunServer() {
 
 	muxG.HandleFunc("/", serveStaticDirHandler)
 
-	tk.PlNow("谢语言微服务框架 版本%v -port=%v -sslPort=%v -dir=%v -webDir=%v -certDir=%v", xie.VersionG, portG, sslPortG, basePathG, webPathG, certPathG)
+	tk.PlNow("Xie micro-service framework V%v -port=%v -sslPort=%v -dir=%v -webDir=%v -certDir=%v", xie.VersionG, portG, sslPortG, basePathG, webPathG, certPathG)
 
 	if sslPortG != "" {
-		tk.PlNow("在端口%v上启动https服务...", sslPortG)
+		tk.PlNow("starting https service on port %v...", sslPortG)
 		go startHttpsServer(sslPortG)
 	}
 
-	tk.Pl("在端口%v上启动http服务 ...", portG)
+	tk.Pl("starting http service on port %v...", portG)
 	err := http.ListenAndServe(portG, muxG)
 
 	if err != nil {
-		tk.PlNow("启动服务失败：%v", err)
+		tk.PlNow("failed to start service: %v", err)
 	}
 
 }
@@ -752,7 +869,7 @@ func main() {
 	}
 
 	if tk.IfSwitchExistsWhole(argsT, "-version") {
-		tk.Pl("谢语言 版本%v", xie.VersionG)
+		tk.Pl("Xie V%v", xie.VersionG)
 		return
 	}
 
@@ -776,7 +893,7 @@ func main() {
 	}
 
 	if tk.IfSwitchExistsWhole(argsT, "-service") {
-		tk.Pl("%v V%v 正在服务模式下运行。启动谢语言时带有-service参数时将使其运行在服务模式下。\n%v V%v is in service(server) mode. Running the application with argument \"-service\" will cause it in service mode.\n", serviceNameG, xie.VersionG, serviceNameG, xie.VersionG)
+		tk.Pl("%v V%v is running in service(server) mode. Running the application with argument \"-service\" will cause it running in service mode.\n", serviceNameG, xie.VersionG, serviceNameG, xie.VersionG)
 		serviceModeG = true
 
 		s := initSvc()
@@ -798,19 +915,19 @@ func main() {
 		s := initSvc()
 
 		if s == nil {
-			tk.Pl("初始化服务失败（failed to init service）")
+			tk.Pl("failed to initialize service")
 			return
 		}
 
-		tk.Pl("安装服务（installing service） \"%v\"...", (*s).String())
+		tk.Pl("installing service \"%v\"...", (*s).String())
 
 		errT := (*s).Install()
 		if errT != nil {
-			tk.Pl("安装服务失败（failed to install service）: %v", errT)
+			tk.Pl("failed to install service: %v", errT)
 			return
 		}
 
-		tk.Pl("服务安装成功（service installed） - \"%s\" .", (*s).String())
+		tk.Pl("service installed - \"%s\" .", (*s).String())
 
 		// tk.Pl("启动服务（starting service） \"%v\"...", (*s).String())
 
@@ -830,19 +947,19 @@ func main() {
 		s := initSvc()
 
 		if s == nil {
-			tk.Pl("初始化服务失败（failed to init service）")
+			tk.Pl("failed to init service")
 			return
 		}
 
-		tk.Pl("启动服务（starting service） \"%v\"...", (*s).String())
+		tk.Pl("starting service \"%v\"...", (*s).String())
 
 		errT := (*s).Start()
 		if errT != nil {
-			tk.Pl("启动服务失败（failed to start）: %v", errT)
+			tk.Pl("failed to start: %v", errT)
 			return
 		}
 
-		tk.Pl("服务已启动（service started） - \"%s\" .", (*s).String())
+		tk.Pl("service started - \"%s\" ", (*s).String())
 
 		return
 
@@ -852,15 +969,15 @@ func main() {
 		s := initSvc()
 
 		if s == nil {
-			tk.Pl("初始化服务失败（failed to init service）")
+			tk.Pl("failed to init service")
 			return
 		}
 
 		errT := (*s).Stop()
 		if errT != nil {
-			tk.Pl("停止服务失败（failed to stop service）: %s", errT)
+			tk.Pl("failed to stop service: %s", errT)
 		} else {
-			tk.Pl("服务已停止（service stopped） - \"%s\" .", (*s).String())
+			tk.Pl("service stopped - \"%s\" ", (*s).String())
 		}
 
 		return
@@ -871,24 +988,24 @@ func main() {
 		s := initSvc()
 
 		if s == nil {
-			tk.Pl("初始化服务失败（failed to init service）")
+			tk.Pl("failed to init service")
 			return
 		}
 
 		errT := (*s).Stop()
 		if errT != nil {
-			tk.Pl("停止服务失败（failed to stop service）: %s", errT)
+			tk.Pl("failed to stop service: %s", errT)
 		} else {
-			tk.Pl("服务已停止（service stopped） - \"%s\" .", (*s).String())
+			tk.Pl("service stopped - \"%s\" ", (*s).String())
 		}
 
 		errT = (*s).Uninstall()
 		if errT != nil {
-			tk.Pl("服务移除失败（failed to remove service）: %v", errT)
+			tk.Pl("failed to remove service: %v", errT)
 			return
 		}
 
-		tk.Pl("服务已移除（service removed） - \"%s\" .", (*s).String())
+		tk.Pl("service removed - \"%s\" ", (*s).String())
 
 		return
 
@@ -898,43 +1015,43 @@ func main() {
 		s := initSvc()
 
 		if s == nil {
-			tk.Pl("初始化服务失败（failed to init service）")
+			tk.Pl("failed to init service")
 			return
 		}
 
 		errT := (*s).Stop()
 		if errT != nil {
-			tk.Pl("停止服务失败（failed to stop service）: %s", errT)
+			tk.Pl("failed to stop service: %s", errT)
 		} else {
-			tk.Pl("服务已停止（service stopped） - \"%s\" .", (*s).String())
+			tk.Pl("service stopped - \"%s\" ", (*s).String())
 		}
 
 		errT = (*s).Uninstall()
 		if errT != nil {
-			tk.Pl("服务移除失败（failed to remove service）: %v", errT)
+			tk.Pl("failed to remove service: %v", errT)
 		} else {
-			tk.Pl("服务已移除（service removed） - \"%s\" .", (*s).String())
+			tk.Pl("service removed - \"%s\" ", (*s).String())
 		}
 
-		tk.Pl("安装服务（installing service） \"%v\"...", (*s).String())
+		tk.Pl("installing service \"%v\"...", (*s).String())
 
 		errT = (*s).Install()
 		if errT != nil {
-			tk.Pl("安装服务失败（failed to install service）: %v", errT)
+			tk.Pl("failed to install service: %v", errT)
 			return
 		}
 
-		tk.Pl("服务安装成功（service installed） - \"%s\" .", (*s).String())
+		tk.Pl("service installed - \"%s\" .", (*s).String())
 
-		tk.Pl("启动服务（starting service） \"%v\"...", (*s).String())
+		tk.Pl("starting service \"%v\"...", (*s).String())
 
 		errT = (*s).Start()
 		if errT != nil {
-			tk.Pl("启动服务失败（failed to start）: %v", errT)
+			tk.Pl("failed to start: %v", errT)
 			return
 		}
 
-		tk.Pl("服务已启动（service started） - \"%s\" .", (*s).String())
+		tk.Pl("service started - \"%s\" ", (*s).String())
 
 		return
 
@@ -944,26 +1061,26 @@ func main() {
 		s := initSvc()
 
 		if s == nil {
-			tk.Pl("初始化服务失败（failed to init service）")
+			tk.Pl("failed to init service")
 			return
 		}
 
 		errT := (*s).Stop()
 		if errT != nil {
-			tk.Pl("停止服务失败（failed to stop service）: %s", errT)
+			tk.Pl("failed to stop service: %s", errT)
 		} else {
-			tk.Pl("服务已停止（service stopped） - \"%s\" .", (*s).String())
+			tk.Pl("service stopped - \"%s\" ", (*s).String())
 		}
 
-		tk.Pl("启动服务（starting service） \"%v\"...", (*s).String())
+		tk.Pl("starting service \"%v\"...", (*s).String())
 
 		errT = (*s).Start()
 		if errT != nil {
-			tk.Pl("启动服务失败（failed to start）: %v", errT)
+			tk.Pl("failed to start: %v", errT)
 			return
 		}
 
-		tk.Pl("服务已启动（service started） - \"%s\" .", (*s).String())
+		tk.Pl("service started - \"%s\" ", (*s).String())
 
 		return
 
@@ -1001,7 +1118,7 @@ func main() {
 				re := regexp.MustCompile(text1T + text2T + text3T + `(.*?) *` + text3T + text2T + text1T)
 				matchT := re.FindAllSubmatch(buf1, -1)
 
-				if matchT != nil && len(matchT) > 0 {
+				if len(matchT) > 0 {
 					codeStrT := string(matchT[len(matchT)-1][1])
 
 					decCodeT := tk.DecryptStringByTXDEF(codeStrT, "topxeq")
@@ -1030,14 +1147,14 @@ func main() {
 				fcT := tk.LoadStringFromFile(v["Abs"])
 
 				if tk.IsErrX(fcT) {
-					tk.Pl("载入自动脚本([%v] %v)失败：%v", i, v["Abs"], tk.GetErrStrX(fcT))
+					tk.Pl("failed to load auto-run script([%v] %v): %v", i, v["Abs"], tk.GetErrStrX(fcT))
 					return
 				}
 
 				scriptPathG = v["Abs"]
 
-				rs := xie.RunCode(fcT, map[string]interface{}{"guiG": guiHandlerG, "scriptPathG": scriptPathG, "basePathG": basePathG}, argsT...)
-				if rs != "TXERROR:no result" {
+				rs := xie.RunCode(fcT, nil, map[string]interface{}{"guiG": guiHandlerG, "scriptPathG": scriptPathG, "basePathG": basePathG}, argsT...)
+				if !tk.IsUndefined(rs) {
 					tk.Pl("%v", rs)
 				}
 			}
@@ -1058,29 +1175,29 @@ func main() {
 	if ifInExeT && inExeCodeT != "" {
 		scriptT = inExeCodeT
 	} else if ifExampleT {
-		if (!tk.EndsWith(filePathT, ".xie")) && (!tk.EndsWith(filePathT, ".谢")) {
-			filePathT += ".谢"
+		if !tk.EndsWith(filePathT, ".xie") {
+			filePathT += ".xie"
 		}
 
-		pathT := "http://xie.topget.org/xc/t/c/xielang/example/" + tk.UrlEncode2(filePathT)
+		pathT := "http://xie.topget.org/xc/t/c/xie/example/" + tk.UrlEncode2(filePathT)
 		scriptT = tk.DownloadWebPageX(pathT)
 		scriptPathG = pathT
 
 	} else if ifExamT {
-		if (!tk.EndsWith(filePathT, ".xie")) && (!tk.EndsWith(filePathT, ".谢")) {
+		if !tk.EndsWith(filePathT, ".xie") {
 			filePathT += ".xie"
 		}
 
-		pathT := "http://xie.topget.org/xc/t/c/xielang/example/" + tk.UrlEncode2(filePathT)
+		pathT := "http://xie.topget.org/xc/t/c/xie/example/" + tk.UrlEncode2(filePathT)
 		scriptT = tk.DownloadWebPageX(pathT)
 		scriptPathG = pathT
 
 	} else if ifGoPathT {
-		if (!tk.EndsWith(filePathT, ".xie")) && (!tk.EndsWith(filePathT, ".谢")) {
+		if !tk.EndsWith(filePathT, ".xie") {
 			filePathT += ".xie"
 		}
 
-		filePathT = filepath.Join(tk.GetEnv("GOPATH"), "src", "github.com", "topxeq", "xie", "cmd", "xie", "scripts", filePathT)
+		filePathT = filepath.Join(tk.GetEnv("GOPATH"), "src", "github.com", "topxeq", "xie", "cmd", "scripts", filePathT)
 		// tk.Pl(filePathT)
 		scriptT = tk.LoadStringFromFile(filePathT)
 		scriptPathG = filePathT
@@ -1102,7 +1219,7 @@ func main() {
 		scriptT = string(b)
 
 	} else if ifCloudT {
-		if (!tk.EndsWith(filePathT, ".xie")) && (!tk.EndsWith(filePathT, ".谢")) {
+		if !tk.EndsWith(filePathT, ".xie") {
 			filePathT += ".xie"
 		}
 
@@ -1131,7 +1248,7 @@ func main() {
 		}
 
 	} else if ifRemoteT {
-		if (!tk.EndsWith(filePathT, ".xie")) && (!tk.EndsWith(filePathT, ".谢")) {
+		if !tk.EndsWith(filePathT, ".xie") {
 			filePathT += ".xie"
 		}
 
@@ -1151,7 +1268,7 @@ func main() {
 		scriptT = tk.GetClipText()
 
 	} else if ifLocalT {
-		if (!tk.EndsWith(filePathT, ".xie")) && (!tk.EndsWith(filePathT, ".谢")) {
+		if !tk.EndsWith(filePathT, ".xie") {
 			filePathT += ".xie"
 		}
 
@@ -1162,7 +1279,7 @@ func main() {
 		cfgStrT := tk.Trim(tk.LoadStringFromFile(cfgPathT))
 
 		if tk.IsErrorString(cfgStrT) {
-			tk.Pl("获取配置文件信息失败：%v", tk.GetErrorString(cfgStrT))
+			tk.Pl("failed to get config file content: %v", tk.GetErrorString(cfgStrT))
 
 			return
 		}
@@ -1271,8 +1388,8 @@ func main() {
 
 	var guiHandlerG tk.TXDelegate = guiHandler
 
-	rs := xie.RunCode(scriptT, map[string]interface{}{"guiG": guiHandlerG, "scriptPathG": scriptPathG}, argsT...)
-	if rs != "TXERROR:no result" {
+	rs := xie.RunCode(scriptT, nil, map[string]interface{}{"guiG": guiHandlerG, "scriptPathG": scriptPathG}, argsT...)
+	if !tk.IsUndefined(rs) {
 		tk.Pl("%v", rs)
 	}
 }

@@ -1,0 +1,20 @@
+pln start...
+
+# debugInfo $pln
+
+push #f1.8
+
+goto :label1
+
+:label2
+pop $c
+
+pln `c =` $c
+
+exit
+
+:label1
+    pln "label1 =" $peek
+
+    goto :label2
+    

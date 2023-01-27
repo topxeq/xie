@@ -1,0 +1,42 @@
+// the first loop starts here
+assign $i #i0
+
+// variable $cond is used for loop condition
+// here we give it an initial value true(bool type)
+// otherwise the first loop will not even run once
+assign $cond #btrue
+
+// the 2nd
+for $cond "" :label1
+
+// the second loop starts here
+assign $j #f0.0
+
+// the quick eval expression in the first parameter(determines if variable $j < float value 2.8)
+for @`$j < #f2.8` "" :label2
+
+// the end of the both of the loops
+pln "for end"
+
+// terminate the program, otherwise will run down to the following code
+exit
+
+:label1
+    pl "i=%v" $i
+
+    // same as "++ $i" and "i++" in C/C++
+    inc $i
+
+    // check if $i < 5(int value) and put the bool result into $cond
+    < $cond $i #i5
+
+    // continue the loop(will check the condition defined in $cond again to determine if continue or end the loop and run the following code）
+    // if break, default label is ":+1", means running the code line right after the "for" instruction
+    continue
+
+:label2
+    pl j=%v $j
+
+    add $j $j #f0.5
+
+    continue

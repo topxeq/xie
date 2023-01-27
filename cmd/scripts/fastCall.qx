@@ -1,0 +1,25 @@
+// push 2 values
+push #i108
+push #i16
+
+// fast call func1
+fastCall :func1
+
+// output the value upmost of the stack
+plv $pop
+
+// terminate the program
+exit
+
+// function func1
+// add 2 nubmers
+:func1
+    // pop 2 values to add
+    pop $v2
+    pop $v1
+
+    // add 2 nubmers and push the result to the stack
+    add $push $v1 $v2
+
+    // return, continue to the next command of the fastCall
+    fastRet

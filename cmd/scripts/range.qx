@@ -1,0 +1,40 @@
+// range/iterate integer 5, run the loop body at the position of label ":label1"
+// then (break) run the code in label ":+1", ie. the next line of the "range" instr
+// loop for 5 times, the iterated value will be 0，1，2，3，4
+// the same as in C/C++: for i := 1, i < 5; i ++……
+range #i5 :label1 :+1
+
+// end of the first range
+pln "end range1"
+
+goto :next1
+
+:label1
+    // get the i, v from iterator
+    // if iteration failed, $i will be an error object
+    getIter $i $v
+    checkErrX $i
+
+    pl "i: %v, v: %v" $i $v
+
+    // continue the loop/range
+    continue
+
+:next1
+
+// the break label could be omitted, default is ":+1"
+range "abc123" :label2
+
+// end of the second range
+pln "end range2"
+
+// exit the program, or the next line will be run
+exit
+
+:label2
+    getIter $i $v
+    checkErrX $i
+
+    pl "i: %v, v: %v" $i $v
+
+    continue

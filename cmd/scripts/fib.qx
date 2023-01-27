@@ -1,0 +1,33 @@
+// cal Fibonacci numbers(the 18th) by recursive function
+
+push int 18
+call $drop :fib
+pln $pop
+
+exit
+
+:fib
+    var $n1
+    pop $n1
+
+    < $push $n1 #i2
+
+    if $pop :label1
+
+    :else
+        dec $n1
+        push int $n1
+        call $drop :fib
+
+        dec $n1
+        push int $n1
+        call $drop :fib
+
+        add $push $pop $pop
+
+        ret
+
+    :label1
+        push $n1
+        ret
+

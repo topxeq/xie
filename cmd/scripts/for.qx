@@ -1,0 +1,22 @@
+// the following code has the same effect as the for-3 loop like: for i = 0; i < 5; i ++ {...}
+
+assign $i #i0
+
+:loop1
+
+    // the result will be put into $tmp
+    add $i #i10
+
+    pln $i ":"  $tmp
+
+    // same as ++
+    inc $i
+
+    // if $i < 5, set $tmp to true
+    < $i #i5
+
+    // 
+    if $tmp :loop1
+
+// else the code will coninue to run to the following line
+pln end

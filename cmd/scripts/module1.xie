@@ -1,0 +1,15 @@
+:add1
+    pop $v2L
+    pop $v1L
+
+    add $push $v1L $v2L
+
+    fastRet
+
+:sub1
+    pop $v2L
+    pop $v1L
+
+    sub $push $v1L $v2L
+    
+    fastRet

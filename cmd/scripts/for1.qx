@@ -1,0 +1,10 @@
+// infinite loop
+push "welcome"
+
+:loop1
+    pln $peek
+
+    // sleep for 2.5 seconds
+    sleep #f2.5
+
+goto :loop1

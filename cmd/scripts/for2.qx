@@ -1,0 +1,34 @@
+// a doubly nested loops
+// like the following code in C/C++
+// for (int i = 0; i < 5; i ++) {
+//   println(i, ":", i + 10);
+//   for (int j = i; j < 10; j ++) {
+//        println("j:", j);
+//   }
+// }
+
+assign $i #i0
+
+:loop1
+
+    add $i #i10
+
+    pln $i : $tmp
+
+    assign $j $i
+
+    :loop2
+
+        pln j: $j
+
+        inc $j
+
+        < $j #i10
+
+        if $tmp :loop2
+
+    inc $i
+
+    < $i #i5
+
+    if $tmp :loop1

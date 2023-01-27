@@ -1,0 +1,84 @@
+systemCmd $rs "qx" "-gopath" "basic.qx"
+
+test $rs "abc qqq\n10\n" $seq "basic.qx"
+
+systemCmd $rs "qx" "-gopath" "assign.qx"
+
+test $rs "(string)\"abc\"\n(string)\"abc 123\"\n(string)\"abc 123\\nand this\"\n(int)3\n(int)3\n(float64)3\n" $seq "assign.qx"
+
+systemCmd $rs "qx" "-gopath" "add.qx"
+
+test $rs "(int)7\n(float64)4.1\n(string)\"abc123 456\"\n(string)\"9.18abc123 456\"\n(int)208\n" $seq "add.qx"
+
+systemCmd $rs "qx" "-gopath" "goto.qx"
+
+test $rs "start...\nlabel1 = 1.8\nc = 1.8\n" $seq "goto.qx"
+
+systemCmd $rs "qx" "-gopath" "if.qx"
+
+test $rs "if branch\nlabel3 else\n" $seq "if.qx"
+
+systemCmd $rs "qx" "-gopath" "for.qx"
+
+test $rs "0 : 10\n1 : 11\n2 : 12\n3 : 13\n4 : 14\nend\n" $seq "for.qx"
+
+systemCmd $rs "qx" "-gopath" "for2.qx"
+
+test $rs "0 : 10\nj: 0\nj: 1\nj: 2\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n1 : 11\nj: 1\nj: 2\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n2 : 12\nj: 2\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n3 : 13\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n4 : 14\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n" $seq "for2.qx"
+
+systemCmd $rs "qx" "-gopath" "for3.qx"
+
+test $rs "i=0\ni=1\ni=2\ni=3\ni=4\nj=0\nj=0.5\nj=1\nj=1.5\nj=2\nj=2.5\nfor end\n" $seq "for3.qx"
+
+systemCmd $rs "qx" "-gopath" "for4.qx"
+
+test $rs "0 : 10\nj: 0\nj: 1\nj: 2\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n1 : 11\nj: 1\nj: 2\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n2 : 12\nj: 2\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n3 : 13\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n4 : 14\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\nend\n" $seq "for4.qx"
+
+systemCmd $rs "qx" "-gopath" "for5.qx"
+
+test $rs "0 : 10\nj: 0\nj: 1\nj: 2\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n1 : 11\nj: 1\nj: 2\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n2 : 12\nj: 2\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n3 : 13\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\n4 : 14\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nend\n" $seq "for5.qx"
+
+systemCmd $rs "qx" "-gopath" "fastCall.qx"
+
+test $rs "124\n" $seq "fastCall.qx"
+
+systemCmd $rs "qx" "-gopath" "local.qx"
+
+test $rs "1.6 2.8 undefined undefined\n2.5 10 abc true\nfunction result: done\n2.5 2.8 undefined true\n" $seq "local.qx"
+
+systemCmd $rs "qx" "-gopath" "fib.qx"
+
+test $rs "2584\n" $seq "fib.qx"
+
+systemCmd $rs "qx" "-gopath" "call.qx"
+
+test $rs "2584\n" $seq "call.qx"
+
+systemCmd $rs "qx" "-gopath" "runCall.qx"
+
+test $rs "arg1= 1.6\narg2= 2.3\n3.9\nrunCall result: 3.9\n" $seq "runCall.qx"
+
+systemCmd $rs "qx" "-gopath" "sealCall.qx"
+
+test $rs "num1= 1.62\nnum2= 2.8\n4.536\nseal-function result: 4.536\n" $seq "sealCall.qx"
+
+systemCmd $rs "qx" "-gopath" "loadModule.qx"
+
+test $rs "code loaded:  \n :add1\n    pop $v2L\n    pop $v1L\n\n    add $push $v1L $v2L\n\n    fastRet\n\n:sub1\n    pop $v2L\n    pop $v1L\n\n    sub $push $v1L $v2L\n    \n    fastRet \n\n(int)23\n(int)18\n(int)1782\n" $seq "loadModule.qx"
+
+systemCmd $rs "qx" "-gopath" "onError.qx"
+
+test $rs "error occurred while running to line 8: runtime error, detail: (Line 8: getArrayItem $item $array1 1) index out of range: 1/0\ncalculation completed(and the error handler)\n" $seq "onError.qx"
+
+systemCmd $rs "qx" "-gopath" "defer.qx"
+
+testByStartsWith $rs "1\nsub1\nsub defer: test1\nmain defer: test2\nmain defer: test1\n(Line 26:     checkErrX $r1) [" $seq "defer.qx"
+
+systemCmd $rs "qx" "-gopath" "range.qx"
+
+test $rs "i: 0, v: 0\ni: 1, v: 1\ni: 2, v: 2\ni: 3, v: 3\ni: 4, v: 4\nend range1\ni: 0, v: a\ni: 1, v: b\ni: 2, v: c\ni: 3, v: 1\ni: 4, v: 2\ni: 5, v: 3\nend range2\n" $seq "range.qx"
+
+systemCmd $rs "qx" "-gopath" "rangeNumber.qx"
+
+test $rs "0 -> 0\n1 -> 1\n2 -> 2\n3 -> 3\n4 -> 4\n\n0 -> 2\n1 -> 3\n2 -> 4\n\n0 -> 20\n1 -> 25\n2 -> 30\n3 -> 35\n4 -> 40\n5 -> 45\n\n0 -> 0.2\n1 -> 0.7\n2 -> 1.2\n\n0 -> 60 / 12 = 5\n1 -> 60 / 9 = 6\n2 -> 60 / 6 = 10\n3 -> 60 / 3 = 20\nfailed to cal (60 / 0): failed: runtime error: integer divide by zero(60, 0)\n5 -> 60 / -3 = -20\n6 -> 60 / -6 = -10\n" $seq "rangeNumber.qx"
+

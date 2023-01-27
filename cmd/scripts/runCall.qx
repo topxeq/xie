@@ -1,0 +1,24 @@
+compile $func1 `
+    # plv $inputL
+
+    getArrayItem $f1 $inputL 0
+    getArrayItem $f2 $inputL 1
+
+    # debugInfo $pln
+
+    pln arg1= $f1
+    pln arg2= $f2
+
+    add $result $f1 $f2
+
+    pln $result
+
+    var $outL
+    assign $outL $result
+
+    exit
+`
+
+runCall $rs $func1 #f1.6 #f2.3
+
+pln "runCall result:" $rs

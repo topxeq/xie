@@ -1,0 +1,21 @@
+// range a map normally
+
+// assign a value by JSON string to $map1
+assign $map1 #J`{"field1": "text1", "field2": 123, "field3": [1, "abc", true]}`
+
+plv $map1
+
+range $map1 :range1 :+1
+
+pln "end of range"
+
+exit
+
+:range1
+
+    getIter $k $v
+
+    // the map items will in random order since the nature of a map
+    pl "%v: %v" $k $v
+
+    continue

@@ -8,5 +8,5 @@ import (
 )
 
 func guiHandler(actionA string, objA interface{}, dataA interface{}, paramsA ...interface{}) interface{} {
-	return fmt.Errorf("未设置GUI引擎")
+	return fmt.Errorf("GUI engined disabled")
 }

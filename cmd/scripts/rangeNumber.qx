@@ -1,0 +1,64 @@
+// shows the range/iterate action of integer and float
+
+// range integer 5
+// range value for each round will be: 0, 1, 2, 3, 4
+// range index will be: 0, 1, 2, 3, 4
+range #i5 :label1
+
+pln
+
+// range from 2 to 5
+// range value for each round will be: 2, 3, 4
+// range index will be: 0, 1, 2
+// here the break label ":+1"(or other label) could not be omitted
+range #i5 :label1 :+1 #i2
+
+pln
+
+// range from 20 to 50, step 5(if not set, the default step is always 1)
+// range value for each round will be: 20, 25, 30, 35, 40, 45
+// range index will be: 0, 1, 2, 3, 4, 5
+range #i50 :label1 :+1 #i20 #i50 #i5
+
+pln
+
+// range of float value is the same as integer, if the step is not set, the default step is 1.0
+// range value for each round will be: 0.2, 0.7, 1.2
+// range index will be: 0, 1, 2
+range #f1.6 :label1 :+1 #f0.2 #f1.6 #f0.5
+
+pln
+
+// the step could be a negative value
+// the last parameter is direction: 0(default): >=, 1: <=, 2: >, 3: <, 4: ==, means the condition operator to terminate the range loop
+// in most cases, for positive range(0, 1, 2...), it should be 0, for negative range(9, 8, 7...), it will be 1
+// range value for each round will be: 12, 9, 6, 3, 0
+// the output will be 60 / range value
+// range index will be: 0, 1, 2, 3, 4
+// when range to value of 0, will trigger the error handler
+range #i-9 :label2 :+1 #i12 #i-9 #i-3 1
+
+exit
+
+:label1
+    // get the range index and value
+    getIter $i $v
+
+    pln $i -> $v
+
+    continue
+
+:label2
+
+    getIter $i $v
+
+    div $rs1 #i60 $v
+
+    ifErrX $rs1 :+1 :+3
+        pl "failed to cal (60 / %v): %v" $v $rs1
+        continue     
+    
+    pl "%v -> 60 / %v = %v" $i $v $rs1
+
+    continue
+

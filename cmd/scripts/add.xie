@@ -1,0 +1,36 @@
+// push an integer value 2 to stack
+push #i2
+
+// push another integer value 5 to stack
+push #i5
+
+// add 2 values popped from the stack and add them
+// the result push into the (empty now) stack
+// after that, there is only one value 7 in the stack
+add $push $pop $pop
+
+// output the top value of the stack
+plo $pop
+
+// add float value 1.5 and 2.6, push the result
+add $push #f1.5 #f2.6
+
+// print the top value of the stack again
+plo $pop
+
+// add 2 string value(concat them) and put the result into variable $c
+add $c `abc` `123 456` 
+
+plo $c
+
+push $c
+
+push "9.18"
+
+add $d $pop $pop
+
+plo $d
+
+add $push #i18 #i190
+
+plo $pop

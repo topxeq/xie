@@ -1,0 +1,5 @@
+alert "This is a test."
+
+add $a1 #i3 #i8
+
+alert $a1
