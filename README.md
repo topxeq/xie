@@ -97,7 +97,7 @@
 
 谢语言（英文名称为：Xielang，官网 [xie.topget.org](http://xie.topget.org/)）是一门开源、免费的解释型编程语言（也称作脚本语言），最大的特色包括：跨平台；跨语言（目前支持Go语言、JavaScript语言等，即将支持Java语言）可嵌入（即可在这些语言中调用）；结合了汇编语言和高级语言的优点；支持全中文编程（包括提示信息），语法简单易懂；单文件无依赖；可编译成单独可执行文件发布等。
 
-$\color{#555555} {Xielang: a simple, easy, quick, cross-platform, embeddable, ASM/shell-like script language.} $
+<font color="#777777">Xielang: a simple, easy, quick, cross-platform, embeddable, ASM/shell-like script language.</font>
 
 
 谢语言支持各种基本的语法元素和结构，包括变量、条件分支、循环、函数、递归函数调用、多线程等，支持作为嵌入型语言在不同语言中调用，也支持独立运行（单文件的可执行程序），还支持作为后台微服务运行。同时，谢语言也提供一个命令行交互式编程环境，可用于一般的测试。
