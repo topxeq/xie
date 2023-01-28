@@ -175,6 +175,11 @@ func newWindowWebView2(objA interface{}, paramsA []interface{}) interface{} {
 			w.Destroy()
 			return nil
 		case "setQuickDelegate":
+			len1T := len(paramsA)
+			if len1T < 1 {
+				return fmt.Errorf("not enough parameters")
+			}
+
 			var deleT tk.QuickVarDelegate = paramsA[0].(tk.QuickVarDelegate)
 
 			w.Bind("quickDelegateDo", func(args ...interface{}) interface{} {
@@ -190,43 +195,61 @@ func newWindowWebView2(objA interface{}, paramsA []interface{}) interface{} {
 
 			return nil
 		case "setDelegate":
-			var codeT string = tk.ToStr(paramsA[0])
+			len1T := len(paramsA)
+			if len1T < 1 {
+				return fmt.Errorf("not enough parameters")
+			}
 
-			codeT = strings.ReplaceAll(codeT, "~~~", "`")
+			var codeT = paramsA[0]
 
-			// p := objA.(*xie.XieVM)
+			dv1, ok := codeT.(tk.QuickVarDelegate)
 
-			w.Bind("delegateDo", func(argsA ...interface{}) interface{} {
-				// args是WebView2中调用谢语言函数时传入的参数
-				// 可以是多个，谢语言中按位置索引进行访问
-				// strT := args[0].String()
+			if ok {
+				w.Bind("delegateDo", dv1)
+				return nil
+			}
+
+			sv1, ok := codeT.(string)
+
+			if ok {
+				sv1 = strings.ReplaceAll(sv1, "~~~", "`")
 
 				vmT := xie.NewVMQuick()
 
-				vmT.SetVar(p.Running, "inputG", argsA)
+				lrs := vmT.Load(vmT.Running, sv1)
 
-				lrs := vmT.Load(vmT.Running, codeT)
-
-				if tk.IsErrX(lrs) {
+				if tk.IsError(lrs) {
 					return lrs
 				}
 
-				rs := vmT.Run()
+				w.Bind("delegateDo", func(argsA ...interface{}) interface{} {
+					// args是WebView2中调用谢语言函数时传入的参数
+					// 可以是多个，谢语言中按位置索引进行访问
+					// strT := args[0].String()
 
-				// if !tk.IsErrX(rs) {
-				// 	outIndexT, ok := vmT.VarIndexMapM["outG"]
-				// 	if !ok {
-				// 		return tk.ErrStrf("no result")
-				// 	}
+					vmT.SetVar(p.Running, "inputG", argsA)
 
-				// 	return tk.ToStr((*vmT.FuncContextM.VarsM)[vmT.FuncContextM.VarsLocalMapM[outIndexT]])
-				// }
+					rs := vmT.Run()
 
-				// 最后一定要返回一个值，空字符串也可以
-				return rs
-			})
+					// if !tk.IsErrX(rs) {
+					// 	outIndexT, ok := vmT.VarIndexMapM["outG"]
+					// 	if !ok {
+					// 		return tk.ErrStrf("no result")
+					// 	}
 
-			return nil
+					// 	return tk.ToStr((*vmT.FuncContextM.VarsM)[vmT.FuncContextM.VarsLocalMapM[outIndexT]])
+					// }
+
+					// 最后一定要返回一个值，空字符串也可以
+					return rs
+				})
+
+			}
+
+			// p := objA.(*xie.XieVM)
+
+			return fmt.Errorf("invalid type: %T(%v)", codeT, codeT)
+			// return nil
 		case "setGoDelegate":
 			var codeT string = tk.ToStr(paramsA[0])
 
