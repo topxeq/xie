@@ -1,3 +1,5 @@
+// 使用sealCall进行封装调用函数
+// 与runCall不同，入参和出参是通过inputG和outG变量进行的
 // prepare 2 values to be input paramaters of the function
 assign $a #f1.62
 push #f2.8

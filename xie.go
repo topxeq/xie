@@ -65,9 +65,15 @@ var InstrNameSet map[string]int = map[string]int{
 	"testByStartsWith": 122, // for test purpose, check if first string starts with the 2nd
 	"testByReg":        123, // for test purpose, check if first string matches the regex pattern defined by the 2nd string
 
+	"typeOf": 131, // 获取变量或数值类型（字符串格式），省略所有参数表示获取看栈值（不弹栈）的类型
+
+	"layer": 141, // 获取变量所处的层级（主函数层级为0，调用的第一个函数层级为1，再嵌套调用的为2，……）
+
 	"loadCode": 151, // 载入字符串格式的谢语言代码到当前虚拟机中（加在最后），出错则返回error对象说明原因
 
 	"compile": 153, // compile a piece of code
+
+	"quickRun": 155, // quick run a piece of code
 
 	"len": 161, // 获取字符串、列表、映射等的长度，参数全省略表示取弹栈值
 
@@ -76,12 +82,24 @@ var InstrNameSet map[string]int = map[string]int{
 	"goto": 180, // jump to the instruction line (often indicated by labels)
 	"jmp":  180,
 
+	"wait": 191, // 等待可等待的对象，例如waitGroup或chan，如果没有指定，则无限循环等待（中间会周期性休眠），用于等待用户按键退出或需要静止等待等场景；如果给出一个字符串，则输出字符串后等待输入（回车确认）后继续；如果是整数或浮点数则休眠相应的秒数后继续；
+
 	"exit": 199, // terminate the program, can with a return value(same as assign the global value $outG)
 
 	// var related
 	"global": 201, // define a global variable
 
 	"var": 203, // define a local variable
+
+	"const": 205, // 获取预定义常量
+
+	// "ref": 210, // 获取变量的引用（取地址）
+
+	// "refNative": 211,
+
+	// "unref": 215, // 对引用进行解引用
+
+	// "assignRef": 218, // 根据引用进行赋值（将引用指向的变量赋值）
 
 	// push/peek/pop stack related
 
@@ -95,19 +113,68 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"clearStack": 240,
 
+	"pushRun": 250, // push any value to running context stack
+
+	"peekRun": 252, // peek the value on the top of the running stack
+
+	"popRun": 254, // pop the value on the top of the running stack
+
+	"getRunStackSize": 256,
+
+	"clearRunStack": 258,
+
+	// shared sync map(cross-VM) related 全局同步映射相关（跨虚拟机）
+	"getSharedMap":           300, // 获取所有的列表项
+	"getSharedMapItem":       301, // 获取全局映射变量，用法：getSharedMapItem $result key default，其中key是键名，default是可以省略的默认值（省略时如果没有值将返回undefined）
+	"getSharedMapSize":       302,
+	"tryGetSharedMapItem":    303,
+	"tryGetSharedMapSize":    304,
+	"setSharedMapItem":       311, // 设置全局映射变量，用法：setSharedMapItem $result key value
+	"trySetSharedMapItem":    313,
+	"deleteSharedMapItem":    321,
+	"tryDeleteSharedMapItem": 323,
+	"clearSharedMap":         331,
+	"tryClearSharedMap":      333,
+
+	"lockSharedMap":        341,
+	"tryLockSharedMap":     342,
+	"unlockSharedMap":      343,
+	"readLockSharedMap":    346,
+	"tryReadLockSharedMap": 347,
+	"readUnlockSharedMap":  348,
+
+	"quickClearSharedMap":      351,
+	"quickGetSharedMapItem":    353,
+	"quickGetSharedMap":        354,
+	"quickSetSharedMapItem":    355,
+	"quickDeleteSharedMapItem": 357,
+	"quickSizeSharedMap":       359,
+
 	// assign related
 	"assign": 401, // assignment, from local variable to global, assign value to local if not found
 	"=":      401,
 
+	"assignGlobal": 491, // 声明（如果未声明的话）并赋值一个全局变量
+
+	"assignFromGlobal": 492, // 声明（如果未声明的话）并赋值一个局部变量，从全局变量获取值（如果需要的话）
+
+	"assignLocal": 493, // 声明（如果未声明的话）并赋值一个局部变量
+
 	// if/else, switch related
 	"if":    610, // usage: if $boolValue1 :labelForTrue :labelForElse
 	"ifNot": 611, // usage: if @`$a1 == #i3` :+1 :+2
+
+	"ifEval": 631, // 判断第一个参数（字符串类型）表示的表达式计算结果如果是true，则跳转到指定标号处
+
+	"ifEmpty": 641, // 判断是否是空（值为undefined、nil、false、空字符串、小于等于0的整数或浮点数均会满足条件），是则跳转
 
 	"ifEqual":    643, // 判断是否相等，是则跳转
 	"ifNotEqual": 644, // 判断是否不等，是则跳转
 
 	"ifErr":  651, // if error or TXERROR string then ... else ...
 	"ifErrX": 651,
+
+	"switch": 691, // 用法：switch $condition1 $value1 :label1 $value2 :label2 ...
 
 	// compare related
 	"==": 701, // 判断两个数值是否相等，无参数时，比较两个弹栈值，结果压栈；参数为1个时是结果参数，两个数值从堆栈获取；参数为2个时，表示两个数值，结果压栈；参数为3个时，第一个参数是结果参数，后两个为待比较数值
@@ -162,7 +229,10 @@ var InstrNameSet map[string]int = map[string]int{
 	"?":          990, // 三元操作符，用法示例：? $result $a $s1 "abc"，表示判断变量$a中的布尔值，如果为true，则结果为$s1，否则结果值为字符串abc，结果值将放入结果变量result中，如果省略结果参数，结果值将会存入$tmp
 	"ifThenElse": 990,
 
+	// "eval":      998, // 计算一个表达式
+
 	"quickEval": 999, // quick eval an expression, use {} to contain an instruction(no nested {} allowed) that return result value in $tmp
+	"eval":      999,
 
 	// func related
 
@@ -172,16 +242,22 @@ var InstrNameSet map[string]int = map[string]int{
 	// and the function should return result in local variable "outL"
 	// use "ret $result" is a covenient way to set value of $outL and return from the function
 
-	"ret": 1020, // return from a normal function, can with a paramter for set $outL
+	"ret": 1020, // return from a normal function or a fast call function, while for normal function call, can with a paramter for set $outL
 
 	"sealCall": 1050, // new a VM to run a function, output/input through inputG & outG
 
 	"runCall": 1055, //
 
-	"fastCall": 1070, // fast call function, no function stack used, no result value or arguments allowed, use stack or variables for input and output
+	"threadCall": 1060, // 并发调用函数，第一个参数是传入参数（压栈值）的个数（可省略），第二个参数是字符串类型的源代码，如果后续还有参数，将合并为数组传入调用函数（新虚拟机）的inputG变量中，并发函数体内需要通过outG返回值
+	"goCall":     1060,
+
+	"go": 1063, // 快速并发调用一个标号处的代码，该段代码应该使用exit命令来表示退出该线程
+
+	"fastCall": 1070, // fast call function, no function stack used, no result value or arguments allowed, use stack or variables for input and output, use fastRet or ret to return
 
 	"fastRet": 1071, // return from fast function, used with fastCall
 
+	// for/range related 循环/遍历相关
 	"for": 1080, // for loop, usage: for @`$a < #i10` `++ $a` :cont1 :+1 , if the quick eval result is true(bool value), goto label :cont1, otherwise goto :+1(the next line/instr), the same as in C/C++ "for (; a < 10; a++) {...}"
 
 	"range": 1085, // usage: range 5 :+1 :breakRange1, range #J`[{"a":1,"b":2},{"c":3,"d":4}]` :range1 :+1
@@ -190,12 +266,37 @@ var InstrNameSet map[string]int = map[string]int{
 
 	// array/slice related 数组/切片相关
 
+	"newList":  1101, // 新建一个数组，后接任意个元素作为数组的初始项
+	"newArray": 1101,
+
+	"addItem":      1110, //数组中添加项
+	"addArrayItem": 1110, //数组中添加项
+	"addListItem":  1110,
+
+	"addStrItem": 1111,
+
+	"deleteItem":      1112, //数组中删除项
+	"deleteArrayItem": 1112,
+	"deleteListItem":  1112,
+
+	"addItems":      1115, // 数组添加另一个数组的值
+	"addArrayItems": 1115,
+	"addListItems":  1115,
+
+	"getAnyItem": 1120,
+
+	"setAnyItem": 1121,
+
+	"getItem":      1123,
 	"getArrayItem": 1123,
 	"[]":           1123,
 
+	"setItem":      1124, // 修改数组中某一项的值
+	"setArrayItem": 1124,
+
 	"slice": 1130, // 对列表（数组）切片，如果没有指定结果参数，将改变原来的变量。用法示例：slice $list4 $list3 #i1 #i5，将list3进行切片，截取序号1（包含）至序号5（不包含）之间的项，形成一个新的列表，放入变量list4中
 
-	// control related
+	// control related 代码逻辑控制相关
 	"continue": 1210, // continue the loop or range, PS "continue 2" means continue the upper loop in nested loop, "continue 1" means continue the upper of upper loop, default is 1 but could be omitted
 
 	"break": 1211, // break the loop or range, PS "break 2" means break the upper loop in nested loop
@@ -1410,20 +1511,16 @@ func (p *RunningContext) RunDeferUpToRoot(vmA *XieVM) error {
 
 }
 
-func (p *RunningContext) RunDefer(vmA *XieVM) error {
-	// if p.Parent == nil {
-	// 	return fmt.Errorf("no parent VM: %v", p.Parent)
-	// }
-
-	lenT := p.FuncStack.Size()
+func RunDefer(vmA *XieVM, runA *RunningContext) error {
+	lenT := runA.FuncStack.Size()
 
 	if lenT < 1 {
 		return nil
 	}
 
-	contextT := p.FuncStack.Peek().(*FuncContext)
+	contextT := runA.FuncStack.Peek().(*FuncContext)
 
-	rs := contextT.RunDefer(vmA, p)
+	rs := contextT.RunDefer(vmA, runA)
 
 	if tk.IsError(rs) {
 		return rs
@@ -1431,34 +1528,57 @@ func (p *RunningContext) RunDefer(vmA *XieVM) error {
 
 	return nil
 
-	// for {
-	// 	instrT := p.GetCurrentFuncContext().DeferStack.Pop()
-
-	// 	// tk.Pl("\nDeferStack.Pop: %#v\n", instrT)
-
-	// 	if instrT == nil || tk.IsUndefined(instrT) {
-	// 		break
-	// 	}
-
-	// 	nv, ok := instrT.(*Instr)
-
-	// 	if !ok {
-	// 		return fmt.Errorf("invalid instruction: %#v", instrT)
-	// 	}
-
-	// 	if GlobalsG.VerboseLevel > 1 {
-	// 		tk.Pl("defer run: %v", nv)
-	// 	}
-
-	// 	rs := RunInstr(vmA, p, nv)
-
-	// 	if tk.IsErrX(rs) {
-	// 		return fmt.Errorf("[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), tk.GetErrStrX(rs))
-	// 	}
-	// }
-
-	// return nil
 }
+
+// func (p *RunningContext) RunDefer(vmA *XieVM) error {
+// 	// if p.Parent == nil {
+// 	// 	return fmt.Errorf("no parent VM: %v", p.Parent)
+// 	// }
+
+// 	lenT := p.FuncStack.Size()
+
+// 	if lenT < 1 {
+// 		return nil
+// 	}
+
+// 	contextT := p.FuncStack.Peek().(*FuncContext)
+
+// 	rs := contextT.RunDefer(vmA, p)
+
+// 	if tk.IsError(rs) {
+// 		return rs
+// 	}
+
+// 	return nil
+
+// 	// for {
+// 	// 	instrT := p.GetCurrentFuncContext().DeferStack.Pop()
+
+// 	// 	// tk.Pl("\nDeferStack.Pop: %#v\n", instrT)
+
+// 	// 	if instrT == nil || tk.IsUndefined(instrT) {
+// 	// 		break
+// 	// 	}
+
+// 	// 	nv, ok := instrT.(*Instr)
+
+// 	// 	if !ok {
+// 	// 		return fmt.Errorf("invalid instruction: %#v", instrT)
+// 	// 	}
+
+// 	// 	if GlobalsG.VerboseLevel > 1 {
+// 	// 		tk.Pl("defer run: %v", nv)
+// 	// 	}
+
+// 	// 	rs := RunInstr(vmA, p, nv)
+
+// 	// 	if tk.IsErrX(rs) {
+// 	// 		return fmt.Errorf("[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), tk.GetErrStrX(rs))
+// 	// 	}
+// 	// }
+
+// 	// return nil
+// }
 
 // func (p *RunningContext) RunDeferUpToRoot() interface{} {
 // 	if p.Parent == nil {
@@ -1791,6 +1911,74 @@ func (p *XieVM) GetVarValue(runA *RunningContext, vA VarRef) interface{} {
 
 }
 
+func (p *XieVM) GetVarValueGlobal(runA *RunningContext, vA VarRef) interface{} {
+	if runA == nil {
+		runA = p.Running
+	}
+
+	idxT := vA.Ref
+
+	if idxT == -2 {
+		return tk.Undefined
+	}
+
+	if idxT == -3 {
+		return vA.Value
+	}
+
+	if idxT == -5 {
+		return p.RootFunc.Tmp
+	}
+
+	if idxT == -11 {
+		return GlobalsG.SyncSeq.Get()
+	}
+
+	if idxT == -8 {
+		return p.Stack.Pop()
+	}
+
+	if idxT == -7 {
+		return p.Stack.Peek()
+	}
+
+	if idxT == -1 { // $debug
+		return tk.ToJSONX(p, "-indent", "-sort")
+	}
+
+	if idxT == -6 {
+		return tk.Undefined
+	}
+
+	if idxT == -10 {
+		// tk.Pln("getvarvalue", vA.Value)
+		return QuickEval(tk.ToStr(vA.Value), p, runA)
+	}
+
+	if idxT == -16 { // labels
+		return runA.GetLabelIndex(vA.Value)
+	}
+
+	if idxT == -17 { // regs
+		return p.Regs[tk.ToInt(vA.Value, 0)]
+		return nil
+	}
+
+	if idxT == 3 { // normal variables
+		nv, ok := p.RootFunc.Vars[vA.Value.(string)]
+
+		if ok {
+			return nv
+		}
+
+		return tk.Undefined
+
+	}
+
+	return tk.Undefined
+
+}
+
 func (p *XieVM) GetVar(runA *RunningContext, keyA string) interface{} {
 	if runA == nil {
 		runA = p.Running
@@ -1817,12 +2005,18 @@ func (p *XieVM) GetVar(runA *RunningContext, keyA string) interface{} {
 
 }
 
+// vA.Ref < -99 to get current function layer
 func (p *XieVM) GetVarLayer(runA *RunningContext, vA VarRef) int {
 	if runA == nil {
 		runA = p.Running
 	}
 
 	idxT := vA.Ref
+
+	if idxT < -99 {
+		lenT := runA.FuncStack.Size()
+		return lenT
+	}
 
 	if idxT < 0 {
 		return idxT
@@ -2255,6 +2449,13 @@ func (p *XieVM) ParamsToList(runA *RunningContext, v *Instr, fromA int) []interf
 	return sl
 }
 
+type CallStruct struct {
+	Type          int // 1: fastCall, 2: (normal) call
+	ReturnPointer int
+	ReturnRef     VarRef
+	Value         interface{}
+}
+
 type RangeStruct struct {
 	Iterator   tk.Iterator
 	LoopIndex  int
@@ -2572,6 +2773,34 @@ func NewObject(p *XieVM, r *RunningContext, typeA string, argsA ...interface{}) 
 		} else {
 			rs = tk.NewSeq()
 		}
+	case "instr": // 指令
+		if len(argsT) < 1 {
+			if makeT {
+				rs = Instr{Code: 12, Params: []VarRef{}} // invalid instr
+			} else {
+				rs = &Instr{Code: 12, Params: []VarRef{}}
+			}
+		} else {
+			vs1 := tk.ToStr(argsT[0])
+			rs1 := Compile(vs1)
+
+			if tk.IsError(rs1) {
+				return p.Errf(r, "failed to compile the instr code(编译指令代码失败): %v", rs1)
+			}
+
+			rs1n := rs1.(*CompiledCode)
+
+			if len(rs1n.InstrList) < 1 {
+				return p.Errf(r, "failed to compile the instr code(编译指令代码失败): %v", "empty code(没有有效代码)")
+			}
+
+			if makeT {
+				rs = rs1n.InstrList[0]
+			} else {
+				rs = &rs1n.InstrList[0]
+			}
+		}
+
 	case "messageQueue", "syncQueue": // 线程安全的先进先出队列
 		if makeT {
 			rs = tk.SyncQueue{}
@@ -3083,6 +3312,142 @@ func callGoFunc(funcA interface{}, thisA interface{}, argsA ...interface{}) inte
 	return nil
 }
 
+func GoCall(codeA interface{}, inputA ...interface{}) error {
+	vmObjT := NewVM()
+
+	if tk.IsError(vmObjT) {
+		return vmObjT.(error)
+	}
+
+	vmT := vmObjT.(XieVM)
+
+	if len(inputA) > 0 {
+		vmT.SetVar(nil, "inputG", inputA)
+	}
+
+	lrs := vmT.Load(nil, codeA)
+
+	if tk.IsError(lrs) {
+		return lrs
+	}
+
+	go vmT.Run()
+
+	return nil
+}
+
+// func (p *XieVM) GetVarRef(runA *RunningContext, vA VarRef) interface{} {
+// 	idxT := vA.Ref
+
+// 	if idxT == -2 {
+// 		return tk.Undefined
+// 	}
+
+// 	if idxT == -3 {
+// 		return tk.Undefined
+// 	}
+
+// 	if idxT == -8 {
+// 		return tk.Undefined
+// 	}
+
+// 	if idxT == -7 {
+// 		return tk.Undefined
+// 	}
+
+// 	if idxT == -5 {
+// 		return &(p.GetCurrentFuncContext(runA).Tmp)
+// 	}
+
+// 	if idxT == -11 { // 自增长序号无法寻址
+// 		return tk.Undefined
+// 	}
+
+// 	if idxT == -6 {
+// 		return tk.Undefined
+// 	}
+
+// 	if idxT == -9 {
+// 		return tk.Undefined
+// 	}
+
+// 	if idxT == -10 {
+// 		return tk.Undefined
+// 	}
+
+// 	if idxT < 0 {
+// 		return tk.Undefined
+// 	}
+
+// 	if idxT == 3 { // normal variables
+// 		lenT := runA.FuncStack.Size()
+
+// 		for idxT := lenT - 1; idxT >= 0; idxT-- {
+// 			loopFunc := runA.FuncStack.PeekLayer(idxT).(*FuncContext)
+// 			nv, ok := loopFunc.Vars[vA.Value.(string)]
+
+// 			if ok {
+// 				return &loopFunc.Vars[vA.Value.(string)]
+// 			}
+// 		}
+
+// 		nv, ok := p.RootFunc.Vars[vA.Value.(string)]
+
+// 		if ok {
+// 			return nv
+// 		}
+
+// 		return tk.Undefined
+
+// 	}
+
+// 	return tk.Undefined
+// }
+
+// 避免使用任何跳转到当前代码外的指令
+// return value is not required normally, but errors
+// normally return tk.Undefined
+func (p *XieVM) QuickRunCode(codeA interface{}) interface{} {
+	nr := NewRunningContext(codeA)
+
+	if tk.IsError(nr) {
+		return nr
+	}
+
+	nrr := nr.(*RunningContext)
+
+	lenT := len(nrr.InstrList)
+
+	tmpPointerT := 0
+
+	for (tmpPointerT >= 0) && (tmpPointerT < lenT) {
+		rs := RunInstr(p, p.Running, &nrr.InstrList[nrr.CodePointer])
+
+		nv, ok := rs.(int)
+
+		if ok {
+			tmpPointerT = nv
+			continue
+		}
+
+		if tk.IsError(rs) {
+			return rs
+		}
+
+		nsv, ok := rs.(string)
+
+		if ok {
+			if nsv == "exit" {
+				return tk.Undefined
+			}
+		}
+
+		tmpPointerT++
+	}
+
+	return tk.Undefined
+}
+
 func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) {
 	defer func() {
 		if r1 := recover(); r1 != nil {
@@ -3371,6 +3736,35 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		}
 
 		return ""
+	case 131: // typeOf
+
+		var pr interface{} = -5
+
+		var v1 interface{}
+
+		if instrT.ParamLen < 1 {
+			v1 = p.Stack.Peek()
+		} else if instrT.ParamLen < 2 {
+			v1 = p.GetVarValue(r, instrT.Params[0])
+		} else {
+			pr = instrT.Params[0]
+			v1 = p.GetVarValue(r, instrT.Params[1])
+		}
+
+		p.SetVar(r, pr, fmt.Sprintf("%T", v1))
+
+		return ""
+	case 141: // layer
+		var pr interface{} = -5
+
+		if instrT.ParamLen > 0 {
+			pr = instrT.Params[0]
+		}
+
+		p.SetVar(r, pr, r.FuncStack.Size())
+
+		return ""
+
 	case 151: // loadCode
 
 		var pr any = -5
@@ -3403,6 +3797,25 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		}
 
 		rs := Compile(tk.ToStr(p.GetVarValue(r, instrT.Params[v1p])))
+
+		p.SetVar(r, pr, rs)
+
+		return ""
+
+	case 155: // quickRun
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		rs := p.QuickRunCode(p.GetVarValue(r, instrT.Params[v1p]))
 
 		p.SetVar(r, pr, rs)
 
@@ -3805,6 +4218,174 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		p.SetVarLocal(r, pr, pv)
 
 		return ""
+	case 205: // const
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		p.SetVar(r, pr, GlobalsG.Vars[tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))])
+
+		return ""
+	// case 210: // ref
+	// 	if instrT.ParamLen < 1 {
+	// 		return p.Errf(r, "not enough parameters(参数不够)")
+	// 	}
+
+	// 	var pr interface{} = -5
+
+	// 	var v2 interface{}
+
+	// 	if instrT.ParamLen < 2 {
+	// 		v2 = p.GetVarRef(instrT.Params[0])
+	// 	} else {
+	// 		pr = instrT.Params[0]
+	// 		v2 = p.GetVarRef(instrT.Params[1])
+	// 	}
+
+	// 	p.SetVar(r, pr, v2)
+
+	// 	return ""
+	// case 211: // refNative
+	// 	if instrT.ParamLen < 1 {
+	// 		return p.Errf(r, "not enough parameters(参数不够)")
+	// 	}
+
+	// 	var pr interface{} = -5
+
+	// 	var v2 interface{}
+
+	// 	if instrT.ParamLen < 2 {
+	// 		v2 = p.GetVarRefNative(instrT.Params[0])
+	// 	} else {
+	// 		pr = instrT.Params[0]
+	// 		v2 = p.GetVarRefNative(instrT.Params[1])
+	// 	}
+
+	// 	p.SetVar(r, pr, v2)
+
+	// 	return ""
+	// case 215: // unref
+	// 	if instrT.ParamLen < 1 {
+	// 		return p.Errf(r, "not enough parameters(参数不够)")
+	// 	}
+
+	// 	var pr interface{} = -5
+
+	// 	var v2 interface{}
+
+	// 	if instrT.ParamLen < 1 {
+	// 		v2 = p.GetCurrentFuncContext(r).Tmp
+	// 	} else if instrT.ParamLen < 2 {
+	// 		v2 = p.GetVarValue(r, instrT.Params[0])
+	// 	} else {
+	// 		pr = instrT.Params[0]
+	// 		v2 = p.GetVarValue(r, instrT.Params[1])
+	// 	}
+
+	// 	switch nv := v2.(type) {
+	// 	case *interface{}:
+	// 		p.SetVar(r, pr, *nv)
+	// 	case *byte:
+	// 		p.SetVar(r, pr, *nv)
+	// 	case *int:
+	// 		p.SetVar(r, pr, *nv)
+	// 	case *uint64:
+	// 		p.SetVar(r, pr, *nv)
+	// 	case *rune:
+	// 		p.SetVar(r, pr, *nv)
+	// 	case *bool:
+	// 		p.SetVar(r, pr, *nv)
+	// 	case *string:
+	// 		p.SetVar(r, pr, *nv)
+	// 	case *strings.Builder:
+	// 		p.SetVar(r, pr, *nv)
+	// 	default:
+	// 		return p.Errf(r, "无法处理的类型：%T", v2)
+	// 	}
+
+	// 	return ""
+	// case 218: // assignRef
+	// 	if instrT.ParamLen < 2 {
+	// 		return p.Errf(r, "not enough parameters(参数不够)")
+	// 	}
+
+	// 	// nameT := instrT.Params[0].Ref
+	// 	p1a := p.GetVarValue(r, instrT.Params[0])
+
+	// 	// p1, ok := p1a.(*interface{})
+
+	// 	var p1 *interface{}
+	// 	v1p := 1
+
+	// 	switch nv := p1a.(type) {
+	// 	case *interface{}:
+	// 		p1 = nv
+	// 		break
+	// 	case *byte:
+	// 		*nv = tk.ToByte(p.GetVarValue(r, instrT.Params[v1p]))
+	// 		return ""
+	// 	case *rune:
+	// 		*nv = tk.ToRune(p.GetVarValue(r, instrT.Params[v1p]))
+	// 		return ""
+	// 	case *int:
+	// 		*nv = tk.ToInt(p.GetVarValue(r, instrT.Params[v1p]))
+	// 		return ""
+	// 	default:
+	// 		return p.Errf(r, "无法处理的类型：%T", p1a)
+	// 	}
+
+	// 	if instrT.ParamLen > 2 {
+	// 		valueTypeT := instrT.Params[1].Value
+	// 		valueT := p.GetVarValue(r, instrT.Params[2])
+
+	// 		if valueTypeT == "bool" {
+	// 			*p1 = tk.ToBool(valueT)
+	// 		} else if valueTypeT == "int" {
+	// 			*p1 = tk.ToInt(valueT)
+	// 		} else if valueTypeT == "byte" {
+	// 			*p1 = tk.ToByte(valueT)
+	// 		} else if valueTypeT == "rune" {
+	// 			*p1 = tk.ToRune(valueT)
+	// 		} else if valueTypeT == "float" {
+	// 			*p1 = tk.ToFloat(valueT)
+	// 		} else if valueTypeT == "str" {
+	// 			*p1 = tk.ToStr(valueT)
+	// 		} else if valueTypeT == "list" || valueT == "array" || valueT == "[]" {
+	// 			*p1 = valueT.([]interface{})
+	// 		} else if valueTypeT == "strList" {
+	// 			*p1 = valueT.([]string)
+	// 		} else if valueTypeT == "byteList" {
+	// 			*p1 = valueT.([]byte)
+	// 		} else if valueTypeT == "runeList" {
+	// 			*p1 = valueT.([]rune)
+	// 		} else if valueTypeT == "map" {
+	// 			*p1 = valueT.(map[string]interface{})
+	// 		} else if valueTypeT == "strMap" {
+	// 			*p1 = valueT.(map[string]string)
+	// 		} else if valueTypeT == "time" {
+	// 			*p1 = valueT.(time.Time)
+	// 		} else {
+	// 			*p1 = valueT
+	// 		}
+
+	// 		return ""
+	// 	}
+
+	// 	valueT := p.GetVarValue(r, instrT.Params[1])
+
+	// 	*p1 = valueT
+
+	// 	// (*(p.CurrentVarsM))[nameT] = valueT
+
+	// 	return ""
 
 	case 220: // push
 		if instrT.ParamLen < 1 {
@@ -3883,6 +4464,429 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		p.Stack.Clear()
 		return ""
 
+	case 250: // pushRun
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		if instrT.ParamLen > 1 {
+			v2 := p.GetVarValue(r, instrT.Params[1])
+
+			v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[0]))
+
+			if v1 == "int" {
+				r.PointerStack.Push(tk.ToInt(v2))
+			} else if v1 == "byte" {
+				r.PointerStack.Push(tk.ToByte(v2))
+			} else if v1 == "rune" {
+				r.PointerStack.Push(tk.ToRune(v2))
+			} else if v1 == "float" {
+				r.PointerStack.Push(tk.ToFloat(v2))
+			} else if v1 == "bool" {
+				r.PointerStack.Push(tk.ToBool(v2))
+			} else if v1 == "str" {
+				r.PointerStack.Push(tk.ToStr(v2))
+			} else {
+				r.PointerStack.Push(v2)
+			}
+
+			return ""
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[0])
+
+		r.PointerStack.Push(v1)
+
+		return ""
+	case 252: // peekRun
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		pr := instrT.Params[0]
+
+		errT := p.SetVar(r, pr, r.PointerStack.Peek())
+
+		if errT != nil {
+			return p.Errf(r, "%v", errT)
+		}
+
+		return ""
+
+	case 254: // popRun
+		var pr interface{} = -5
+		if instrT.ParamLen < 1 {
+			p.SetVar(r, pr, r.PointerStack.Pop())
+			return ""
+		}
+
+		pr = instrT.Params[0]
+
+		p.SetVar(r, pr, r.PointerStack.Pop())
+
+		return ""
+	case 256: // getRunStackSize
+		var pr interface{} = -5
+		if instrT.ParamLen < 1 {
+			p.SetVar(r, pr, r.PointerStack.Size())
+			return ""
+		}
+
+		pr = instrT.Params[0]
+
+		p.SetVar(r, pr, r.PointerStack.Size())
+
+		return ""
+	case 258: // clearRunStack
+		r.PointerStack.Clear()
+		return ""
+
+	case 300: // getSharedMap
+
+		var pr interface{} = -5
+		// v1p := 0
+
+		if instrT.ParamLen > 0 {
+			pr = instrT.Params[0]
+			// v1p = 1
+		}
+
+		p.SetVar(r, pr, GlobalsG.SyncMap.GetList())
+
+		return ""
+
+	case 301: // getSharedMapItem
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		pr := instrT.Params[0] // -5
+		v1p := 1
+
+		// if instrT.ParamLen > 2 {
+		// 	pr = instrT.Params[0]
+		// 	v1p = 1
+		// 	// p.SetVarInt(instrT.Params[2].Ref, vT)
+		// }
+
+		// v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+
+		// var vT interface{}
+		// tk.Pln(pr, v1, v2)
+
+		var defaultT interface{} = tk.Undefined
+
+		if instrT.ParamLen > 2 {
+			defaultT = p.GetVarValue(r, instrT.Params[2])
+		}
+
+		p.SetVar(r, pr, GlobalsG.SyncMap.Get(v1, defaultT))
+
+		return ""
+
+	case 302: // getSharedMapSize
+
+		var pr interface{} = -5
+
+		if instrT.ParamLen > 0 {
+			pr = instrT.Params[0]
+		}
+
+		p.SetVar(r, pr, GlobalsG.SyncMap.Size())
+
+		return ""
+
+	case 303: // tryGetSharedMapItem
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		pr := instrT.Params[0] // -5
+		v1p := 1
+
+		// if instrT.ParamLen > 2 {
+		// 	pr = instrT.Params[0]
+		// 	v1p = 1
+		// 	// p.SetVarInt(instrT.Params[2].Ref, vT)
+		// }
+
+		// v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+
+		// var vT interface{}
+		// tk.Pln(pr, v1, v2)
+
+		var defaultT interface{} = tk.Undefined
+
+		if instrT.ParamLen > 2 {
+			defaultT = p.GetVarValue(r, instrT.Params[2])
+		}
+
+		p.SetVar(r, pr, GlobalsG.SyncMap.TryGet(v1, defaultT))
+
+		return ""
+
+	case 304: // tryGetSharedMapSize
+		var pr interface{} = -5
+
+		if instrT.ParamLen > 0 {
+			pr = instrT.Params[0]
+		}
+
+		vr := GlobalsG.SyncMap.TrySize()
+
+		if vr < 0 {
+			p.SetVar(r, pr, fmt.Errorf("获取大小失败"))
+		} else {
+			p.SetVar(r, pr, vr)
+		}
+
+		return ""
+
+	case 311: // setSharedMapItem
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		// var pr interface{} = -5
+		v1p := 0
+
+		// if instrT.ParamLen > 2 {
+		// 	// pr = instrT.Params[0]
+		// 	v1p = 1
+		// 	// p.SetVarInt(instrT.Params[2].Ref, vT)
+		// }
+
+		// v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+		v2 := p.GetVarValue(r, instrT.Params[v1p+1])
+
+		GlobalsG.SyncMap.Set(v1, v2)
+		// p.SetVar(r, pr, true)
+
+		return ""
+
+	case 313: // trySetSharedMapItem
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 2 {
+			pr = instrT.Params[0]
+			v1p = 1
+			// p.SetVarInt(instrT.Params[2].Ref, vT)
+		}
+
+		// v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+		v2 := p.GetVarValue(r, instrT.Params[v1p+1])
+
+		p.SetVar(r, pr, GlobalsG.SyncMap.TrySet(v1, v2))
+
+		return ""
+
+	case 321: // deleteSharedMapItem
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		// var pr interface{} = -5
+		v1p := 0
+
+		// if instrT.ParamLen > 1 {
+		// 	// pr = instrT.Params[0]
+		// 	v1p = 1
+		// 	// p.SetVarInt(instrT.Params[2].Ref, vT)
+		// }
+
+		// v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+
+		GlobalsG.SyncMap.Delete(v1)
+		// p.SetVar(r, pr, true)
+
+		return ""
+
+	case 323: // tryDeleteSharedMapItem
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+			// p.SetVarInt(instrT.Params[2].Ref, vT)
+		}
+
+		// v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+
+		p.SetVar(r, pr, GlobalsG.SyncMap.TryDelete(v1))
+
+		return ""
+
+	case 331: // clearSharedMapItem
+		// if instrT.ParamLen < 1 {
+		// 	return p.Errf(r, "not enough parameters(参数不够)")
+		// }
+
+		// var pr interface{} = -5
+		// // v1p := 0
+
+		// if instrT.ParamLen > 1 {
+		// 	pr = instrT.Params[0]
+		// 	// v1p = 1
+		// 	// p.SetVarInt(instrT.Params[2].Ref, vT)
+		// }
+
+		// v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		// v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+
+		GlobalsG.SyncMap.Clear()
+		// p.SetVar(r, pr, true)
+
+		return ""
+
+	case 333: // tryClearSharedMap
+		// if instrT.ParamLen < 1 {
+		// 	return p.Errf(r, "not enough parameters(参数不够)")
+		// }
+
+		var pr interface{} = -5
+		// v1p := 0
+
+		if instrT.ParamLen > 0 {
+			pr = instrT.Params[0]
+			// v1p = 1
+			// p.SetVarInt(instrT.Params[2].Ref, vT)
+		}
+
+		// v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		// v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+
+		p.SetVar(r, pr, GlobalsG.SyncMap.TryClear())
+
+		return ""
+
+	case 341: // lockSharedMap
+		GlobalsG.SyncMap.Lock()
+
+		return ""
+
+	case 342: // tryLockSharedMap
+		GlobalsG.SyncMap.TryLock()
+
+		return ""
+
+	case 343: // unlockSharedMap
+		GlobalsG.SyncMap.Unlock()
+
+		return ""
+
+	case 346: // readLockSharedMap
+		GlobalsG.SyncMap.RLock()
+
+		return ""
+
+	case 347: // tryReadLockSharedMap
+		GlobalsG.SyncMap.TryRLock()
+
+		return ""
+
+	case 348: // readUnlockSharedMap
+		GlobalsG.SyncMap.RUnlock()
+
+		return ""
+
+	case 351: // quickClearSharedMap
+		GlobalsG.SyncMap.QuickClear()
+
+		return ""
+
+	case 353: // quickGetSharedMapItem
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		pr := instrT.Params[0] // -5
+		v1p := 1
+
+		v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+
+		var defaultT interface{} = tk.Undefined
+
+		if instrT.ParamLen > 2 {
+			defaultT = p.GetVarValue(r, instrT.Params[2])
+		}
+
+		p.SetVar(r, pr, GlobalsG.SyncMap.QuickGet(v1, defaultT))
+
+		return ""
+
+	case 354: // quickGetSharedMap
+		var pr interface{} = -5
+
+		if instrT.ParamLen > 0 {
+			pr = instrT.Params[0]
+		}
+
+		p.SetVar(r, pr, GlobalsG.SyncMap)
+
+		return ""
+
+	case 355: // quickSetSharedMapItem
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		v1p := 0
+
+		v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+		v2 := p.GetVarValue(r, instrT.Params[v1p+1])
+
+		GlobalsG.SyncMap.QuickSet(v1, v2)
+
+		return ""
+
+	case 357: // quickDeleteSharedMapItem
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		v1p := 0
+
+		v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+
+		GlobalsG.SyncMap.QuickDelete(v1)
+
+		return ""
+	case 359: // quickSizeSharedMap
+
+		var pr interface{} = -5
+
+		if instrT.ParamLen > 0 {
+			pr = instrT.Params[0]
+		}
+
+		p.SetVar(r, pr, GlobalsG.SyncMap.QuickSize())
+
+		return ""
+
 	case 401: // assign/=
 		if instrT.ParamLen < 2 {
 			return p.Errf(r, "not enough parameters(参数不够)")
@@ -3890,48 +4894,150 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		pr := instrT.Params[0]
 
+		var valueT interface{}
+
 		if instrT.ParamLen > 2 {
 			valueTypeT := instrT.Params[1].Value
-			valueT := p.GetVarValue(r, instrT.Params[2])
+			valueT = p.GetVarValue(r, instrT.Params[2])
 
 			if valueTypeT == "bool" {
-				p.SetVar(r, pr, tk.ToBool(valueT))
+				valueT = tk.ToBool(valueT)
 			} else if valueTypeT == "int" {
-				p.SetVar(r, pr, tk.ToInt(valueT))
+				valueT = tk.ToInt(valueT)
+				// p.SetVar(r, pr, tk.ToInt(valueT))
 			} else if valueTypeT == "byte" {
-				p.SetVar(r, pr, tk.ToByte(valueT))
+				valueT = tk.ToByte(valueT)
 			} else if valueTypeT == "rune" {
-				p.SetVar(r, pr, tk.ToRune(valueT))
+				valueT = tk.ToRune(valueT)
 			} else if valueTypeT == "float" {
-				p.SetVar(r, pr, tk.ToFloat(valueT))
+				valueT = tk.ToFloat(valueT)
 			} else if valueTypeT == "str" {
-				p.SetVar(r, pr, tk.ToStr(valueT))
-			} else if valueTypeT == "list" || valueT == "array" || valueT == "[]" {
-				p.SetVar(r, pr, valueT.([]interface{}))
-			} else if valueTypeT == "strList" {
-				p.SetVar(r, pr, valueT.([]string))
-			} else if valueTypeT == "byteList" {
-				p.SetVar(r, pr, valueT.([]byte))
-			} else if valueTypeT == "runeList" {
-				p.SetVar(r, pr, valueT.([]rune))
-			} else if valueTypeT == "map" {
-				p.SetVar(r, pr, valueT.(map[string]interface{}))
-			} else if valueTypeT == "strMap" {
-				p.SetVar(r, pr, valueT.(map[string]string))
-			} else if valueTypeT == "time" {
-				p.SetVar(r, pr, valueT.(map[string]string))
-			} else {
-				p.SetVar(r, pr, valueT)
+				valueT = tk.ToStr(valueT)
+				// } else if valueTypeT == "list" || valueT == "array" || valueT == "[]" {
+				// 	p.SetVar(r, pr, valueT.([]interface{}))
+				// } else if valueTypeT == "strList" {
+				// 	p.SetVar(r, pr, valueT.([]string))
+				// } else if valueTypeT == "byteList" {
+				// 	p.SetVar(r, pr, valueT.([]byte))
+				// } else if valueTypeT == "runeList" {
+				// 	p.SetVar(r, pr, valueT.([]rune))
+				// } else if valueTypeT == "map" {
+				// 	p.SetVar(r, pr, valueT.(map[string]interface{}))
+				// } else if valueTypeT == "strMap" {
+				// 	p.SetVar(r, pr, valueT.(map[string]string))
+				// } else if valueTypeT == "time" {
+				// 	p.SetVar(r, pr, valueT.(map[string]string))
 			}
-
-			return ""
+		} else {
+			valueT = p.GetVarValue(r, instrT.Params[1])
 		}
-
-		valueT := p.GetVarValue(r, instrT.Params[1])
 
 		p.SetVar(r, pr, valueT)
 
-		// (*(p.CurrentVarsM))[nameT] = valueT
+		return ""
+
+	case 491: // assignGlobal
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		pr := instrT.Params[0]
+
+		var valueT interface{}
+
+		if instrT.ParamLen > 2 {
+			valueTypeT := instrT.Params[1].Value
+			valueT = p.GetVarValue(r, instrT.Params[2])
+
+			if valueTypeT == "bool" {
+				valueT = tk.ToBool(valueT)
+			} else if valueTypeT == "int" {
+				valueT = tk.ToInt(valueT)
+				// p.SetVar(r, pr, tk.ToInt(valueT))
+			} else if valueTypeT == "byte" {
+				valueT = tk.ToByte(valueT)
+			} else if valueTypeT == "rune" {
+				valueT = tk.ToRune(valueT)
+			} else if valueTypeT == "float" {
+				valueT = tk.ToFloat(valueT)
+			} else if valueTypeT == "str" {
+				valueT = tk.ToStr(valueT)
+			}
+		} else {
+			valueT = p.GetVarValue(r, instrT.Params[1])
+		}
+
+		p.SetVarGlobal(pr, valueT)
+
+		return ""
+
+	case 492: // assignFromGlobal
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		pr := instrT.Params[0]
+
+		var valueT interface{}
+
+		if instrT.ParamLen > 2 {
+			valueTypeT := instrT.Params[1].Value
+			valueT = p.GetVarValueGlobal(r, instrT.Params[2])
+
+			if valueTypeT == "bool" {
+				valueT = tk.ToBool(valueT)
+			} else if valueTypeT == "int" {
+				valueT = tk.ToInt(valueT)
+				// p.SetVar(r, pr, tk.ToInt(valueT))
+			} else if valueTypeT == "byte" {
+				valueT = tk.ToByte(valueT)
+			} else if valueTypeT == "rune" {
+				valueT = tk.ToRune(valueT)
+			} else if valueTypeT == "float" {
+				valueT = tk.ToFloat(valueT)
+			} else if valueTypeT == "str" {
+				valueT = tk.ToStr(valueT)
+			}
+		} else {
+			valueT = p.GetVarValueGlobal(r, instrT.Params[1])
+		}
+
+		p.SetVarGlobal(pr, valueT)
+
+		return ""
+
+	case 493: // assignLocal
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		pr := instrT.Params[0]
+
+		var valueT interface{}
+
+		if instrT.ParamLen > 2 {
+			valueTypeT := instrT.Params[1].Value
+			valueT = p.GetVarValue(r, instrT.Params[2])
+
+			if valueTypeT == "bool" {
+				valueT = tk.ToBool(valueT)
+			} else if valueTypeT == "int" {
+				valueT = tk.ToInt(valueT)
+				// p.SetVar(r, pr, tk.ToInt(valueT))
+			} else if valueTypeT == "byte" {
+				valueT = tk.ToByte(valueT)
+			} else if valueTypeT == "rune" {
+				valueT = tk.ToRune(valueT)
+			} else if valueTypeT == "float" {
+				valueT = tk.ToFloat(valueT)
+			} else if valueTypeT == "str" {
+				valueT = tk.ToStr(valueT)
+			}
+		} else {
+			valueT = p.GetVarValue(r, instrT.Params[1])
+		}
+
+		p.SetVarLocal(r, pr, valueT)
 
 		return ""
 
@@ -4000,6 +5106,210 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		}
 
 		return ""
+	case 611: // ifNot
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var condT bool
+		var v2 interface{}
+		var v2o interface{}
+		var ok0 bool
+
+		var elseLabelIntT int = -1
+
+		if instrT.ParamLen > 2 {
+			elseLabelT := r.GetLabelIndex(p.GetVarValue(r, instrT.Params[2]))
+
+			if elseLabelT < 0 {
+				return p.Errf(r, "invalid label: %v", elseLabelT)
+			}
+
+			elseLabelIntT = elseLabelT
+		}
+
+		v2o = instrT.Params[1]
+
+		v2 = p.GetVarValue(r, instrT.Params[1])
+
+		// tk.Plv(instrT)
+		tmpv := p.GetVarValue(r, instrT.Params[0])
+		if GlobalsG.VerboseLevel > 1 {
+			tk.Pl("if %v -> %v", instrT.Params[0], tmpv)
+		}
+
+		condT, ok0 = tmpv.(bool)
+
+		if !ok0 {
+			var tmps string
+			tmps, ok0 = tmpv.(string)
+
+			if ok0 {
+				tmprs := QuickEval(tmps, p, r)
+
+				condT, ok0 = tmprs.(bool)
+			}
+		}
+
+		if !ok0 {
+			return p.Errf(r, "invalid condition parameter: %#v", tmpv)
+		}
+
+		if !condT {
+			c2 := r.GetLabelIndex(v2)
+
+			if c2 < 0 {
+				return p.Errf(r, "invalid label: %v", v2o)
+			}
+
+			return c2
+		}
+
+		if elseLabelIntT >= 0 {
+			return elseLabelIntT
+		}
+
+		return ""
+
+	case 631: // ifEval
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var condT bool
+		var v2 interface{}
+		var v2o interface{}
+
+		var elseLabelIntT int = -1
+
+		if instrT.ParamLen > 2 {
+			elseLabelT := r.GetLabelIndex(p.GetVarValue(r, instrT.Params[2]))
+
+			if elseLabelT < 0 {
+				return p.Errf(r, "invalid label: %v", elseLabelT)
+			}
+
+			elseLabelIntT = elseLabelT
+		}
+
+		v2o = instrT.Params[1]
+
+		v2 = p.GetVarValue(r, instrT.Params[1])
+
+		// tk.Plv(instrT)
+		tmpv := tk.ToStr(p.GetVarValue(r, instrT.Params[0]))
+
+		condObjT := QuickEval(tmpv, p, r)
+
+		if tk.IsError(condObjT) {
+			return p.Errf(r, "failed to compare: %v", condObjT)
+		}
+
+		condT = tk.ToBool(condObjT)
+
+		if condT {
+			c2 := r.GetLabelIndex(v2)
+
+			if c2 < 0 {
+				return p.Errf(r, "invalid label: %v", v2o)
+			}
+
+			return c2
+		}
+
+		if elseLabelIntT >= 0 {
+			return elseLabelIntT
+		}
+
+		return ""
+
+	case 641: // ifEmpty
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var condT bool
+		var v2 interface{}
+		var v2o interface{}
+
+		var elseLabelIntT int = -1
+
+		if instrT.ParamLen > 2 {
+			elseLabelT := r.GetLabelIndex(p.GetVarValue(r, instrT.Params[2]))
+
+			if elseLabelT < 0 {
+				return p.Errf(r, "invalid label: %v", elseLabelT)
+			}
+
+			elseLabelIntT = elseLabelT
+		}
+
+		v2o = instrT.Params[1]
+
+		v2 = p.GetVarValue(r, instrT.Params[1])
+
+		// tk.Plv(instrT)
+		v1 := p.GetVarValue(r, instrT.Params[0])
+
+		if v1 == nil {
+			condT = true
+		} else if v1 == tk.Undefined {
+			condT = true
+		} else {
+			switch nv := v1.(type) {
+			// case bool:
+			// 	condT = (nv == false)
+			case string:
+				condT = (nv == "")
+			// case byte:
+			// 	condT = (nv <= 0)
+			// case int:
+			// 	condT = (nv <= 0)
+			// case rune:
+			// 	condT = (nv <= 0)
+			// case int64:
+			// 	condT = (nv <= 0)
+			// case float64:
+			// 	condT = (nv <= 0)
+			case []byte:
+				condT = (len(nv) < 1)
+			case []int:
+				condT = (len(nv) < 1)
+			case []rune:
+				condT = (len(nv) < 1)
+			case []int64:
+				condT = (len(nv) < 1)
+			case []float64:
+				condT = (len(nv) < 1)
+			case []string:
+				condT = (len(nv) < 1)
+			case []interface{}:
+				condT = (len(nv) < 1)
+			case map[string]string:
+				condT = (len(nv) < 1)
+			case map[string]interface{}:
+				condT = (len(nv) < 1)
+			default:
+				condT = false
+			}
+		}
+
+		if condT {
+			c2 := r.GetLabelIndex(v2)
+
+			if c2 < 0 {
+				return p.Errf(r, "invalid label: %v", v2o)
+			}
+
+			return c2
+		}
+
+		if elseLabelIntT >= 0 {
+			return elseLabelIntT
+		}
+
+		return ""
+
 	case 643: // ifEqual
 		if instrT.ParamLen < 3 {
 			return p.Errf(r, "not enough parameters(参数不够)")
@@ -4156,106 +5466,31 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		return ""
 
-	// s2, sok := v2.(string)
-
-	// if !sok {
-	// 	if condT {
-	// 		c2, cok := v2.(int)
-	// 		if cok {
-	// 			// tk.Pln("c2", c2)
-	// 			return c2
-	// 		} else {
-	// 			return p.Errf(r, "无效的标号：%v", v2)
-	// 		}
-	// 	}
-	// } else {
-	// 	if condT {
-	// 		// tk.Pl("s2: %v", s2)
-	// 		if strings.HasPrefix(s2, "+") {
-	// 			// tk.Pl("s2p: %v - %v", p.CodePointerM+tk.ToInt(s2[1:]), p.CodeListM[p.CodePointerM+tk.ToInt(s2[1:])])
-	// 			return p.CodePointerM + tk.ToInt(s2[1:])
-	// 		} else if strings.HasPrefix(s2, "-") {
-	// 			return p.CodePointerM - tk.ToInt(s2[1:])
-	// 		} else {
-	// 			labelPointerT, ok := p.LabelsM[p.VarIndexMapM[s2]]
-	// 			// tk.Pln("labelPointerT", labelPointerT, ok)
-
-	// 			if ok {
-	// 				return labelPointerT
-	// 			} else {
-	// 				return p.ErrStrf("无效的标号：%v", v2)
-	// 			}
-	// 		}
-	// 	}
-	// }
-
-	// if elseLabelIntT >= 0 {
-	// 	return elseLabelIntT
-	// }
-
-	// return ""
-
-	case 611: // ifNot
-		if instrT.ParamLen < 2 {
+	case 691: // switch
+		if instrT.ParamLen < 3 {
 			return p.Errf(r, "not enough parameters(参数不够)")
 		}
 
-		var condT bool
-		var v2 interface{}
-		var v2o interface{}
-		var ok0 bool
+		v1 := p.GetVarValue(r, instrT.Params[0])
 
-		var elseLabelIntT int = -1
+		vs := p.ParamsToList(r, instrT, 1)
 
-		if instrT.ParamLen > 2 {
-			elseLabelT := r.GetLabelIndex(p.GetVarValue(r, instrT.Params[2]))
+		lenT := len(vs) / 2
 
-			if elseLabelT < 0 {
-				return p.Errf(r, "invalid label: %v", elseLabelT)
+		for i := 0; i < lenT; i++ {
+			if v1 == vs[i*2] {
+				labelT := vs[i*2+1]
+
+				c := r.GetLabelIndex(labelT)
+
+				// c, ok := labelT.(int)
+
+				if c >= 0 {
+					return c
+				} else {
+					return p.Errf(r, "标号格式错误：%T(%v)", labelT, labelT)
+				}
 			}
-
-			elseLabelIntT = elseLabelT
-		}
-
-		v2o = instrT.Params[1]
-
-		v2 = p.GetVarValue(r, instrT.Params[1])
-
-		// tk.Plv(instrT)
-		tmpv := p.GetVarValue(r, instrT.Params[0])
-		if GlobalsG.VerboseLevel > 1 {
-			tk.Pl("if %v -> %v", instrT.Params[0], tmpv)
-		}
-
-		condT, ok0 = tmpv.(bool)
-
-		if !ok0 {
-			var tmps string
-			tmps, ok0 = tmpv.(string)
-
-			if ok0 {
-				tmprs := QuickEval(tmps, p, r)
-
-				condT, ok0 = tmprs.(bool)
-			}
-		}
-
-		if !ok0 {
-			return p.Errf(r, "invalid condition parameter: %#v", tmpv)
-		}
-
-		if !condT {
-			c2 := r.GetLabelIndex(v2)
-
-			if c2 < 0 {
-				return p.Errf(r, "invalid label: %v", v2o)
-			}
-
-			return c2
-		}
-
-		if elseLabelIntT >= 0 {
-			return elseLabelIntT
 		}
 
 		return ""
@@ -4408,6 +5643,97 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		v3 := tk.GetGETResult(v1, v2)
 
 		p.SetVar(r, pr, v3)
+		return ""
+	case 790: // cmp/比较
+		var pr interface{} = -5
+		var v1, v2 interface{}
+
+		if instrT.ParamLen == 0 {
+			v2 = p.Stack.Pop()
+			v1 = p.Stack.Pop()
+		} else if instrT.ParamLen == 1 {
+			pr = instrT.Params[0]
+			v2 = p.Stack.Pop()
+			v1 = p.Stack.Pop()
+			// return p.Errf(r, "not enough parameters(参数不够)")
+		} else if instrT.ParamLen == 2 {
+			v1 = p.GetVarValue(r, instrT.Params[0])
+			v2 = p.GetVarValue(r, instrT.Params[1])
+		} else {
+			pr = instrT.Params[0]
+			v1 = p.GetVarValue(r, instrT.Params[1])
+			v2 = p.GetVarValue(r, instrT.Params[2])
+		}
+
+		var v3 int
+
+		switch nv := v2.(type) {
+		case bool:
+			v1v := v1.(bool)
+
+			if v1v == nv {
+				v3 = 0
+			} else if v1v == false {
+				v3 = -1
+			} else {
+				v3 = 1
+			}
+		case int:
+			v1v := v1.(int)
+
+			if v1v == nv {
+				v3 = 0
+			} else if v1v < nv {
+				v3 = -1
+			} else {
+				v3 = 1
+			}
+		case byte:
+			v1v := v1.(byte)
+
+			if v1v == nv {
+				v3 = 0
+			} else if v1v < nv {
+				v3 = -1
+			} else {
+				v3 = 1
+			}
+		case rune:
+			v1v := v1.(rune)
+
+			if v1v == nv {
+				v3 = 0
+			} else if v1v < nv {
+				v3 = -1
+			} else {
+				v3 = 1
+			}
+		case float64:
+			v1v := v1.(float64)
+
+			if v1v == nv {
+				v3 = 0
+			} else if v1v < nv {
+				v3 = -1
+			} else {
+				v3 = 1
+			}
+		case string:
+			v1v := v1.(string)
+
+			if v1v == nv {
+				v3 = 0
+			} else if v1v < nv {
+				v3 = -1
+			} else {
+				v3 = 1
+			}
+		default:
+			return p.Errf(r, "types not match(数据类型不匹配): %T(%#v） -> %T(%#v)", v1, v1, v2, v2)
+		}
+
+		p.SetVar(r, pr, v3)
+
 		return ""
 
 	case 801: // inc
@@ -4808,6 +6134,52 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		p.SetVar(r, pr, v3)
 
 		return ""
+	// case 998: // eval
+	// if instrT.ParamLen < 1 {
+	// 	return p.Errf(r, "not enough parameters(参数个数不够)")
+	// }
+
+	// var pr interface{} = -5
+	// v1p := 0
+
+	// if instrT.ParamLen > 1 {
+	// 	pr = instrT.Params[0]
+	// 	v1p = 1
+	// }
+
+	// v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+
+	// p.SetVar(r, pr, p.EvalExpression(v1))
+
+	// return ""
+
+	case 990: // ? 三元操作符
+		if instrT.ParamLen < 3 {
+			return p.Errf(r, "not enough parameters(参数个数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 3 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := tk.ToBool(p.GetVarValue(r, instrT.Params[v1p]))
+
+		v2 := p.GetVarValue(r, instrT.Params[v1p+1])
+
+		v3 := p.GetVarValue(r, instrT.Params[v1p+2])
+
+		if v1 {
+			p.SetVar(r, pr, v2)
+		} else {
+			p.SetVar(r, pr, v3)
+		}
+
+		return ""
+
 	case 999: // quickEval
 		if instrT.ParamLen < 1 {
 			return p.Errf(r, "not enough paramters")
@@ -4846,9 +6218,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 			return p.Errf(r, "invalid label format: %v", v1)
 		}
 
-		r.PointerStack.Push(r.CodePointer)
-
-		r.PointerStack.Push(pr)
+		r.PointerStack.Push(CallStruct{Type: 2, ReturnPointer: r.CodePointer, ReturnRef: pr})
 
 		r.PushFunc()
 
@@ -4861,39 +6231,57 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		return v1c
 
 	case 1020: // ret
-		rsi := r.RunDefer(p)
+		rs := r.PointerStack.Pop()
 
-		if tk.IsErrX(rsi) {
-			return p.Errf(r, "[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), tk.GetErrStrX(rsi))
+		if tk.IsUndefined(rs) {
+			return p.Errf(r, "pointer stack empty")
 		}
 
-		if instrT.ParamLen > 0 {
-			r.GetCurrentFuncContext().Vars["outL"] = p.GetVarValue(r, instrT.Params[0])
+		nv, ok := rs.(CallStruct)
+
+		if !ok {
+			return p.Errf(r, "not in a call, not a call struct in running stack: %v", rs)
 		}
 
-		pr := r.PointerStack.Pop()
+		if nv.Type == 1 { // fastCall
+			return tk.ToInt(nv.ReturnPointer) + 1
+		} else if nv.Type == 2 { // (normal) call
+			rsi := RunDefer(p, r)
 
-		rs, rok := r.GetCurrentFuncContext().Vars["outL"]
+			if tk.IsError(rsi) {
+				return p.Errf(r, "[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), rsi)
+			}
 
-		errT := r.PopFunc()
+			if instrT.ParamLen > 0 {
+				r.GetCurrentFuncContext().Vars["outL"] = p.GetVarValue(r, instrT.Params[0])
+			}
 
-		if errT != nil {
-			return p.Errf(r, "failed to return from function call: %v", errT)
+			pr := nv.ReturnRef
+
+			rs2, rok := r.GetCurrentFuncContext().Vars["outL"]
+
+			errT := r.PopFunc()
+
+			if errT != nil {
+				return p.Errf(r, "failed to return from function call while popFunc: %v", errT)
+			}
+
+			if rok {
+				p.SetVar(r, pr, rs2)
+			} else {
+				p.SetVar(r, pr, tk.Undefined)
+			}
+
+			// newPointT := r.PointerStack.Pop()
+
+			// if newPointT == nil || tk.IsUndefined(newPointT) {
+			// 	return p.Errf(r, "no return pointer from function call: %v", newPointT)
+			// }
+
+			return nv.ReturnPointer + 1
 		}
 
-		if rok {
-			p.SetVar(r, pr, rs)
-		} else {
-			p.SetVar(r, pr, tk.Undefined)
-		}
-
-		newPointT := r.PointerStack.Pop()
-
-		if newPointT == nil || tk.IsUndefined(newPointT) {
-			return p.Errf(r, "no return pointer from function call: %v", newPointT)
-		}
-
-		return tk.ToInt(newPointT) + 1
+		return p.Errf(r, "unsupported call type to return: %v", nv.Type)
 	case 1050: // sealCall
 		if instrT.ParamLen < 2 {
 			return p.Errf(r, "not enough parameters(参数不够)")
@@ -4927,7 +6315,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		if s1, ok := codeT.(string); ok {
 			compiledT := Compile(s1)
 
-			if tk.IsErrX(compiledT) {
+			if tk.IsError(compiledT) {
 				p.SetVar(r, pr, compiledT)
 				return ""
 			}
@@ -4944,6 +6332,77 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		p.SetVar(r, pr, fmt.Errorf("failed to compile code: %v", codeT))
 		return ""
+	case 1060: // threadCall/goCall
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		pr := instrT.Params[0]
+
+		codeT := p.GetVarValue(r, instrT.Params[1])
+
+		vs := p.ParamsToList(r, instrT, 2)
+
+		rs := GoCall(codeT, vs...)
+
+		p.SetVar(r, pr, rs)
+
+		return ""
+	case 1063: // go, no defer here, 避免使用有可能出问题的指令，例如跳转到范围之外的goto等
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		v1p := 0
+
+		v2 := r.GetLabelIndex(p.GetVarValue(r, instrT.Params[v1p]))
+
+		vs := p.ParamsToList(r, instrT, v1p+1)
+
+		var deleT tk.QuickVarDelegate
+
+		deleT = func(argsA ...interface{}) interface{} {
+
+			tmpPointerT := v2
+
+			for {
+				// tk.Pl("RunLine: %v", tmpPointerT)
+				rs := RunInstr(p, r, &r.InstrList[tmpPointerT])
+
+				nv, ok := rs.(int)
+
+				if ok {
+					tmpPointerT = nv
+					continue
+				}
+
+				if tk.IsError(rs) {
+					return rs
+				}
+
+				nsv, ok := rs.(string)
+
+				if ok {
+					if tk.IsErrStr(nsv) {
+						return nsv
+					}
+
+					if nsv == "exit" {
+						return nil
+					} else if nsv == "fr" {
+						return nil
+					}
+				}
+
+				tmpPointerT++
+			}
+
+			return nil
+		}
+
+		go deleT(vs...)
+
+		return ""
 
 	case 1070: // fastCall
 		if instrT.ParamLen < 1 {
@@ -4958,7 +6417,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 			return p.Errf(r, "invalid label: %v", v1)
 		}
 
-		r.PointerStack.Push(r.CodePointer)
+		r.PointerStack.Push(CallStruct{Type: 1, ReturnPointer: r.CodePointer})
 
 		return c1
 
@@ -4969,20 +6428,48 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 			return p.Errf(r, "pointer stack empty")
 		}
 
-		return tk.ToInt(rs) + 1
+		nv, ok := rs.(CallStruct)
+
+		if !ok {
+			return p.Errf(r, "not in a call, not a call struct in running stack: %v", rs)
+		}
+
+		if nv.Type != 1 {
+			return p.Errf(r, "not in a fastCall: %v", nv)
+		}
+
+		return tk.ToInt(nv.ReturnPointer) + 1
 	case 1080: // for
-		if instrT.ParamLen < 3 {
+		if instrT.ParamLen < 4 {
 			return p.Errf(r, "not enough parameters(参数不够)")
 		}
 
-		v1 := instrT.Params[0]
-		v2 := tk.ToStr(p.GetVarValue(r, instrT.Params[1]))
-		v3 := p.GetVarValue(r, instrT.Params[2])
+		v1p := 0
+		v0 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+		v1 := instrT.Params[v1p+1]
+		v2 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p+2]))
+		v3 := p.GetVarValue(r, instrT.Params[v1p+3])
 
 		var v4 interface{} = ":+1"
 
-		if instrT.ParamLen > 3 {
-			v4 = p.GetVarValue(r, instrT.Params[3])
+		if instrT.ParamLen > 4 {
+			v4 = p.GetVarValue(r, instrT.Params[v1p+4])
+		}
+
+		compiled0T := Compile(v0)
+
+		if tk.IsError(compiled0T) {
+			return p.Errf(r, "failed to compile initial instr: %v", compiled0T)
+		}
+
+		compiledObj0T := compiled0T.(*CompiledCode)
+
+		if len(compiledObj0T.InstrList) > 0 {
+			rs1 := RunInstr(p, r, &compiledObj0T.InstrList[0])
+
+			if tk.IsError(rs1) {
+				return p.Errf(r, "failed to run initial instr: %v", rs1)
+			}
 		}
 
 		compiledT := Compile(v2)
@@ -5100,6 +6587,357 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		if instrT.ParamLen > 3 {
 			p.SetVar(r, instrT.Params[3], b1)
 		}
+
+		return ""
+	case 1101: // newList/newArray
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		pr := instrT.Params[0]
+		v1p := 1
+
+		vs := p.ParamsToList(r, instrT, v1p)
+
+		vr := make([]interface{}, 0, len(vs))
+
+		for _, v := range vs {
+			vr = append(vr, v)
+		}
+
+		p.SetVar(r, pr, vr)
+
+		return ""
+
+	case 1110: // addItem/addArrayItem/addListItem
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		// varsT := (*(p.CurrentVarsM))
+
+		pr := instrT.Params[0]
+
+		// p1 := instrT.Params[0].Ref
+		v1 := p.GetVarValue(r, instrT.Params[0])
+
+		// v1 := *p1
+
+		// tk.Plo(pr, v1)
+
+		// tk.Pln(p1, instrT, p)
+		// tk.Pl("[Line: %v] STACK: %v, CONTEXT: %v", p.CodeSourceMapM[p.CodePointerM]+1, p.StackM[:p.StackPointerM], tk.ToJSONX(p.CurrentFuncContextM, "-inddent", "-sort"))
+
+		// v2 := p.GetVarValue(r, instrT.Params[1])
+
+		// varsT := p.GetVarValue(r, instrT.Params[1])
+
+		// tk.Pln(p1, v2, varsT[p1])
+		// varsT[p1] = append((varsT[p1]).([]interface{}), v2)
+
+		var v2 interface{}
+
+		// if instrT.ParamLen < 2 {
+		// 	v2 = p. //p.Stack.Pop()
+		// } else {
+		v2 = p.GetVarValue(r, instrT.Params[1])
+		// }
+		// *p1 = append((*p1).([]interface{}), v2)
+
+		switch nv := v1.(type) {
+		case []interface{}:
+			v1 = append(nv, v2)
+			p.SetVar(r, pr, v1)
+
+		// 	*p1 = append((*p1).([]interface{}), v2)
+		case []bool:
+			v1 = append(nv, tk.ToBool(v2))
+			p.SetVar(r, pr, v1)
+		// 	*p1 = append(nv, tk.ToBool(v2))
+		case []int:
+			v1 = append(nv, tk.ToInt(v2))
+			p.SetVar(r, pr, v1)
+		// 	*p1 = append(nv, tk.ToInt(v2))
+		case []byte:
+			v1 = append(nv, tk.ToByte(v2))
+			p.SetVar(r, pr, v1)
+		// 	*p1 = append(nv, byte(tk.ToInt(v2)))
+		case []rune:
+			v1 = append(nv, tk.ToRune(v2))
+			p.SetVar(r, pr, v1)
+		// 	*p1 = append(nv, rune(tk.ToInt(v2)))
+		case []int64:
+			v1 = append(nv, int64(tk.ToInt(v2)))
+			p.SetVar(r, pr, v1)
+		// 	*p1 = append(nv, int64(tk.ToInt(v2)))
+		case []float64:
+			v1 = append(nv, tk.ToFloat(v2))
+			p.SetVar(r, pr, v1)
+		// 	*p1 = append(nv, tk.ToFloat(v2))
+		case []string:
+			v1 = append(nv, tk.ToStr(v2))
+			p.SetVar(r, pr, v1)
+		// 	*p1 = append(nv, tk.ToStr(v2))
+		default:
+			valueT := reflect.ValueOf(v1)
+
+			kindT := valueT.Kind()
+
+			if kindT == reflect.Array || kindT == reflect.Slice {
+				vrs := reflect.Append(valueT, reflect.ValueOf(v2))
+
+				p.SetVar(r, pr, vrs.Interface())
+				return ""
+			}
+
+			return p.Errf(r, "参数类型错误：%T(%v) -> %T", v1, nv, v2)
+			// tk.Pln(p.ErrStrf("参数类型：%T(%v) -> %T", nv, nv, v2))
+		}
+
+		return ""
+
+	case 1111: // addStrItem
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		// varsT := p.GetVars()
+
+		// p1 := instrT.Params[0].Ref
+		v1 := p.GetVarValue(r, instrT.Params[0])
+
+		v2 := p.GetVarValue(r, instrT.Params[1])
+
+		// varsT[p1] = append((varsT[p1]).([]string), tk.ToStr(v2))
+		v1 = append(v1.([]string), tk.ToStr(v2))
+
+		return ""
+
+	case 1112: // deleteItem
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		// varsT := (*(p.CurrentVarsM))
+
+		// p1 := instrT.Params[0].Ref
+
+		// p1 := p.GetVarValue(r, instrT.Params[0]) // instrT.Params[0].Ref
+		// p1 := p.GetVarRef(instrT.Params[0])
+		pr := instrT.Params[0]
+		v1 := p.GetVarValue(r, instrT.Params[0])
+
+		v2 := tk.ToInt(p.GetVarValue(r, instrT.Params[1]))
+
+		// varsT := p.GetVars()
+
+		// aryT := (varsT[p1]).([]interface{})
+		// v1 := *p1
+
+		// aryT := (*p1).([]interface{})
+
+		// if v2 >= len(aryT) {
+		// 	return p.Errf(r, "序号超出范围：%v/%v", v2, len(aryT))
+		// }
+
+		// rs := make([]interface{}, 0, len(aryT)-1)
+		// rs = append(rs, aryT[:v2]...)
+		// rs = append(rs, aryT[v2+1:]...)
+
+		// (*p1) = rs
+
+		switch nv := v1.(type) {
+		case []interface{}:
+			lenT := len(nv)
+
+			if v2 >= lenT {
+				return p.Errf(r, "序号超出范围：%v/%v", v2, lenT)
+			}
+
+			rs := append(nv[:v2], nv[v2+1:]...)
+
+			p.SetVar(r, pr, rs)
+			return ""
+
+		case []bool:
+			lenT := len(nv)
+
+			if v2 >= lenT {
+				return p.Errf(r, "序号超出范围：%v/%v", v2, lenT)
+			}
+
+			rs := append(nv[:v2], nv[v2+1:]...)
+
+			p.SetVar(r, pr, rs)
+			return ""
+
+		case []int:
+			lenT := len(nv)
+
+			if v2 >= lenT {
+				return p.Errf(r, "序号超出范围：%v/%v", v2, lenT)
+			}
+
+			rs := append(nv[:v2], nv[v2+1:]...)
+
+			p.SetVar(r, pr, rs)
+			return ""
+
+		case []byte:
+			lenT := len(nv)
+
+			if v2 >= lenT {
+				return p.Errf(r, "序号超出范围：%v/%v", v2, lenT)
+			}
+
+			rs := append(nv[:v2], nv[v2+1:]...)
+
+			p.SetVar(r, pr, rs)
+			return ""
+
+		case []rune:
+			lenT := len(nv)
+
+			if v2 >= lenT {
+				return p.Errf(r, "序号超出范围：%v/%v", v2, lenT)
+			}
+
+			rs := append(nv[:v2], nv[v2+1:]...)
+
+			p.SetVar(r, pr, rs)
+			return ""
+
+		case []int64:
+			lenT := len(nv)
+
+			if v2 >= lenT {
+				return p.Errf(r, "序号超出范围：%v/%v", v2, lenT)
+			}
+
+			rs := append(nv[:v2], nv[v2+1:]...)
+
+			p.SetVar(r, pr, rs)
+			return ""
+
+		case []float64:
+			lenT := len(nv)
+
+			if v2 >= lenT {
+				return p.Errf(r, "序号超出范围：%v/%v", v2, lenT)
+			}
+
+			rs := append(nv[:v2], nv[v2+1:]...)
+
+			p.SetVar(r, pr, rs)
+			return ""
+
+		case []string:
+			lenT := len(nv)
+
+			if v2 >= lenT {
+				return p.Errf(r, "序号超出范围：%v/%v", v2, lenT)
+			}
+
+			rs := append(nv[:v2], nv[v2+1:]...)
+
+			p.SetVar(r, pr, rs)
+			return ""
+
+		default:
+			valueT := reflect.ValueOf(v1)
+
+			kindT := valueT.Kind()
+
+			if kindT == reflect.Array || kindT == reflect.Slice {
+				// vrs := reflect.Append(valueT, reflect.ValueOf(v2))
+				lenT := valueT.Len()
+
+				if v2 >= lenT {
+					return p.Errf(r, "序号超出范围：%v/%v", v2, lenT)
+				}
+
+				// rs := make([]interface{}, 0, lenT-1)
+
+				// rs = append(rs, aryT[:v2]...)
+				// rs = append(rs, aryT[v2+1:]...)
+
+				vrs := reflect.AppendSlice(valueT.Slice(0, v2), valueT.Slice(v2+1, lenT))
+
+				p.SetVar(r, pr, vrs.Interface())
+				return ""
+			}
+
+			return p.Errf(r, "参数类型错误：%T(%v) -> %T", v1, nv, v2)
+		}
+
+		return ""
+
+	case 1115: // addItems
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		// varsT := (*(p.CurrentVarsM))
+
+		pr := instrT.Params[0]
+		v1p := 0
+
+		if instrT.ParamLen > 2 {
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		v2 := p.GetVarValue(r, instrT.Params[v1p+1])
+
+		switch nv := v1.(type) {
+		case []interface{}:
+			p.SetVar(r, pr, append(nv, (v2.([]interface{}))...))
+		case []bool:
+			p.SetVar(r, pr, append(nv, (v2.([]bool))...))
+		case []int:
+			p.SetVar(r, pr, append(nv, (v2.([]int))...))
+		case []byte:
+			p.SetVar(r, pr, append(nv, (v2.([]byte))...))
+		case []rune:
+			p.SetVar(r, pr, append(nv, (v2.([]rune))...))
+		case []int64:
+			p.SetVar(r, pr, append(nv, (v2.([]int64))...))
+		case []float64:
+			p.SetVar(r, pr, append(nv, (v2.([]float64))...))
+		case []string:
+			p.SetVar(r, pr, append(nv, (v2.([]string))...))
+		default:
+			valueT := reflect.ValueOf(v1)
+			value2T := reflect.ValueOf(v2)
+
+			kindT := valueT.Kind()
+			kind2T := value2T.Kind()
+
+			if !(kind2T == reflect.Array || kind2T == reflect.Slice) {
+				return p.Errf(r, "参数类型错误：%T(%v) -> %T(%v)", v1, v1, v2, v2)
+			}
+
+			if kindT == reflect.Array || kindT == reflect.Slice {
+				vrs := reflect.AppendSlice(valueT, reflect.ValueOf(v2))
+				if !vrs.IsValid() {
+					return p.Errf(r, "操作失败，类型错误：%T(%v) -> %T(%v)", v1, v1, v2, v2)
+				}
+				p.SetVar(r, pr, vrs)
+				return
+			}
+
+			return p.Errf(r, "参数类型错误：%T(%v) -> %T(%v)", v1, v1, v2, v2)
+			// tk.Pln(p.ErrStrf("参数类型：%T(%v) -> %T", nv, nv, v2))
+		}
+
+		// if instrT.ParamLen > 2 {
+		// 	// p.SetVarInt(instrT.Params[2].Ref, append((varsT[p1]).([]interface{}), v2...))
+		// 	p.SetVarInt(instrT.Params[2].Ref, append(v1.([]interface{}), v2...))
+		// } else {
+		// 	// varsT[p1] = append((varsT[p1]).([]interface{}), v2...)
+		// 	v1 = append(v1.([]interface{}), v2...)
+		// }
 
 		return ""
 
@@ -5255,6 +7093,97 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		}
 
 		return ""
+
+	case 1124: // setItem
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[0])
+
+		v2 := tk.ToInt(p.GetVarValue(r, instrT.Params[1]))
+
+		var v3 interface{}
+
+		if instrT.ParamLen < 3 {
+			v3 = p.Stack.Pop()
+			// v1.([]interface{})[v2] = p.Stack.Pop()
+		} else {
+			v3 = p.GetVarValue(r, instrT.Params[2])
+			// v1.([]interface{})[v2] = p.GetVarValue(r, instrT.Params[2])
+		}
+
+		switch nv := v1.(type) {
+		case []interface{}:
+			if v2 >= len(nv) {
+				return p.Errf(r, "序号超出范围：%v/%v", v2, len(nv))
+			}
+
+			nv[v2] = v3
+		case []bool:
+			if v2 >= len(nv) {
+				return p.Errf(r, "序号超出范围：%v/%v", v2, len(nv))
+			}
+
+			nv[v2] = tk.ToBool(v3)
+		case []int:
+			if v2 >= len(nv) {
+				return p.Errf(r, "序号超出范围：%v/%v", v2, len(nv))
+			}
+
+			nv[v2] = tk.ToInt(v3)
+		case []byte:
+			if v2 >= len(nv) {
+				return p.Errf(r, "序号超出范围：%v/%v", v2, len(nv))
+			}
+
+			nv[v2] = byte(tk.ToInt(v3))
+		case []rune:
+			if v2 >= len(nv) {
+				return p.Errf(r, "序号超出范围：%v/%v", v2, len(nv))
+			}
+
+			nv[v2] = rune(tk.ToInt(v3))
+		case []int64:
+			if v2 >= len(nv) {
+				return p.Errf(r, "序号超出范围：%v/%v", v2, len(nv))
+			}
+
+			nv[v2] = int64(tk.ToInt(v3))
+		case []float64:
+			if v2 >= len(nv) {
+				return p.Errf(r, "序号超出范围：%v/%v", v2, len(nv))
+			}
+
+			nv[v2] = tk.ToFloat(v3)
+		case []string:
+			if v2 >= len(nv) {
+				return p.Errf(r, "序号超出范围：%v/%v", v2, len(nv))
+			}
+
+			nv[v2] = tk.ToStr(v3)
+		default:
+			valueT := reflect.ValueOf(v1)
+
+			kindT := valueT.Kind()
+
+			if kindT == reflect.Array || kindT == reflect.Slice {
+				lenT := valueT.Len()
+
+				if v2 < 0 || v2 >= lenT {
+					return p.Errf(r, "序号超出范围：%v/%v", v2, lenT)
+				}
+
+				valueT.Index(v2).Set(reflect.ValueOf(v3))
+				return ""
+			}
+
+			return p.Errf(r, "参数类型错误：%T(%#v) -> %T(%#v)", v1, v1, v3, v3)
+
+		}
+
+		return ""
+
 	case 1130: // slice
 		if instrT.ParamLen < 3 {
 			return p.Errf(r, "not enough parameters(参数不够)")
@@ -10255,7 +12184,7 @@ func (p *XieVM) Run(posA ...int) interface{} {
 
 }
 
-func (p *XieVM) RunCompiledCode(codeA *CompiledCode, inputA interface{}) interface{} {
+func (p *XieVM) RunCompiledCode(codeA interface{}, inputA interface{}) interface{} {
 	r := NewRunningContext(codeA)
 
 	if tk.IsError(r) {
@@ -10739,61 +12668,6 @@ func SplitExpr(strA string) ([]ExprElement, error) {
 	return backElementsT, nil
 }
 
-// func NewInstr(codeA string, valuesA *map[string]interface{}) Instr {
-// 	v := strings.TrimSpace(codeA)
-
-// 	if tk.StartsWith(v, "//") || tk.StartsWith(v, "#") {
-// 		instrT := Instr{Code: 101, Cmd: InstrCodeSet[101], ParamLen: 0}
-// 		return instrT
-// 	}
-
-// 	// var varCountT int
-
-// 	if tk.StartsWith(v, ":") {
-// 		instrT := Instr{Code: InstrNameSet["pass"], Cmd: InstrCodeSet[101], ParamLen: 0}
-// 		return instrT
-// 	}
-
-// 	listT, lineT, errT := p.ParseLine(v)
-// 	if errT != nil {
-// 		instrT := Instr{Code: InstrNameSet["invalidInstr"], Cmd: "invalidInstr", ParamLen: 1, Params: []VarRef{VarRef{Ref: -3, Value: "参数解析失败"}}, Line: lineT}
-// 		return instrT
-// 	}
-
-// 	lenT := len(listT)
-
-// 	instrNameT := strings.TrimSpace(listT[0])
-
-// 	codeT, ok := InstrNameSet[instrNameT]
-
-// 	if !ok {
-// 		instrT := Instr{Code: InstrNameSet["invalidInstr"], Cmd: "invalidInstr", ParamLen: 1, Params: []VarRef{VarRef{Ref: -3, Value: tk.Spr("未知指令：%v", instrNameT)}}}
-// 		return instrT
-// 	}
-
-// 	instrT := Instr{Code: codeT, Cmd: InstrCodeSet[codeT], Params: make([]VarRef, 0, lenT-1)} //&([]VarRef{})}
-
-// 	list3T := []VarRef{}
-
-// 	for j, jv := range listT {
-// 		if j == 0 {
-// 			continue
-// 		}
-
-// 		if strings.HasPrefix(jv, "~") {
-// 			list3T = append(list3T, VarRef{-3, (*valuesA)[jv]})
-// 		} else {
-// 			list3T = append(list3T, p.ParseVar(jv))
-// 		}
-
-// 	}
-
-// 	instrT.Params = append(instrT.Params, list3T...)
-// 	instrT.ParamLen = lenT - 1
-
-// 	return instrT
-// }
-
 func QuickEval(strA string, p *XieVM, r *RunningContext) interface{} {
 
 	listT, errT := SplitExpr(strA)
@@ -11084,6 +12958,208 @@ func QuickEval(strA string, p *XieVM, r *RunningContext) interface{} {
 	return vr
 }
 
+// func (p *XieVM) EvalExpressionNoGroup(strA string, valuesA *map[string]interface{}) interface{} {
+// 	// strT := strA[1 : len(strA)-1]
+// 	// tk.Pl("EvalExpressionNoGroup: %v", strA)
+// 	// tk.Pl("tmpValues: %v", valuesA)
+// 	if strings.HasPrefix(strA, "?") {
+// 		instrT := p.NewInstr(strA[1:], valuesA)
+
+// 		if instrT.Code == InstrNameSet["invalidInstr"] {
+// 			return fmt.Errorf("指令分析失败：%v", instrT.Params[0].Value)
+// 		}
+
+// 		rsT := p.RunLine(0, instrT)
+
+// 		nsv, ok := rsT.(string)
+
+// 		if ok {
+// 			if tk.IsErrStr(nsv) {
+// 				return fmt.Errorf("计算失败：%v", tk.GetErrStr(nsv))
+// 			}
+// 		}
+
+// 		// keyT := "~" + tk.IntToStr(len(valuesA))
+
+// 		// valuesA[keyT] = p.Pop()
+
+// 		strA = "$tmp"
+
+// 	}
+
+// 	listT := strings.SplitN(strA, " ", -1)
+
+// 	// lenT := len(listT)
+
+// 	// opListT := make([][]interface{}, 0, lenT)
+
+// 	stateT := 0 // 0: initial, 1: first value ready, 2: operator ready, 3: second value ready
+
+// 	opT := []interface{}{nil, nil, nil}
+
+// 	// valuesT := make([]interface{})
+
+// 	for _, v := range listT {
+// 		v = strings.TrimSpace(v)
+
+// 		if v == "" {
+// 			continue
+// 		}
+
+// 		// tk.Pl("v: %v", v)
+
+// 		if tk.InStrings(v, "+", "-", "*", "/", "%", "!", "&&", "||", "==", "!=", "<>", ">", "<", ">=", "<=", "&", "|", "^", ">>", "<<") {
+// 			if stateT == 0 {
+// 				opT[0] = nil
+// 				opT[1] = v
+// 				stateT = 2
+// 			} else if stateT == 1 {
+// 				opT[1] = v
+// 				stateT = 2
+// 			} else if stateT == 2 {
+// 				opT[1] = v
+// 				stateT = 2
+// 			} else {
+// 			}
+
+// 		} else if strings.HasPrefix(v, "~") {
+// 			if stateT == 0 {
+// 				opT[0] = (*valuesA)[v]
+// 				stateT = 1
+// 			} else if stateT == 1 {
+// 				opT[0] = (*valuesA)[v]
+// 				stateT = 1
+// 			} else if stateT == 2 {
+// 				opT[2] = (*valuesA)[v]
+// 				stateT = 3
+// 			}
+
+// 		} else {
+// 			vT := p.ParseVar(v)
+// 			vvT := p.GetVarValue(vT)
+
+// 			if stateT == 0 {
+// 				opT[0] = vvT
+// 				stateT = 1
+// 			} else if stateT == 1 {
+// 				opT[0] = vvT
+// 				stateT = 1
+// 			} else if stateT == 2 {
+// 				opT[2] = vvT
+// 				stateT = 3
+// 			}
+// 		}
+
+// 		if stateT == 3 {
+// 			// opListT = append(opListT, opT)
+
+// 			rvT := evalSingle(opT)
+
+// 			if tk.IsError(rvT) {
+// 				return rvT
+// 			}
+
+// 			opT[0] = rvT
+
+// 			stateT = 1
+// 		}
+
+// 	}
+
+// 	return opT[0]
+// }
+
+// func (p *XieVM) EvalExpression(strA string) (resultR interface{}) {
+// 	strT := strA
+// 	regexpT := regexp.MustCompile(`\([^\(]*?\)`)
+
+// 	valuesT := make(map[string]interface{})
+
+// 	var tmpv interface{}
+
+// 	for {
+// 		matchT := regexpT.FindStringIndex(strT)
+
+// 		if matchT == nil {
+// 			tmpv = p.EvalExpressionNoGroup(strT, &valuesT)
+
+// 			if tk.IsError(tmpv) {
+// 				tk.Pl("表达式计算失败：%v", tmpv)
+// 			}
+
+// 			break
+// 		} else {
+// 			tmpv = p.EvalExpressionNoGroup(strT[matchT[0]:matchT[1]][1:matchT[1]-matchT[0]-1], &valuesT)
+
+// 			if tk.IsError(tmpv) {
+// 				tk.Pl("表达式计算失败：%v", tmpv)
+// 			}
+// 		}
+
+// 		keyT := "~" + tk.IntToStr(len(valuesT))
+
+// 		valuesT[keyT] = tmpv
+
+// 		strT = strT[0:matchT[0]] + " " + keyT + " " + strT[matchT[1]:len(strT)]
+// 	}
+
+// 	resultR = tmpv
+
+// 	return
+
+// 	// listT := strings.Split(strA, " ")
+
+// 	// lenT := len(listT)
+
+// 	// opListT := make([][]interface{}, lenT)
+
+// 	// stateT := 0 // 0: initial, 1: first value ready, 2: operator ready, 3: second value ready
+
+// 	// for i, v := range listT {
+// 	// 	v = strings.TrimSpace(v)
+
+// 	// 	if v == "" {
+// 	// 		continue
+// 	// 	}
+
+// 	// 	opT := []interface{}{nil, nil, nil}
+
+// 	// 	if tk.InStrings(v, "+", "-", "*", "/", "%", "!", "&&", "||", "==", "!=", ">", "<", ">=", "<=") {
+// 	// 		if stateT == 0 {
+// 	// 			opT[0] = nil
+// 	// 			opT[1] = v
+// 	// 			stateT = 2
+// 	// 		}
+
+// 	// 	} else {
+// 	// 		vT := p.ParseVar(v)
+// 	// 		vvT := p.GetVarValue(vT)
+
+// 	// 		if stateT == 0 {
+// 	// 			opT[0] = vvT
+// 	// 			stateT = 1
+// 	// 		}
+// 	// 	}
+
+// 	// 	if stateT == 3 {
+// 	// 		opListT = append(opListT, opT)
+// 	// 	}
+
+// 	// }
+
+// }
+
+// var TimeFormat = "2006-01-02 15:04:05"
+// var TimeFormatMS = "2006-01-02 15:04:05.000"
+// var TimeFormatMSCompact = "20060102150405.000"
+// var TimeFormatCompact = "20060102150405"
+// var TimeFormatCompact2 = "2006/01/02 15:04:05"
+// var TimeFormatDateCompact = "20060102"
+// var ConstMapG map[string]interface{} = map[string]interface{}{
+// 	"timeFormat":        "2006-01-02 15:04:05",
+// 	"timeFormatCompact": "20060102150405",
+// }
+
 var GlobalsG *GlobalContext
 
 func init() {
@@ -11100,4 +13176,9 @@ func init() {
 	GlobalsG.Vars = make(map[string]interface{}, 0)
 
 	GlobalsG.Vars["backQuote"] = "`"
+
+	GlobalsG.Vars["timeFormat"] = "`"
+
+	GlobalsG.Vars["timeFormatCompact"] = "`"
+
 }

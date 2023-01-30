@@ -1,36 +1,54 @@
 // 给变量i赋值整数11
+// assign integer value 11 to variable $i
 assign $i #i11
 
 // 比较变量i是否大于整数10
 // 结果放入变量a中
+// compare if $i > 10(integer)
+// then put the result to $a
 > $a $i #i10
 
 // 判断$a是否为布尔值true
 // 如果是则跳转到标号label2
+// check if $a == true(bool value)
+// if true jump to :label2(label)
 if $a :label2
     // 否则执行下面的语句
+    // if not met, continue to run the following
     pln "else branch"
 
 //终止程序执行
+// terminate the program
 exit
 
 // 标号label2
+// label named label2
 :label2
     // 输出“if branch”
+    // output "if branch" for reference
     pln "if branch"
 
-    // 将变量b赋值为整数8
+    // 将局部变量b赋值为整数8
+    // assign a local variable $b(since there are no variabes with this name in global context) to integer value 8
     assign $b #i8
 
     // 比较变量b是否小于或等于变量i
     // 由于省略了结果变量，结果将被放入$tmp中
+    // check if $b <= $i
+    // the result variable is omitted, so the result will be put into global variable $tmp
     <= $b $i
 
-    // 是（tmp值是true）则跳转到标号label3
+    // 判断否（tmp值是false）则跳转到标号label3
+    // ifNot指令是判断条件为false则跳转
+    // check if $tmp is not true
+    // if true($tmp is false), jump to label3
     ifNot $tmp :label3
         // 否则输出
+        // else branch
         pln "label3 else"
+
     // 终止代码执行
+    // terminate
     exit
 
     // 标号label3

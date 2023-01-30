@@ -1,53 +1,78 @@
 // 载入第1个代码文件module1.xie并压栈
-loadText $push `scripts/module1.xie`
+// load code string from module file 1
+// getCurDir $rs1
+// joinPath $path1 $rs1 `scripts` `module1.xie`
+
+loadText $code1 `scripts/module1.xie`
 
 // 输出代码文件内容查看
-pln 加载的代码： "\n" $peek "\n"
+// print the code string for reference
+pln "code loaded: " "\n" $code1 "\n"
 
-// 弹栈加载代码
+// 加载代码
 // 并将结果值返回，成功将返回加载代码的第1行行号（注意是字符串类型）
-// 失败将返回TXERROR:开头的错误信息
-loadCode $push $pop
+// 失败将返回error对象表示的错误信息
+// load the code to current VM
+loadCode $rs $code1
 
-// 查看加载结果
-plo $pop
+// 检查是否出错，是则停止代码运行
+// check if is error, terminate if true
+checkErrX $rs
 
 // 压栈两个整数
+// push 2 values before fast-calling function
 push #i11
 push #i12
 
 // 调用module1.xie文件中定义的快速函数add1
+// fast-call the "add1" function defined in the file "module1.xie"
 fastCall :add1
 
 // 查看函数返回结果（不弹栈）
+// print the result pushed into the stack from the function
+// unlike pop, peek only "look" but not get the value out of the stack
 plo $peek
 
-// 再压入一个整数5
+// 再压入堆栈一个整数5
+// push another value integer 5 into the stack
 push #i5
 
 // 调用module1.xie文件中定义的快速函数sub1
+// fast-call the "sub1" function defined in the file "module1.xie"
 fastCall :sub1
 
-// 查看函数返回结果（不弹栈）
+// 再次查看函数返回结果（不弹栈）
+// print the result again
 plo $peek
 
 // 载入第2个代码文件module2.xie并置于变量code1中
+// load text from another module file
 loadText $code1 `scripts/module2.xie`
 
-// 加载code1中的代码
-// 由于不需要loadCode指令返回的行号，因此用$drop变量将其丢弃
-loadCode $drop $code1
+// 编译这个代码以节约一些后面载入的时间
+// this time, compile it first(will save some time before running)
+compile $compiledT $code1
 
-// 再入栈一个整数99
+checkErrX $compiledT
+
+// 加载编译后的代码
+// 由于不需要loadCode指令返回的结果，因此用$drop变量将其丢弃
+// load the code and drop the result using the global variable $drop
+loadCode $drop $compiledT
+
+// there is a integer value 18 in the stack
 // 此时栈中还有一个整数18
-push #i99
 
-// 调用module2.xie文件中定义的一般函数mul1
-call :mul1
+// 调用module2.xie文件中定义的一般函数mul1，并传入两个参数（整数99和弹栈值18）
+// fast-call the "mul1" function defined in the file "module2.xie"
+call $rs :mul1 #i99 $pop
 
-// 查看函数返回结果（弹栈）
-plo $pop
+// 查看函数返回结果
+// print the result
+plo $rs
 
 // 退出程序执行
 // 注意：如果不加exit指令，程序会继续向下执行module1.xie和module2.xie中的代码
+// terminate the program
+// if without the "exit" instruction here, the program will continue to run the code loaded by module1.xie and module2.xie
 exit

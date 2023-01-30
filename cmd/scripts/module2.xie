@@ -1,8 +1,12 @@
 :mul1
-    pop $v2L
-    pop $v1L
+    var $v1
+    var $v2
+    var $outL
 
-    mul $push $v1L $v2L
+    getArrayItem $v1 $inputL 0
+    getArrayItem $v2 $inputL 1
+
+    mul $outL $v1 $v2
 
     ret
 

@@ -1,16 +1,20 @@
 // 延迟执行指令1
+// defer instruction 1
 defer pl "main defer: %v" test1
 
 // 延迟执行指令2
 // defer指令遵循“后进先出”的规则，即后指定的defer指令将先被执行
+// defer instruction 2
+// the deferred instructions will be running by order(first in last out) when the function returns or the program exits, or error occurrs
 defer pl "main defer: %v" test2
 
 pln 1
 
 // 函数中的延迟执行
-call :func1
+// call a function to test defer instruction in functions
+call $rs :func1
 
-pln func1 return
+pln func1 returns $rs
 
 exit
 
@@ -20,11 +24,15 @@ exit
     pln sub1
 
     // 故意做一个会出现错误的指令，这里是除零操作
+    // trigger an error on purpose
     quickEval $r1 `#i10 / #i0`
 
     // 检查出错则中断程序，此时应执行本函数内的defer和主函数内的defer
+    // check if error occurred, and since it is, the deferred instructions defined in this function and up to root function of the VM will be run
     checkErrX $r1
 
+    // 下面的代码不会被执行到
+    // code below will never be reached
     pln "10/0=" $r1
 
     ret

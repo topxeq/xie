@@ -1,5 +1,6 @@
 // 将字符串压栈
-push "欢迎"
+// infinite loop
+push "welcome"
 
 // 设定标号loop1
 :loop1
@@ -7,7 +8,9 @@ push "欢迎"
     pln $peek
 
     // 休眠2.5秒
+    // sleep for 2.5 seconds
     sleep #f2.5
 
 // 跳转到标号loop1处继续往下执行
+// jump to the position at label :loop1
 goto :loop1

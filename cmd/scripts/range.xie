@@ -1,43 +1,53 @@
 // 循环遍历整数5，每次执行标号label1处的循环体代码
 // 将循环5次，遍历值分别是0，1，2，3，4
 // 相当于其他语言中的 for i := 1, i < 5; i ++……
-range #i5 :label1
+// range/iterate integer 5, run the loop body at the position of label ":label1"
+// then (break) run the code in label ":+1", ie. the next line of the "range" instr
+// loop for 5 times, the iterated value will be 0，1，2，3，4
+// the same as in C/C++: for i := 1, i < 5; i ++……
+range #i5 :label1 :+1
 
 // 第一个循环结束
-pln "end for1"
+// end of the first range
+pln "end range1"
 
 // 跳转到标号next1处
 goto :next1
 
 :label1
-    // 从栈中分别弹出遍历序和遍历值
-    assign $i $pop
-    assign $v $pop
+    // 用getIter指令获取遍历序号和遍历值
+    // get the i, v from iterator
+    // if iteration failed, $i will be an error object
+    getIter $i $v
+    checkErrX $i
 
     // 输出供参考
     pl "i: %v, v: %v" $i $v
 
     // 继续循环遍历
+    // continue the loop/range
     continue
 
 :next1
 
-// 进行第二个循环
+// 进行第二个循环，循环体在标号:label2处
+// 第二个表示跳出循环的标号可以省略，默认为“:+1”
+// the break label could be omitted, default is ":+1"
 range "abc123" :label2
 
 // 第二个循环结束
-pln "end for2"
+// end of the second range
+pln "end range2"
 
-// 退出程序执行
+// exit the program, or the next line will be run
 exit
 
 :label2
-    // 从栈中分别弹出遍历序和遍历值
-    assign $i $pop
-    assign $v $pop
+    // 用getIter指令获取遍历序号和遍历值
+    getIter $i $v
 
-    // 输出供参考
+    checkErrX $i
+
     pl "i: %v, v: %v" $i $v
 
-    // 继续循环遍历
     continue

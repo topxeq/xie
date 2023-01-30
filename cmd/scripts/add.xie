@@ -1,36 +1,53 @@
+// 将整数2入栈
 // push an integer value 2 to stack
 push #i2
 
+// 将整数5入栈
 // push another integer value 5 to stack
 push #i5
 
+// 将栈顶两个数值取出相加后结果压入栈中
+// 此处使用了预定义全局变量$push
+// 此时栈中应仅有一个数值（整数5）
 // add 2 values popped from the stack and add them
 // the result push into the (empty now) stack
 // after that, there is only one value 7 in the stack
 add $push $pop $pop
 
+// 输出栈顶数值（同时该数值被弹出）
 // output the top value of the stack
 plo $pop
 
+// 将浮点数1.5与2.6相加后压栈
 // add float value 1.5 and 2.6, push the result
 add $push #f1.5 #f2.6
 
+// 弹栈输出
 // print the top value of the stack again
 plo $pop
 
+// 将两个字符串相加（连接）后赋值给变量c
 // add 2 string value(concat them) and put the result into variable $c
 add $c `abc` `123 456` 
 
+// 输出变量c
 plo $c
 
+// 将变量c中的数值压栈
 push $c
 
+// 将字符串“9.18”压栈
 push "9.18"
 
+// 将栈顶两个字符串相加后赋值给变量d
 add $d $pop $pop
 
+// 输出变量d
 plo $d
 
+// 将整数18与190相加后，压入栈中
+// 表示入栈操作
 add $push #i18 #i190
 
+// 弹栈输出
 plo $pop

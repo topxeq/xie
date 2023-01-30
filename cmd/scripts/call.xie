@@ -1,3 +1,5 @@
+// 本例演示用call指令调用函数时传递参数并接受返回值
+// 调用递归法计算斐波那契序列数的函数，传入参数整数18，返回结果变量$rs并将其输出
 // use function inputL and outL for input and output
 // and cal Fibonacci numbers(the 18th) by recursive function
 

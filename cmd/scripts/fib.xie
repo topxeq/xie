@@ -1,12 +1,20 @@
-push int 35
-call :fib
+// 用递归函数计算斐波那契数列
+// 计算序列上第18个数
+// cal Fibonacci numbers(the 18th) by recursive function
+
+// 压栈一个整数18，表示计算第18个数
+push int 18
+
+// 调用标号:fib出的函数代码进行计算
+call $drop :fib
+
 pln $pop
 
 exit
 
+// 递归运算的斐波那契计算函数
 :fib
     var $n1
- 
     pop $n1
 
     < $push $n1 #i2
@@ -16,13 +24,13 @@ exit
     :else
         dec $n1
         push int $n1
-        call :fib
+        call $drop :fib
 
         dec $n1
         push int $n1
-        call :fib
+        call $drop :fib
 
-        add $push
+        add $push $pop $pop
 
         ret
 

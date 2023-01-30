@@ -6,14 +6,14 @@ pln $a
 
 == $a $undefined
 
-pln $pop
+pln $tmp
 
 isUndef $b
 
-pln $pop
+pln $tmp
 
 assign $c #f1.6
 
 isUndef $c
 
-pln $pop
+pln $tmp

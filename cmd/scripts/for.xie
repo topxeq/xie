@@ -1,4 +1,5 @@
 // 实现类似 for i = 0; i < 5; i ++ 的标准三段for循环结构
+// the following code has the same effect as the for-3 loop like: for i = 0; i < 5; i ++ {...}
 
 // 将变量i赋值为整数0
 assign $i #i0
@@ -8,15 +9,18 @@ assign $i #i0
 
     // 将i的值加上整数10
     // 结果存入tmp
+    // the result will be put into $tmp
     add $i #i10
 
     // 输出变量i中数值，和tmp值
     pln $i ":"  $tmp
 
     // 将变量i的值加1
+    // same as ++
     inc $i
 
     // 判断变量i中的数值是否小于整数5
+    // if $i < 5, set $tmp to true
     < $i #i5
 
     // 是则跳转到标号loop1（继续循环）
@@ -25,4 +29,5 @@ assign $i #i0
 // 否则执行下面的语句
 // 也就是跳出了loop1的循环结构
 // 输出字符串“end”
+// else the code will coninue to run to the following line
 pln end

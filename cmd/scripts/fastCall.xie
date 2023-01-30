@@ -1,27 +1,36 @@
 // 将两个整数压栈
+// push 2 integer values
 push #i108
 push #i16
 
 // 快速调用函数func1
 // 而fastRet命令将返回到fastCall语句的下一行有效代码处
+// fast call func1
 fastCall :func1
 
 // 输出弹栈值（为函数func1压栈的返回结果）
+// output the value upmost of the stack
 plv $pop
 
 // 终止代码执行
+// terminate the program
 exit
 
 // 函数func1
 // 功能是将两个数相加
+// function func1
+// add 2 nubmers
 :func1
     // 弹栈两个数值
+    // pop 2 values from stack to add
     pop $v2
     pop $v1
 
     // 将两个数值相加后压栈
+    // add 2 nubmers and push the result to the stack
     add $push $v1 $v2
 
-    // 函数返回
+    // 函数返回（也可以用ret指令）
     // 从相应fastCall指令的下一条指令开始继续执行
+    // return, continue to the next command of the fastCall(ret is also valid instead of fastRet)
     fastRet

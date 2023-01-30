@@ -1,43 +1,64 @@
 // 给全局变量a和b赋值为浮点数
+// assign float values to variabe $a and $b
 assign $a #f1.6
 assign $b #f2.8
 
 // 调用函数func1
-call :func1
+// call function from label 'func1'
+// and get the return result in variabe $rs
+// the callFunction should return result in local variable $outL, or use instruction "ret" with a paramter for it
+call $rs :func1
+
+// 输出函数返回值
+pln "function result:" $rs
 
 // 输出调用函数后a、b、c、d四个变量的值
+// output all the 4 variables after calling function :func1
 pln $a $b $c $d
 
 // 退出程序执行
+// terminate the program
 exit
 
 // 函数func1
+// function 'func1'
 :func1
     // 输出进入函数时a、b、c、d四个变量的值
+    // output all the 4 variables for reference
     pln $a $b $c $d
 
     // 将变量a与0.9相加后将结果再放入变量a中
+    // add $a and float value 0.9, put the result again to $a
     add $a $a #f0.9
 
     // 声明一个局部变量b（与全局变量b是两个变量）
+    // define a local variable with the same name $b as the global one(but they are completely different variables)
     var $b
 
     // 给局部变量b赋值为整数9
+    // assign an integer value 9 to local variable $b
     assign $b #i9
 
     // 将局部变量b中的值加1
+    // increase the number of local $b by 1
     inc $b
 
     // 将变量c赋值为字符串
+    // assing a string value 'abc' to variable $c, also a local variable since not declared in global context
     = $c `abc`
 
     // 声明一个全局变量d
+    // explicitly declare a global variabe $d
     global $d
 
     // 给变量d赋值为布尔值true
+    // assign a bool value 'true' to global variable $d
     = $d #btrue
 
     // 退出函数时输出a、b、c、d四个变量的值
+    // output all the 4 variables for reference
     pln $a $b $c $d
 
-    ret
+    // 函数返回，并带一个返回值
+    // return from the function call, with a result value "done"
+    ret "done"

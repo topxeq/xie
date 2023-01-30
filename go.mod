@@ -2,7 +2,12 @@ module github.com/topxeq/xie
 
 go 1.19
 
-require github.com/topxeq/tk v1.0.0
+require (
+	github.com/domodwyer/mailyak v3.1.1+incompatible
+	github.com/mholt/archiver/v3 v3.5.1
+	github.com/topxeq/goph v0.0.0-20230116054750-120b087d86fb
+	github.com/topxeq/tk v1.0.0
+)
 
 require (
 	github.com/aarzilli/sandblast v0.0.0-20151220083925-43f8fb998d06 // indirect
@@ -25,7 +30,6 @@ require (
 	github.com/klauspost/pgzip v1.2.5 // indirect
 	github.com/kr/fs v0.1.0 // indirect
 	github.com/mattn/go-runewidth v0.0.13 // indirect
-	github.com/mholt/archiver/v3 v3.5.1 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/nwaples/rardecode v1.1.2 // indirect
@@ -37,7 +41,6 @@ require (
 	github.com/ssor/bom v0.0.0-20170718123548-6386211fdfcf // indirect
 	github.com/topxeq/countingwriter v0.0.0-20230115115152-84660be6de09 // indirect
 	github.com/topxeq/gods v0.0.0-20220125023913-b5718bb0c704 // indirect
-	github.com/topxeq/goph v0.0.0-20230116054750-120b087d86fb // indirect
 	github.com/topxeq/mahonia v0.0.0-20190828060648-12b0599ddd1a // indirect
 	github.com/topxeq/regexpx v0.0.0-20200814082553-4bffc7d07029 // indirect
 	github.com/topxeq/socks v0.0.0-20200812112322-24acb126b5f3 // indirect
