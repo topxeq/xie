@@ -7,8 +7,7 @@ pln "end"
 exit
 
 :range1
-    pop $i
-    pop $v
+    getIter $i $v
 
     pl "[1] %v: %v" $i $v
 
@@ -18,18 +17,16 @@ exit
 
 
 :range2
-    pop $j
-    pop $jv
+    getIter $j $jv
 
     pl "[2] %v: %v" $j $jv
 
-    range $j @`$j + $j + #i1` :range3
+    range @`$j + $j + #i1` :range3 :+1  $j @`$j + $j + #i1`
 
     continue
 
 :range3
-    pop $k
-    pop $kv
+    getIter $k $kv
 
     pl "[3] %v: %v" $k @`$kv * $kv`
 

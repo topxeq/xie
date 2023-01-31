@@ -15,8 +15,8 @@ import (
 	"strings"
 
 	"github.com/kardianos/service"
-	"github.com/topxeq/xie"
 	"github.com/topxeq/tk"
+	"github.com/topxeq/xie"
 )
 
 // func main() {
@@ -1179,7 +1179,7 @@ func main() {
 			filePathT += ".xie"
 		}
 
-		pathT := "http://xie.topget.org/xc/t/c/xie/example/" + tk.UrlEncode2(filePathT)
+		pathT := "http://xie.topget.org/xc/t/c/xielang/example/" + tk.UrlEncode2(filePathT)
 		scriptT = tk.DownloadWebPageX(pathT)
 		scriptPathG = pathT
 
@@ -1188,7 +1188,7 @@ func main() {
 			filePathT += ".xie"
 		}
 
-		pathT := "http://xie.topget.org/xc/t/c/xie/example/" + tk.UrlEncode2(filePathT)
+		pathT := "http://xie.topget.org/xc/t/c/xielang/example/" + tk.UrlEncode2(filePathT)
 		scriptT = tk.DownloadWebPageX(pathT)
 		scriptPathG = pathT
 

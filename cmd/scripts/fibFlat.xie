@@ -14,7 +14,7 @@ now $t1
 
 push $roundT
 
-call :fib
+call $rs :fib $roundT
 
 now $t2
 
@@ -24,16 +24,16 @@ convert $timeDiffT $timeDiffT float
 
 div $timeDiffT $timeDiffT #f1000
 
-pl `%v 秒` $timeDiffT
+pl `%v secs` $timeDiffT
 
-pln $pop
+pln $rs
 
 exit
 
 :fib
     var $c
  
-    pop $c
+    getArrayItem $c $inputL 0
 
     < $br $c #i2
 
@@ -58,10 +58,10 @@ exit
             < $br2 $i $c
             if $br2 :loop1
 
-        push $fibo
+        = $outL $fibo
         ret
 
     :label1
-        push $c
+        = $outL $c
         ret
 

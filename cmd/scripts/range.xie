@@ -32,6 +32,7 @@ goto :next1
 
 // 进行第二个循环，循环体在标号:label2处
 // 第二个表示跳出循环的标号可以省略，默认为“:+1”
+// 遍历字符串每次的遍历值是一个byte类型的整数
 // the break label could be omitted, default is ":+1"
 range "abc123" :label2
 

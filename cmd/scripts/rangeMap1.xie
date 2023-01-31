@@ -1,4 +1,5 @@
-// 映射也可以手工进行循环遍历
+// 映射（map）也可以手工进行循环遍历
+// 注意，映射的特性是顺序不固定，所以遍历的时候先取到那个键值对是随机的
 
 // 通过JSON直接将一个复杂映射赋值给变量$map1
 fromJson $map1 `{"field1": "text1", "field2": 123, "field3": [1, "abc", true]}`
@@ -19,7 +20,7 @@ if @`$i < $len1` :+1 :next1
     getArrayItem $key $keys $i
     getMapItem $v $map1 $key
 
-    pl "%v: %v" $i $v
+    pl "%v(%v): %v" $i $key $v
  
     ++ $i
     goto :range1

@@ -2,32 +2,52 @@ package xie
 
 import (
 	"bytes"
+	"compress/gzip"
+	"database/sql"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"image"
+	"image/jpeg"
+	"image/png"
 	"io"
 	"math/rand"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"path"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"runtime/debug"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/domodwyer/mailyak"
+	"github.com/kbinani/screenshot"
 	"github.com/mholt/archiver/v3"
 	"github.com/topxeq/goph"
+	"github.com/topxeq/regexpx"
+	"github.com/topxeq/sqltk"
 	"github.com/topxeq/tk"
+
+	excelize "github.com/xuri/excelize/v2"
+
+	_ "github.com/denisenkom/go-mssqldb"
+
+	_ "github.com/godror/godror"
+	_ "github.com/sijms/go-ora/v2"
+
+	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/mattn/go-sqlite3"
 )
 
-var VersionG string = "1.0.0"
+var VersionG string = "1.0.1"
 
 func Test() {
 	tk.Pl("test")
@@ -69,11 +89,15 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"layer": 141, // 获取变量所处的层级（主函数层级为0，调用的第一个函数层级为1，再嵌套调用的为2，……）
 
+	// -- run code related 运行代码相关
+
 	"loadCode": 151, // 载入字符串格式的谢语言代码到当前虚拟机中（加在最后），出错则返回error对象说明原因
 
 	"compile": 153, // compile a piece of code
 
-	"quickRun": 155, // quick run a piece of code
+	"quickRun": 155, // quick run a piece of code, in a new running context
+
+	"runCode": 156, // 运行一段谢语言代码，在新的虚拟机中执行，除结果参数（不可省略）外，第一个参数是字符串类型的代码（必选，后面参数都是可选），第二个参数为任意类型的传入虚拟机的参数（虚拟机内通过inputG全局变量来获取该参数），后面的参数可以是一个字符串数组类型的变量或者多个字符串类型的变量，虚拟机内通过argsG（字符串数组）来对其进行访问。
 
 	"len": 161, // 获取字符串、列表、映射等的长度，参数全省略表示取弹栈值
 
@@ -97,7 +121,7 @@ var InstrNameSet map[string]int = map[string]int{
 
 	// "refNative": 211,
 
-	// "unref": 215, // 对引用进行解引用
+	"unref": 215, // 对引用进行解引用
 
 	// "assignRef": 218, // 根据引用进行赋值（将引用指向的变量赋值）
 
@@ -303,8 +327,14 @@ var InstrNameSet map[string]int = map[string]int{
 
 	// map related 映射相关
 
+	"setMapItem": 1310, // 设置映射项，用法：setMapItem $map1 Name "李白"
+
+	"deleteMapItem": 1312, // 删除映射项
+
 	"getMapItem": 1320, // 获取指定序号的映射项，用法：getMapItem $result $map1 #i2，获取map1中的序号为2的项（即第3项），放入结果变量result中，如果有第4个参数则为默认值（没有找到映射项时使用的值），省略时将是undefined（可与全局内置变量$undefined比较）
 	"{}":         1320,
+
+	"getMapKeys": 1331, // 取所有的映射键名，可用于手工遍历等场景
 
 	// object related 对象相关
 
@@ -312,6 +342,21 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"method": 1403, // 对特定数据类型执行一定的方法，例如：method $result $str1 trimSet "ab"，将对一个字符串类型的变量str1去掉首尾的a和b字符，结果放入变量result中（注意，该结果参数不可省略，即使该方法没有返回数据，此时可以考虑用$drop）
 	"mt":     1403,
+
+	"member": 1405, // 获取特定数据类型的某个成员变量的值，例如：member $result $requestG "Method"，将获得http请求对象的Method属性值（GET、POST等），结果放入变量result中（注意，该结果参数不可省略，即使该方法没有返回数据，此时可以考虑用$drop）
+	"mb":     1405,
+
+	"mbSet": 1407, // 设置某个成员变量
+
+	"newObj": 1410, // 新建一个对象，第一个参数为结果放入的变量，第二个为字符串格式的对象名，后面是可选的0-n个参数，目前支持string、any等
+
+	"setObjValue": 1411, // 设置对象本体值
+	"getObjValue": 1412, // 获取对象本体值
+
+	"getMember": 1420, // 获取对象成员值
+	"setMember": 1430, // 设置对象成员值
+
+	"callObj": 1440, // 调用对象方法
 
 	// string related 字符串相关
 	"backQuote": 1501, // 获取反引号字符串
@@ -453,10 +498,9 @@ var InstrNameSet map[string]int = map[string]int{
 	"isErrStr":  10910, // 判断是否是TXERROR字符串，用法：isErrStr $result $str1 $errMsg，第三个参数可选（结果参数不可省略），如有则当str1为TXERROR字符串时，会放入错误原因信息
 	"getErrStr": 10921, // 获取TXERROR字符串中的错误原因信息（即TXERROR:后的内容）
 
-	// "getErrStr$":  10922,
 	"checkErrStr": 10931, // 判断是否是TXERROR字符串，是则退出程序运行
 
-	// error related / err string(with the prefix "TXERROR:" ) related
+	// error related / err string(with the prefix "TXERROR:" ) related error相关
 
 	"isErr":     10941, // 判断是否是error对象，结果参数不可省略，除结果参数外第一个参数是需要确定是否是error的对象，第二个可选变量是如果是error时，包含的错误描述信息
 	"getErrMsg": 10942, // 获取error对象的错误信息
@@ -498,6 +542,21 @@ var InstrNameSet map[string]int = map[string]int{
 	"regReplace":       20411,
 	"regReplaceAllStr": 20411,
 
+	"regFindAll":   20421, // 获取正则表达式的所有匹配，用法示例：regFindAll $result $str1 $regex1 $group
+	"regFind":      20423, // 获取正则表达式的第一个匹配，用法示例：regFind $result $str1 $regex1 $group
+	"regFindFirst": 20423,
+	"regFindIndex": 20425, // 获取正则表达式的第一个匹配的位置，返回一个整数数组，任意值为-1表示没有找到匹配，用法示例：regFindIndex $result $str1 $regex1
+
+	"regMatch": 20431, // 判断字符串是否完全符合正则表达式，用法示例：regMatch $result "abcab" `a.*b`
+
+	"regContains":   20441, // 判断字符串中是否包含符合正则表达式的子串
+	"regContainsIn": 20443, // 判断字符串中是否包含符合任意一个正则表达式的子串
+	"regCount":      20445, // 计算字符串中包含符合某个正则表达式的子串个数，用法示例：regCount $result $str1 $regex1
+
+	"regSplit": 20451, // 用正则表达式分割字符串
+
+	"regQuote": 20491, // 将一个普通字符串中涉及正则表达式特殊字符进行转义替换以便用于正则表达式中
+
 	// system related
 
 	"sleep": 20501, // sleep for n seconds(float, 0.001 means 1 millisecond)
@@ -506,7 +565,15 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"setClipText": 20512, // 设置剪贴板文本
 
-	"systemCmd": 20601,
+	"getEnv":    20521, // 获取环境变量
+	"setEnv":    20522, // 设置环境变量
+	"removeEnv": 20523, // 删除环境变量
+
+	"systemCmd":       20601, // 执行一条系统命令，例如： systemCmd "cmd" "/k" "copy a.txt b.txt"
+	"openWithDefault": 20603, // 用系统默认的方式打开一个文件，例如： openWithDefault "a.jpg"
+
+	"getOSName": 20901, // 获取操作系统名称，如windows,linux,darwin等
+	"getOsName": 20901,
 
 	// file related
 	"loadText": 21101, // load text from file
@@ -625,7 +692,149 @@ var InstrNameSet map[string]int = map[string]int{
 	"encryptData": 25201, // 用TXDEF方法加密数据（字节列表）
 	"decryptData": 25203, // 用TXDEF方法解密数据（字节列表）
 
-	// GUI related
+	// network relate 网络相关
+	"getRandomPort": 26001, // 获取一个可用的socket端口（注意：获取后应尽快使用，否则仍有可能被占用）
+
+	// database related 数据库相关
+	"dbConnect": 32101, // 连接数据库，用法示例：dbConnect $db "sqlite3" `c:\tmpx\test.db`，或dbConnect $db "godror" `user/pass@129.0.9.11:1521/testdb`，结果参数外第一个参数为数据库驱动类型，目前支持sqlite3、mysql、mssql、godror（即oracle）等，第二个参数为连接字串
+	"连接数据库":     32101,
+
+	"dbClose": 32102, // 关闭数据库连接
+	"关闭数据库":   32102,
+
+	"dbQuery": 32103, // 在指定数据库连接上执行一个查询的SQL语句（一般是select等），返回数组，每行是映射（字段名：字段值），用法示例：dbQuery $rs $db $sql $arg1 $arg2 ...
+	"查询数据库":   32103,
+
+	"dbQueryMap": 32104, // 在指定数据库连接上执行一个查询的SQL语句（一般是select等），返回一个映射，以指定的数据库记录字段为键名，对应记录为键值，用法示例：dbQueryMap $rs $db $sql $key $arg1 $arg2 ...
+	"查询数据库映射":    32104,
+
+	"dbQueryRecs": 32105, // 在指定数据库连接上执行一个查询的SQL语句（一般是select等），返回二维数组（第一行为字段名），用法示例：dbQueryRecs $rs $db $sql $arg1 $arg2 ...
+	"查询数据库记录":     32105,
+
+	"dbQueryCount": 32106, // 在指定数据库连接上执行一个查询的SQL语句，返回一个整数，一般用于查询记录条数或者某个整数字段的值等场景，用法示例：dbQueryCount $rs $db `select count(*) from TABLE1 where FIELD1=:v1 and FIELD2=:v2` $arg1 $arg2 ...
+
+	"dbQueryFloat": 32107, // 在指定数据库连接上执行一个查询的SQL语句，返回一个浮点数，用法示例：dbQueryFloat $rs $db `select PRICE from TABLE1 where FIELD1=:v1 and FIELD2=:v2` $arg1 $arg2 ...
+
+	"dbQueryString": 32108, // 在指定数据库连接上执行一个查询的SQL语句，返回一个字符串，用法示例：dbQueryString $rs $db `select NAME from TABLE1 where FIELD1=:v1 and FIELD2=:v2` $arg1 $arg2 ...
+
+	"dbExec": 32111, // 在指定数据库连接上执行一个有操作的SQL语句（一般是insert、update、delete等），用法示例：dbExec $rs $db $sql $arg1 $arg2 ...
+	"执行数据库":  32111,
+
+	// markdown related Markdown格式相关
+	"renderMarkdown": 40001, // 将Markdown格式字符串渲染为HTML
+
+	// image related 图像处理相关
+	"newImage": 41001,
+
+	"pngEncode": 41101, // 将图像保存为PNG文件或其他可写载体（如字符串），用法：pngEncode $errT $fileT $imgT
+
+	"jpgEncode":  41103, // 将图像保存为JPG文件或其他可写载体（如字符串），用法：jpgEncode $errT $fileT $imgT -quality=90
+	"jpegEncode": 41103,
+
+	// screen related 屏幕相关
+	"getActiveDisplayCount": 45001, // 获取活跃屏幕数量
+
+	"getScreenResolution": 45011, // 获取指定屏幕的分辨率，用法：getScreenResolution $rectT -index=0 -format=rect，其中后面的参数均可选，index指定要获取的活跃屏幕号，主屏幕是0，format可以是rect、json或为空，参看例子代码getScreenInfo.xie
+
+	"captureDisplay": 45021, // 屏幕截图，用法 captureDisplay $imgT 0，截取0号活跃屏幕（主屏幕）的全屏截图
+
+	"captureScreen":     45023, // 屏幕区域截图，用法 captureScreenRect $imgT 100 100 640 480，截取主屏幕的坐标(100,100)为左上角，宽640，高480的区域截图，后面几个参数均可省略，默认截全屏
+	"captureScreenRect": 45023,
+
+	// token related 令牌相关
+	"genToken":   50001, // 生成令牌，用法：genToken $result $appCode $userID $userRole -secret=abc，其中可选开关secret是加密秘钥，可省略
+	"checkToken": 50003, // 检查令牌，用法：checkToken $result XXXXX -secret=abc -expire=2，其中expire是设置的超时秒数（默认为1440），如果成功，返回类似“appCode|userID|userRole|”的字符串；失败返回TXERROR字符串
+
+	// line editor related 内置行文本编辑器有关
+	"leClear": 70001, // 清空行文本编辑器缓冲区
+
+	"leLoadStr":     70003, // 行文本编辑器缓冲区载入指定字符串内容，例：leLoadStr $textT "abc\nbbb\n结束"
+	"leSetAll":      70003, // 等同于leLoadStr
+	"leSaveStr":     70007, // 取出行文本编辑器缓冲区中内容，例：leSaveStr $result $s
+	"leGetAll":      70007, // 等同于leSaveStr
+	"leLoad":        70011, // 从文件中载入文本到行文本编辑器缓冲区中，例：leLoad $result `c:\test.txt`
+	"leLoadFile":    70011, // 等同于leLoad
+	"leLoadClip":    70012, // 从剪贴板中载入文本到行文本编辑器缓冲区中，例：leLoadClip $result
+	"leLoadSSH":     70015, // 从SSH连接获取文本文件内容，用法：leLoadSSH 结果变量 -host=服务器名 -port=服务器端口 -user=用户名 -password=密码 -path=远端文件路径，结果变量不可省略，其他参数省略时将从之前获取内容的SSH连接中获取
+	"leLoadUrl":     70016, // 从网址URL载入文本到行文本编辑器缓冲区中，例：leLoadUrl $result `http://example.com/abc.txt`
+	"leSave":        70017, // 将行文本编辑器缓冲区中内容保存到文件中，例：leSave $result `c:\test.txt`
+	"leSaveFile":    70017, // 等同于leSave
+	"leSaveClip":    70023, // 将行文本编辑器缓冲区中内容保存到剪贴板中，例：leSaveClip $result
+	"leSaveSSH":     70025, // 将编辑缓冲区内容保存到SSH连接中，如果不带参数，将从之前获取内容的SSH连接中获取，用法：leSaveSSH 结果变量 -host=服务器名 -port=服务器端口 -user=用户名 -password=密码 -path=远端文件路径。结果参数不可省略
+	"leInsert":      70027, // 行文本编辑器缓冲区中的指定位置前插入指定内容，例：leInsert $result 3 "abc"
+	"leInsertLine":  70027, // 等同于leInsert
+	"leAppend":      70029, // 行文本编辑器缓冲区中的最后追加指定内容，例：leAppendLine $result "abc"
+	"leAppendLine":  70031, // 等同于leAppend
+	"leSet":         70033, // 设定行文本编辑器缓冲区中的指定行为指定内容，例：leSet  $result 3 "abc"
+	"leSetLine":     70033, // 设定行文本编辑器缓冲区中的指定行为指定内容，例：leSetLine $result 3 "abc"
+	"leSetLines":    70037, // 设定行文本编辑器缓冲区中指定范围的多行为指定内容，例：leSetLines $result 3 5 "abc\nbbb"
+	"leRemove":      70039, // 删除行文本编辑器缓冲区中的指定行，例：leRemove $result 3
+	"leRemoveLine":  70039, // 等同于leRemove
+	"leRemoveLines": 70043, // 删除行文本编辑器缓冲区中指定范围的多行，例：leRemoveLines $result 1 3
+	"leViewAll":     70045, // 查看行文本编辑器缓冲区中的所有内容，例：leViewAll $textT
+	"leView":        70047, // 查看行文本编辑器缓冲区中的指定行，例：leView $lineText 18
+	"leViewLine":    70047,
+	"leSort":        70049, // 将行文本编辑器缓冲区中的行进行排序，唯一参数表示是否降序排序，例：leSort $result true
+	"leEnc":         70051, // 将行文本编辑器缓冲区中的文本转换为UTF-8编码，如果不指定原始编码则默认为GB18030编码，用法：leEnc $result gbk
+	"leLineEnd":     70061, // 读取或设置行文本编辑器缓冲区中行末字符（一般是\n或\r\n），不带参数是获取，带参数是设置
+	"leSilent":      70071, // 读取或设置行文本编辑器的静默模式（布尔值），不带参数是获取，带参数是设置
+	"leFind":        70081, // 在编辑缓冲区查找包含某字符串（可以是正则表达式）的行
+	"leReplace":     70083, // 在编辑缓冲区查找包含某字符串（可以是正则表达式）的行并替换相关内容
+
+	"leSSHInfo": 70091, // 获取当前行文本编辑器使用的SSH连接的信息
+
+	"leRun": 70098, // 将当前行文本编辑器中保存的文本作为谢语言代码执行，结果参数不可省略，如有第二个参数则为要传入的inputG，第三个参数开始为传入的argsG
+
+	// server related 服务器相关
+	"getMimeType": 80001, // 根据文件名获取MIME类型，文件名可以包含路径
+	"getMIMEType": 80001,
+
+	// zip related 压缩相关
+	"archiveFilesToZip":   90101, // 添加多个文件到一个新建的zip文件，第一个参数为zip文件名，后缀必须是.zip，可选参数-overwrite（是否覆盖已有文件），-makeDirs（是否根据需要新建目录），其他参数看做是需要添加的文件或目录，目录将递归加入zip文件，如果参数为一个列表，将看作一个文件名列表，其中的文件都将加入
+	"extractFilesFromZip": 90111, // 添加文件到zip文件
+
+	"compressData":   90201, // 压缩数据，用法：compressData $result $data -method=gzip，压缩方法由-method参数指定，默认为gzip，还支持lzw
+	"decompressData": 90203, // 解压缩数据
+
+	// web GUI related 网页界面相关
+	"initWebGUIW":   100001, // 初始化Web图形界面编程环境（Windows下IE11版本），如果没有外嵌式浏览器xiewbr，则将其下载到xie语言目录下
+	"initWebGuiW":   100001,
+	"updateWebGuiW": 100003, // 强制刷新Web图形界面编程环境（Windows下IE11版本），会将最新的外嵌式浏览器xiewbr下载到xie语言目录下
+
+	"initWebGUIC": 100011, // 初始化Web图形界面编程环境（Windows下CEF版本），如果没有外嵌式浏览器xiecbr及相关库文件，则将其下载到xie语言目录下
+	"initWebGuiC": 100011,
+
+	// ssh/sftp/ftp related
+	"sshConnect":       200001, // 打开一个SSH连接，用法：sshConnect 结果变量 -host=服务器名 -port=服务器端口 -user=用户名 -password=密码
+	"sshOpen":          200001,
+	"sshClose":         200003, // 关闭一个SSH连接
+	"sshUpload":        200011, // 通过ssh上传一个文件，用法：sshUpload 结果变量 -host=服务器名 -port=服务器端口 -user=用户名 -password=密码 -path=文件路径 -remotePath=远端文件路径，可以加-force参数表示覆盖已有文件
+	"sshUploadBytes":   200013, // 通过ssh上传一个二进制内容（字节数组）到文件，用法：sshUpload 结果变量 内容变量 -host=服务器名 -port=服务器端口 -user=用户名 -password=密码 -remotePath=远端文件路径，可以加-force参数表示覆盖已有文件；内容变量也可以是一个字符串，将自动转换为字节数组
+	"sshDownload":      200021, // 通过ssh下载一个文件，用法：sshDownload 结果变量 -host=服务器名 -port=服务器端口 -user=用户名 -password=密码 -path=本地文件路径 -remotePath=远端文件路径，可以加-force参数表示覆盖已有文件
+	"sshDownloadBytes": 200023, // 通过ssh下载一个文件，结果为字节数组（或error对象），用法：sshDownloadBytes 结果变量 -host=服务器名 -port=服务器端口 -user=用户名 -password=密码 -remotePath=远端文件路径，可以加-force参数表示覆盖已有文件
+
+	// excel related
+	"excelNew":    210001, // 新建一个excel文件，用法：excelNew $excelFileT
+	"excelOpen":   210003, // 打开一个excel文件，用法：excelOpen $excelFileT `d:\tmp\excel1.xlsx`
+	"excelClose":  210005, // 关闭一个excel文件
+	"excelSaveAs": 210007, // 保存一个excel文件，用法：excelSave $result $excelFileT `d:\tmp\excel1.xlsx`
+
+	"excelWrite": 210009, // 将excel文件内容写入到可写入源（io.Writer），例如文件、标准输出、网页输出http的response excelWrite $result $excelFileT $writer
+
+	"excelReadSheet": 210101, // 读取已打开的excel文件某一个sheet的内容，返回格式是二维数组，用法：excelReadSheet $result $excelFileT sheet1，最后一个参数可以是字符串类型表示按sheet名称读取，或者是一个整数表示按序号读取
+	"excelReadCell":  210103, // 读取指定单元格的内容，返回字符串或错误信息，用法：excelReadCell $result $excelFileT "A1"
+	"excelWriteCell": 210105, // 将内容写入到指定单元格，用法：excelWriteCell $result $excelFileT "A1" "abc123"
+	"excelSetCell":   210105,
+
+	"excelGetSheetList": 210201, // 获取sheet名字列表，结果是字符串数组
+
+	// mail related
+
+	// "mailNewSender": 220001, // 新建一个邮件发送对象，与 new $result "mailSender" 指令效果类似
+
+	// GUI related 图形界面相关
+	"guiInit": 400000, // 初始化GUI环境
+
 	"alert":    400001, // 类似JavaScript中的alert，弹出对话框，显示一个字符串或任意数字、对象的字符串表达
 	"guiAlert": 400001,
 
@@ -664,6 +873,14 @@ var InstrNameSet map[string]int = map[string]int{
 type VarRef struct {
 	Ref   int // -99 - invalid, -17 - reg, -16 - label, -15 - ref, -12 - unref, -11 - seq, -10 - quickEval, -9 - eval, -8 - pop, -7 - peek, -6 - push, -5 - tmp, -4 - pln, -3 - value only, -2 - drop, -1 - debug, 3 normal vars
 	Value interface{}
+}
+
+func GetVarRefFromArray(aryA []VarRef, idxT int) VarRef {
+	if idxT < 0 || idxT >= len(aryA) {
+		return VarRef{Ref: -99, Value: nil}
+	}
+
+	return aryA[idxT]
 }
 
 type Instr struct {
@@ -1830,6 +2047,14 @@ func (p *RunningContext) PopFunc() error {
 	// funcContextT := funcContextItemT.(*FuncContext)
 
 	return nil
+}
+
+func GetVarRefInParams(varRefsA []VarRef, idxA int) VarRef {
+	if idxA < 0 || idxA >= len(varRefsA) {
+		return VarRef{Ref: -99, Value: nil}
+	}
+
+	return varRefsA[idxA]
 }
 
 func (p *XieVM) GetVarValue(runA *RunningContext, vA VarRef) interface{} {
@@ -3448,6 +3673,468 @@ func (p *XieVM) QuickRunCode(codeA interface{}) interface{} {
 	return tk.Undefined
 }
 
+var leBufG []string
+var leLineEndG string = "\n"
+var leSilentG bool = true
+var leSSHInfoG map[string]string = map[string]string{}
+
+func SetLeVSilent(vA bool) {
+	leSilentG = vA
+}
+
+func leClear() {
+	leBufG = make([]string, 0, 100)
+}
+
+func leLoadString(strA string) {
+	if leBufG == nil {
+		leClear()
+	}
+
+	leBufG = tk.SplitLines(strA)
+}
+
+func leSaveString() string {
+	if leBufG == nil {
+		leClear()
+	}
+
+	return tk.JoinLines(leBufG, leLineEndG)
+}
+
+func leLoadFile(fileNameA string) error {
+	if leBufG == nil {
+		leClear()
+	}
+
+	strT, errT := tk.LoadStringFromFileE(fileNameA)
+
+	if errT != nil {
+		return errT
+	}
+
+	if strings.Contains(strT, "\r") {
+		leLineEndG = "\r\n"
+	} else {
+		leLineEndG = "\n"
+	}
+
+	leBufG = tk.SplitLines(strT)
+	// leBufG, errT = tk.LoadStringListBuffered(fileNameA, false, false)
+
+	return nil
+}
+
+func leLoadUrl(urlA string) error {
+	if leBufG == nil {
+		leClear()
+	}
+
+	strT := tk.DownloadWebPageX(urlA)
+
+	if tk.IsErrStr(strT) {
+		return tk.ErrStrToErr(strT)
+	}
+
+	leBufG = tk.SplitLines(strT)
+	// leBufG, errT = tk.LoadStringListBuffered(fileNameA, false, false)
+
+	return nil
+}
+
+func leSaveFile(fileNameA string) error {
+	if leBufG == nil {
+		leClear()
+	}
+
+	var errT error
+
+	textT := tk.JoinLines(leBufG, leLineEndG)
+
+	if tk.IsErrStr(textT) {
+		return tk.Errf(tk.GetErrStr(textT))
+	}
+
+	errT = tk.SaveStringToFileE(textT, fileNameA)
+
+	return errT
+}
+
+func leLoadClip() error {
+	if leBufG == nil {
+		leClear()
+	}
+
+	textT := tk.GetClipText()
+
+	if tk.IsErrStr(textT) {
+		return tk.Errf(tk.GetErrStr(textT))
+	}
+
+	leBufG = tk.SplitLines(textT)
+
+	return nil
+}
+
+func leSaveClip() error {
+	if leBufG == nil {
+		leClear()
+	}
+
+	textT := tk.JoinLines(leBufG, leLineEndG)
+
+	if tk.IsErrStr(textT) {
+		return tk.Errf(tk.GetErrStr(textT))
+	}
+
+	return tk.SetClipText(textT)
+}
+
+func leViewAll(argsA ...string) error {
+	if leBufG == nil {
+		leClear()
+	}
+
+	if leBufG == nil {
+		return tk.Errf("buffer not initalized")
+	}
+
+	if tk.IfSwitchExistsWhole(argsA, "-nl") {
+		textT := tk.JoinLines(leBufG, leLineEndG)
+
+		tk.Pln(textT)
+
+	} else {
+		for i, v := range leBufG {
+			tk.Pl("%v: %v", i, v)
+		}
+	}
+
+	return nil
+}
+
+func leViewLine(idxA int) error {
+	if leBufG == nil {
+		leClear()
+	}
+
+	if leBufG == nil {
+		return tk.Errf("buffer not initalized")
+	}
+
+	if idxA < 0 || idxA >= len(leBufG) {
+		return tk.Errf("line index out of range")
+	}
+
+	tk.Pln(leBufG[idxA])
+
+	return nil
+}
+
+func leSort(descentA bool) error {
+	if leBufG == nil {
+		leClear()
+	}
+
+	if leBufG == nil {
+		return tk.Errf("buffer not initalized")
+	}
+
+	if descentA {
+		sort.Sort(sort.Reverse(sort.StringSlice(leBufG)))
+	} else {
+		sort.Sort(sort.StringSlice(leBufG))
+	}
+
+	return nil
+}
+
+func leConvertToUTF8(srcEncA ...string) error {
+	if leBufG == nil {
+		leClear()
+	}
+
+	if leBufG == nil {
+		return tk.Errf("buffer not initalized")
+	}
+
+	encT := ""
+
+	if len(srcEncA) > 0 {
+		encT = srcEncA[0]
+	}
+
+	leBufG = tk.SplitLines(tk.ConvertStringToUTF8(tk.JoinLines(leBufG, leLineEndG), encT))
+
+	return nil
+}
+
+func leLineEnd(lineEndA ...string) string {
+	if leBufG == nil {
+		leClear()
+	}
+
+	if leBufG == nil {
+		return tk.ErrStrf("buffer not initalized")
+	}
+
+	if len(lineEndA) > 0 {
+		leLineEndG = lineEndA[0]
+	} else {
+		return leLineEndG
+	}
+
+	return ""
+}
+
+func leSilent(silentA ...bool) bool {
+	if leBufG == nil {
+		leClear()
+	}
+
+	if leBufG == nil {
+		return false
+	}
+
+	if len(silentA) > 0 {
+		leSilentG = silentA[0]
+		return leSilentG
+	}
+
+	return leSilentG
+}
+
+func leFind(regA string) []string {
+	if leBufG == nil {
+		leClear()
+	}
+
+	if leBufG == nil {
+		return nil
+	}
+
+	aryT := []string{}
+
+	for i, v := range leBufG {
+		if tk.RegContains(v, regA) {
+			aryT = append(aryT, fmt.Sprintf("%v: %v", i, v))
+		}
+	}
+
+	return aryT
+}
+
+func leReplace(regA string, replA string) []string {
+	if leBufG == nil {
+		leClear()
+	}
+
+	if leBufG == nil {
+		return nil
+	}
+
+	aryT := []string{}
+
+	for i, v := range leBufG {
+		if tk.RegContains(v, regA) {
+			leBufG[i] = tk.RegReplace(v, regA, replA)
+			aryT = append(aryT, fmt.Sprintf("%v: %v -> %v", i, v, leBufG[i]))
+		}
+	}
+
+	return aryT
+}
+
+func leGetLine(idxA int) string {
+	if leBufG == nil {
+		leClear()
+	}
+
+	if leBufG == nil {
+		return tk.ErrStrf("buffer not initalized")
+	}
+
+	if idxA < 0 || idxA >= len(leBufG) {
+		return tk.ErrStrf("line index out of range")
+	}
+
+	return leBufG[idxA]
+}
+
+func leSetLine(idxA int, strA string) error {
+	if leBufG == nil {
+		leClear()
+	}
+
+	if leBufG == nil {
+		return tk.Errf("buffer not initalized")
+	}
+
+	if idxA < 0 || idxA >= len(leBufG) {
+		return tk.Errf("line index out of range")
+	}
+
+	leBufG[idxA] = strA
+
+	return nil
+}
+
+func leSetLines(startA int, endA int, strA string) error {
+	if leBufG == nil {
+		leClear()
+	}
+
+	if startA > endA {
+		return tk.Errf("start index greater than end index")
+	}
+
+	listT := tk.SplitLines(strA)
+
+	if endA < 0 {
+		rs := make([]string, 0, len(leBufG)+len(listT))
+
+		rs = append(rs, listT...)
+		rs = append(rs, leBufG...)
+
+		leBufG = rs
+
+		return nil
+	}
+
+	if startA >= len(leBufG) {
+		leBufG = append(leBufG, listT...)
+
+		return nil
+	}
+
+	if startA < 0 {
+		startA = 0
+	}
+
+	if endA >= len(leBufG) {
+		endA = len(leBufG) - 1
+	}
+
+	rs := make([]string, 0, len(leBufG)+len(listT)-1)
+
+	rs = append(rs, leBufG[:startA]...)
+	rs = append(rs, listT...)
+	rs = append(rs, leBufG[endA+1:]...)
+
+	leBufG = rs
+
+	return nil
+}
+
+func leInsertLine(idxA int, strA string) error {
+	if leBufG == nil {
+		leClear()
+	}
+
+	// if leBufG == nil {
+	// 	return tk.Errf("buffer not initalized")
+	// }
+
+	// if idxA < 0 || idxA >= len(leBufG) {
+	// 	return tk.Errf("line index out of range")
+	// }
+
+	if idxA < 0 {
+		idxA = 0
+	}
+
+	listT := tk.SplitLines(strA)
+
+	if idxA >= len(leBufG) {
+		leBufG = append(leBufG, listT...)
+	} else {
+		rs := make([]string, 0, len(leBufG)+1)
+
+		rs = append(rs, leBufG[:idxA]...)
+		rs = append(rs, listT...)
+		rs = append(rs, leBufG[idxA:]...)
+
+		leBufG = rs
+
+	}
+
+	return nil
+}
+
+func leAppendLine(strA string) error {
+	if leBufG == nil {
+		leClear()
+	}
+
+	// if leBufG == nil {
+	// 	return tk.Errf("buffer not initalized")
+	// }
+
+	// if idxA < 0 || idxA >= len(leBufG) {
+	// 	return tk.Errf("line index out of range")
+	// }
+
+	listT := tk.SplitLines(strA)
+
+	leBufG = append(leBufG, listT...)
+
+	return nil
+}
+
+func leRemoveLine(idxA int) error {
+	if leBufG == nil {
+		leClear()
+	}
+
+	if leBufG == nil {
+		return tk.Errf("buffer not initalized")
+	}
+
+	if idxA < 0 || idxA >= len(leBufG) {
+		return tk.Errf("line index out of range")
+	}
+
+	rs := make([]string, 0, len(leBufG)+1)
+
+	rs = append(rs, leBufG[:idxA]...)
+	rs = append(rs, leBufG[idxA+1:]...)
+
+	leBufG = rs
+
+	return nil
+}
+
+func leRemoveLines(startA int, endA int) error {
+	if leBufG == nil {
+		leClear()
+	}
+
+	if leBufG == nil {
+		return tk.Errf("buffer not initalized")
+	}
+
+	if startA < 0 || startA >= len(leBufG) {
+		return tk.Errf("start line index out of range")
+	}
+
+	if endA < 0 || endA >= len(leBufG) {
+		return tk.Errf("end line index out of range")
+	}
+
+	if startA > endA {
+		return tk.Errf("start line index greater than end line index")
+	}
+
+	rs := make([]string, 0, len(leBufG)+1)
+
+	rs = append(rs, leBufG[:startA]...)
+	rs = append(rs, leBufG[endA+1:]...)
+
+	leBufG = rs
+
+	return nil
+}
+
 func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) {
 	defer func() {
 		if r1 := recover(); r1 != nil {
@@ -3676,7 +4363,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		if v1 == v2 {
 			tk.Pl("test %v%v passed", v3, v4)
 		} else {
-			return p.Errf(r, "test %v%v failed: %#v <-> %#v", v3, v4, v1, v2)
+			return p.Errf(r, "test %v%v failed: %#v <-> %#v\n-----\n%v\n-----\n%v", v3, v4, v1, v2, v1, v2)
 		}
 
 		return ""
@@ -3732,7 +4419,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		if tk.RegMatchX(tk.ToStr(v1), tk.ToStr(v2)) {
 			tk.Pl("test %v%v passed", v3, v4)
 		} else {
-			return p.Errf(r, "test %v%v failed: %#v <-> %#v", v3, v4, v1, v2)
+			return p.Errf(r, "test %v%v failed: %#v <-> %#v --- %v", v3, v4, v1, v2, v2)
 		}
 
 		return ""
@@ -3816,6 +4503,39 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		}
 
 		rs := p.QuickRunCode(p.GetVarValue(r, instrT.Params[v1p]))
+
+		p.SetVar(r, pr, rs)
+
+		return ""
+
+	case 156: // runCode
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		pr := instrT.Params[0]
+
+		v1p := 1
+
+		codeT := p.GetVarValue(r, instrT.Params[v1p])
+
+		inputT := p.GetVarValue(r, GetVarRefInParams(instrT.Params, v1p+1))
+
+		if tk.IsUndefined(inputT) {
+			inputT = nil
+		}
+
+		objT := p.GetVarValue(r, GetVarRefInParams(instrT.Params, v1p+2))
+
+		obj1, ok := objT.(map[string]interface{})
+
+		if !ok {
+			obj1 = nil
+		}
+
+		vs := p.ParamsToStrs(r, instrT, v1p+3)
+
+		rs := RunCode(codeT, inputT, obj1, vs...)
 
 		p.SetVar(r, pr, rs)
 
@@ -4234,6 +4954,57 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		p.SetVar(r, pr, GlobalsG.Vars[tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))])
 
 		return ""
+
+	case 215: // unref
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+
+		var v2 interface{}
+
+		if instrT.ParamLen < 1 {
+			v2 = p.GetCurrentFuncContext(r).Tmp
+		} else if instrT.ParamLen < 2 {
+			v2 = p.GetVarValue(r, instrT.Params[0])
+		} else {
+			pr = instrT.Params[0]
+			v2 = p.GetVarValue(r, instrT.Params[1])
+		}
+
+		switch nv := v2.(type) {
+		case *interface{}:
+			p.SetVar(r, pr, *nv)
+		case *byte:
+			p.SetVar(r, pr, *nv)
+		case *int:
+			p.SetVar(r, pr, *nv)
+		case *uint64:
+			p.SetVar(r, pr, *nv)
+		case *rune:
+			p.SetVar(r, pr, *nv)
+		case *bool:
+			p.SetVar(r, pr, *nv)
+		case *string:
+			p.SetVar(r, pr, *nv)
+		case *strings.Builder:
+			p.SetVar(r, pr, *nv)
+		default:
+			tk.Pl("hereee")
+			valueT := reflect.ValueOf(v2)
+			kindT := valueT.Kind()
+
+			if kindT == reflect.Pointer {
+				p.SetVar(r, pr, valueT.Elem().Interface())
+				return ""
+			}
+
+			return p.Errf(r, "无法处理的类型：%T", v2)
+		}
+
+		return ""
+
 	// case 210: // ref
 	// 	if instrT.ParamLen < 1 {
 	// 		return p.Errf(r, "not enough parameters(参数不够)")
@@ -6545,7 +7316,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		iteratorT := tk.NewCompactIterator(v1, vs...)
 
 		if iteratorT == nil {
-			return p.Errf(r, "failed to create iterator: %v(%V)", v1, instrT.Params[0])
+			return p.Errf(r, "failed to create iterator: %v(%v)", v1, instrT.Params[0])
 		}
 		// tk.Plv(iteratorT)
 
@@ -6576,6 +7347,8 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		}
 
 		countT, kiT, valueT, b1 := rangerT.Iterator.Next()
+
+		// tk.Plo(countT, kiT, valueT, b1)
 
 		p.SetVar(r, pr1, kiT)
 		p.SetVar(r, pr2, valueT)
@@ -7576,6 +8349,113 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		}
 
 		return ""
+
+	case 1310: // setMapItem
+		if instrT.ParamLen < 3 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		// p1 := instrT.Params[0].Ref
+
+		v1 := p.GetVarValue(r, instrT.Params[0])
+
+		v2o := p.GetVarValue(r, instrT.Params[1])
+
+		v2 := tk.ToStr(v2o)
+
+		var v3 interface{}
+
+		v3 = p.GetVarValue(r, instrT.Params[2])
+
+		switch nv := v1.(type) {
+		case map[string]interface{}:
+			nv[v2] = v3
+		case map[string]int:
+			nv[v2] = tk.ToInt(v3)
+		case map[string]byte:
+			nv[v2] = tk.ToByte(v3)
+		case map[string]rune:
+			nv[v2] = tk.ToRune(v3)
+		case map[string]float64:
+			nv[v2] = tk.ToFloat(v3)
+		case map[string]string:
+			nv[v2] = tk.ToStr(v3)
+		default:
+			valueT := reflect.ValueOf(v1)
+
+			kindT := valueT.Kind()
+
+			if kindT == reflect.Map {
+				valueT.SetMapIndex(reflect.ValueOf(v2o), reflect.ValueOf(v3))
+				return ""
+			}
+
+			return p.Errf(r, "参数类型错误: %T(%#v)", v1)
+		}
+
+		return ""
+
+	case 1312: // deleteMapItem
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		// varsT := (*(p.CurrentVarsM))
+
+		// p1 := instrT.Params[0].Ref
+
+		// p1 := p.GetVarValue(r, instrT.Params[0]) // instrT.Params[0].Ref
+		// p1 := p.GetVarRef(instrT.Params[0])
+		v1 := p.GetVarValue(r, instrT.Params[0])
+
+		v2o := p.GetVarValue(r, instrT.Params[1])
+
+		v2 := tk.ToStr(v2o)
+
+		// varsT := p.GetVars()
+
+		// aryT := (varsT[p1]).([]interface{})
+		// mapT := (*p1).(map[string]interface{})
+
+		// v1 := *p1
+
+		switch nv := v1.(type) {
+		case map[string]interface{}:
+			delete(nv, v2)
+		case map[string]int:
+			delete(nv, v2)
+		case map[string]byte:
+			delete(nv, v2)
+		case map[string]rune:
+			delete(nv, v2)
+		case map[string]float64:
+			delete(nv, v2)
+		case map[string]string:
+			delete(nv, v2)
+		default:
+			valueT := reflect.ValueOf(v1)
+
+			kindT := valueT.Kind()
+
+			if kindT == reflect.Map {
+				valueT.SetMapIndex(reflect.ValueOf(v2o), reflect.Zero(reflect.TypeOf(v1)))
+				return ""
+			}
+
+			return p.Errf(r, "参数类型错误: %T(%#v)", v1)
+		}
+
+		// rs := make([]interface{}, 0, len(aryT)-1)
+		// rs = append(rs, aryT[:v2]...)
+		// rs = append(rs, aryT[v2+1:]...)
+
+		// varsT[p1] = rs // append((varsT[p1]).([]interface{}), v2)
+		// delete(mapT, v2)
+
+		// tk.DeleteItemInArray(p1.([]interface{}), v2)
+
+		return ""
+
 	case 1320: // getMapItem/{}
 		if instrT.ParamLen < 3 {
 			return p.Errf(r, "not enough parameters(参数不够)")
@@ -7614,6 +8494,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		case map[string]map[string]interface{}:
 			rv, ok = nv[v2]
 		default:
+			tk.Plo("here1", v1, v2o)
 			valueT := reflect.ValueOf(v1)
 
 			kindT := valueT.Kind()
@@ -7663,6 +8544,89 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 			} else {
 				rv = tk.Undefined
 			}
+		}
+
+		p.SetVar(r, pr, rv)
+
+		return ""
+	case 1331: // getMapKeys
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		var rv []string
+
+		switch nv := v1.(type) {
+		case map[string]interface{}:
+			rv = make([]string, 0, len(nv))
+			for k, _ := range nv {
+				rv = append(rv, k)
+			}
+		case map[string]int:
+			rv = make([]string, 0, len(nv))
+			for k, _ := range nv {
+				rv = append(rv, k)
+			}
+		case map[string]byte:
+			rv = make([]string, 0, len(nv))
+			for k, _ := range nv {
+				rv = append(rv, k)
+			}
+		case map[string]rune:
+			rv = make([]string, 0, len(nv))
+			for k, _ := range nv {
+				rv = append(rv, k)
+			}
+		case map[string]float64:
+			rv = make([]string, 0, len(nv))
+			for k, _ := range nv {
+				rv = append(rv, k)
+			}
+		case map[string]string:
+			rv = make([]string, 0, len(nv))
+			for k, _ := range nv {
+				rv = append(rv, k)
+			}
+		case map[string]map[string]string:
+			rv = make([]string, 0, len(nv))
+			for k, _ := range nv {
+				rv = append(rv, k)
+			}
+		case map[string]map[string]interface{}:
+			rv = make([]string, 0, len(nv))
+			for k, _ := range nv {
+				rv = append(rv, k)
+			}
+		default:
+			valueT := reflect.ValueOf(v1)
+
+			kindT := valueT.Kind()
+
+			if kindT == reflect.Map {
+				keysT := valueT.MapKeys()
+
+				rvo := reflect.MakeSlice(valueT.Type().Key(), 0, len(keysT))
+
+				for _, v := range keysT {
+					reflect.Append(rvo, v)
+				}
+
+				rvi := rvo.Interface()
+
+				return rvi
+			}
+
+			return p.Errf(r, "参数类型错误：%T(%v)", v1, v1)
 		}
 
 		p.SetVar(r, pr, rv)
@@ -8240,6 +9204,267 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		// p.SetVar(r, pr, fmt.Errorf("未知方法：（%v）%v", v1, v2))
 
 		return ""
+	case 1405: // member/mb
+		if instrT.ParamLen < 3 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		pr := instrT.Params[0]
+
+		v1 := p.GetVarValue(r, instrT.Params[1])
+
+		// v2 := tk.ToStr(p.GetVarValue(r, instrT.Params[2]))
+
+		vs := p.ParamsToStrs(r, instrT, 2)
+
+		var vr interface{} = v1
+
+		for _, v2 := range vs {
+			switch nv := vr.(type) {
+			case *http.Request:
+				switch v2 {
+				case "Method":
+					vr = nv.Method
+					continue
+				case "Proto":
+					vr = nv.Proto
+					continue
+				case "Host":
+					vr = nv.Host
+					continue
+				case "RemoteAddr":
+					vr = nv.RemoteAddr
+					continue
+				case "RequestURI":
+					vr = nv.RequestURI
+					continue
+				case "TLS":
+					vr = nv.TLS
+					continue
+				case "URL":
+					vr = nv.URL
+					continue
+				case "Scheme":
+					vr = nv.URL.Scheme
+					continue
+				}
+
+				// p.SetVar(r, pr, fmt.Sprintf("未知成员: %v", v2))
+				// return p.Errf(r, "未知成员: %v", v2)
+
+			case *url.URL:
+				switch v2 {
+				case "Scheme":
+					vr = nv.Scheme
+					continue
+				}
+
+				// p.SetVar(r, pr, fmt.Sprintf("未知成员: %v", v2))
+				// return p.Errf(r, "未知成员: %v", v2)
+
+			default:
+				break
+			}
+
+			typeT := reflect.TypeOf(vr)
+
+			kindT := typeT.Kind()
+
+			// tk.Pl("kind: %v", kindT)
+
+			if kindT == reflect.Ptr {
+				vrf := reflect.ValueOf(vr).Elem()
+
+				kindT = vrf.Kind()
+
+				// tk.Pl("vrf: %v, kind: %v", vrf, kindT)
+
+				if kindT == reflect.Struct {
+					vr = vrf.Interface()
+				}
+			}
+
+			if kindT == reflect.Struct {
+				rv1 := reflect.ValueOf(vr)
+
+				rv2 := rv1.FieldByName(v2).Interface()
+
+				vr = rv2
+				continue
+			}
+
+			return p.Errf(r, "未知成员：%v（%T/%v）.%v", vr, vr, kindT, v2)
+
+		}
+
+		p.SetVar(r, pr, vr)
+		return ""
+	case 1407: // mbSet
+		if instrT.ParamLen < 3 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 3 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		v2 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p+1]))
+
+		v3 := p.GetVarValue(r, instrT.Params[v1p+2])
+
+		// var vr interface{} = v1
+
+		switch nv := v1.(type) {
+		case string:
+			return p.Errf(r, "无法处理的类型：%v（%T/%v）", nv, v1, v1)
+		default:
+			typeT := reflect.TypeOf(v1)
+
+			kindT := typeT.Kind()
+
+			// tk.Pl("kind: %v", kindT)
+			if kindT == reflect.Ptr {
+				rv1 := reflect.ValueOf(v1)
+
+				// tk.Pl("v1: %#v, p-rv1: %v, canSet: %v", v1, rv1, rv1.CanSet())
+				vrf := rv1.Elem()
+				// tk.Pl("vrf: %v, canSet: %v", vrf, vrf.CanSet())
+
+				kindT = vrf.Kind()
+
+				// tk.Pl("vrf: %v, kind: %v", vrf, kindT)
+
+				if kindT == reflect.Struct {
+					rv2 := vrf.FieldByName(v2)
+
+					rv3 := reflect.ValueOf(v3)
+					// tk.Pl("rv3: %v", rv3)
+
+					rv2.Set(rv3)
+
+					break
+
+				}
+			} else if kindT == reflect.Struct {
+				rv1 := reflect.ValueOf(v1)
+				// tk.Pl("v1: %#v, rv1: %#v, canSet: %v", v1, rv1, rv1.CanSet())
+
+				rv2 := rv1.FieldByName(v2)
+
+				rv3 := reflect.ValueOf(v3)
+				// tk.Pl("rv3: %v", rv3)
+
+				rv2.Set(rv3)
+
+				break
+			}
+
+			return p.Errf(r, "无法处理的类型：%v（%T/%v）", v1, v1, kindT)
+
+		}
+
+		p.SetVar(r, pr, "")
+		return ""
+	case 1410: // newObj
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		pr := instrT.Params[0]
+
+		v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[1]))
+
+		switch v1 {
+		case "string":
+			objT := &XieString{}
+
+			objT.Init(p.ParamsToList(r, instrT, 2)...)
+
+			p.SetVar(r, pr, objT)
+		case "any":
+			objT := &XieAny{}
+
+			objT.Init(p.ParamsToList(r, instrT, 2)...)
+
+			p.SetVar(r, pr, objT)
+		case "mux":
+			p.SetVar(r, pr, http.NewServeMux())
+		case "int":
+			p.SetVar(r, pr, new(int))
+		case "byte":
+			p.SetVar(r, pr, new(byte))
+		default:
+			return p.Errf(r, "未知对象")
+		}
+
+		return ""
+	case 1411: // setObjValue
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[0]).(XieObject)
+
+		// v2 := p.GetVarValue(r, instrT.Params[0])
+
+		v1.SetValue(p.ParamsToList(r, instrT, 1)...)
+
+		return ""
+	case 1412: // getObjValue
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p]).(XieObject)
+
+		p.SetVar(r, pr, v1.GetValue())
+
+		return ""
+	case 1440: // callObj
+		if instrT.ParamLen < 3 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 3 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p]).(XieObject)
+
+		v2 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p+1]))
+
+		argsT := []interface{}{v2}
+
+		argsT = append(argsT, p.ParamsToList(r, instrT, v1p+2)...)
+
+		rsT := v1.Call(argsT...)
+
+		if tk.IsError(rsT) {
+			return p.Errf(r, "对象方法调用失败：%v", rsT)
+		}
+
+		p.SetVar(r, pr, rsT)
+
+		return ""
+
 	case 1501: // backQuote
 		var pr interface{} = -5
 
@@ -8883,9 +10108,9 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		v2 := p.GetVarValue(r, instrT.Params[v1p+1])
 
-		sd := int(v1.(time.Time).Sub(v2.(time.Time)))
+		sd := int(v1.(time.Time).Sub(v2.(time.Time)) / time.Millisecond)
 
-		p.SetVar(r, pr, sd/1000000)
+		p.SetVar(r, pr, sd)
 
 		return ""
 
@@ -9898,7 +11123,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 				errMsgT = tk.GetErrStr(v1)
 			}
 
-			p.SetVar(r, instrT.Params[2].Ref, errMsgT)
+			p.SetVar(r, instrT.Params[2], errMsgT)
 		}
 
 		return ""
@@ -9968,7 +11193,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 				errMsgT = v1.(error).Error()
 			}
 
-			p.SetVar(r, instrT.Params[2].Ref, errMsgT)
+			p.SetVar(r, instrT.Params[2], errMsgT)
 		}
 
 		return ""
@@ -10003,7 +11228,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		if tk.IsErrX(v1) {
 			if instrT.ParamLen > 2 {
-				p2 := instrT.Params[v1p+1].Ref
+				p2 := instrT.Params[v1p+1]
 				p.SetVar(r, p2, tk.GetErrStrX(v1))
 			}
 
@@ -10013,7 +11238,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		}
 
 		if instrT.ParamLen > 2 {
-			p2 := instrT.Params[v1p+1].Ref
+			p2 := instrT.Params[v1p+1]
 			p.SetVar(r, p2, "")
 		}
 
@@ -10395,6 +11620,18 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		vs := p.ParamsToStrs(r, instrT, v1p+3)
 
+		if tk.IfSwitchExistsWhole(vs, "-progress") {
+			fmt.Println()
+			rs := tk.DownloadFileWithProgress(tk.ToStr(v2), tk.ToStr(v3), tk.ToStr(v4), func(i interface{}) interface{} {
+				fmt.Printf("\rprogress: %v                  ", tk.IntToKMGT(i))
+				return ""
+			}, vs...)
+
+			p.SetVar(r, pr, rs)
+
+			return ""
+		}
+
 		rs := tk.DownloadFile(tk.ToStr(v2), tk.ToStr(v3), tk.ToStr(v4), vs...)
 
 		p.SetVar(r, pr, rs)
@@ -10512,6 +11749,206 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		p.SetVar(r, pr, rs)
 
 		return ""
+	case 20421: // regFindAll
+		if instrT.ParamLen < 3 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 3 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		v2 := p.GetVarValue(r, instrT.Params[v1p+1])
+
+		v3 := p.GetVarValue(r, instrT.Params[v1p+2])
+
+		rs := tk.RegFindAllX(tk.ToStr(v1), tk.ToStr(v2), tk.ToInt(v3, 0))
+
+		p.SetVar(r, pr, rs)
+
+		return ""
+
+	case 20423: // regFind
+		if instrT.ParamLen < 3 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 3 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		v2 := p.GetVarValue(r, instrT.Params[v1p+1])
+
+		v3 := p.GetVarValue(r, instrT.Params[v1p+2])
+
+		rs := tk.RegFindFirstX(tk.ToStr(v1), tk.ToStr(v2), tk.ToInt(v3, 0))
+
+		p.SetVar(r, pr, rs)
+
+		return ""
+
+	case 20425: // regFindIndex
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 2 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		v2 := p.GetVarValue(r, instrT.Params[v1p+1])
+
+		rs1, rs2 := tk.RegFindFirstIndexX(tk.ToStr(v1), tk.ToStr(v2))
+
+		p.SetVar(r, pr, []int{rs1, rs2})
+
+		return ""
+
+	case 20431: // regMatch
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 2 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		v2 := p.GetVarValue(r, instrT.Params[v1p+1])
+
+		rs := tk.RegMatchX(tk.ToStr(v1), tk.ToStr(v2))
+
+		p.SetVar(r, pr, rs)
+
+		return ""
+
+	case 20441: // regContains
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 2 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		v2 := p.GetVarValue(r, instrT.Params[v1p+1])
+
+		rs := tk.RegContainsX(tk.ToStr(v1), tk.ToStr(v2))
+
+		p.SetVar(r, pr, rs)
+
+		return ""
+
+	case 20443: // regContainsIn
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		pr := instrT.Params[0]
+		v1p := 1
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		v2s := p.ParamsToStrs(r, instrT, v1p+1)
+
+		rs := tk.RegContainsIn(tk.ToStr(v1), v2s...)
+
+		p.SetVar(r, pr, rs)
+
+		return ""
+
+	case 20445: // regCount
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 2 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		v2 := p.GetVarValue(r, instrT.Params[v1p+1])
+
+		rs := tk.RegFindAllIndexX(tk.ToStr(v1), tk.ToStr(v2))
+
+		p.SetVar(r, pr, len(rs))
+
+		return ""
+
+	case 20451: // regSplit
+		if instrT.ParamLen < 3 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		pr := instrT.Params[0]
+
+		s1 := tk.ToStr(p.GetVarValue(r, instrT.Params[1]))
+
+		s2 := tk.ToStr(p.GetVarValue(r, instrT.Params[2]))
+
+		countT := -1
+
+		if instrT.ParamLen > 3 {
+			countT = tk.ToInt(p.GetVarValue(r, instrT.Params[3]))
+		}
+
+		listT := tk.RegSplitX(s1, s2, countT)
+
+		p.SetVar(r, pr, listT)
+
+		return ""
+
+	case 20491: // regQuote
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+
+		p.SetVar(r, pr, regexpx.QuoteMeta(v1))
+		return ""
 
 	case 20501: // sleep
 		if instrT.ParamLen < 1 {
@@ -10559,6 +11996,62 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		p.SetVar(r, pr, rsT)
 
 		return ""
+	case 20521: // getEnv
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		rsT := tk.GetEnv(tk.ToStr(p.GetVarValue(r, instrT.Params[v1p])))
+
+		p.SetVar(r, pr, rsT)
+
+		return ""
+
+	case 20522: // setEnv
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 2 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		rsT := tk.SetEnv(tk.ToStr(p.GetVarValue(r, instrT.Params[v1p])), tk.ToStr(p.GetVarValue(r, instrT.Params[v1p+1])))
+
+		p.SetVar(r, pr, rsT)
+
+		return ""
+
+	case 20523: // removeEnv
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		rsT := os.Unsetenv(tk.ToStr(p.GetVarValue(r, instrT.Params[v1p])))
+
+		p.SetVar(r, pr, rsT)
+
+		return ""
 
 	case 20601: // systemCmd
 		if instrT.ParamLen < 2 {
@@ -10575,6 +12068,43 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		// tk.Pln(v1, ",", optsA)
 
 		p.SetVar(r, pr, tk.SystemCmd(v1, optsA...))
+
+		return ""
+	case 20603: // openWithDefault
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+
+		rsT := tk.RunWinFileWithSystemDefault(v1)
+
+		if rsT != "" {
+			rsT = tk.GenerateErrorString(rsT)
+		}
+
+		p.SetVar(r, pr, rsT)
+
+		return ""
+
+	case 20901: // getOSName
+		var pr interface{} = -5
+		// v1p := 0
+
+		if instrT.ParamLen > 0 {
+			pr = instrT.Params[0]
+			// v1p = 1
+		}
+
+		p.SetVar(r, pr, runtime.GOOS)
 
 		return ""
 
@@ -11412,7 +12942,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 			return p.Errf(r, "not enough parameters(参数不够)")
 		}
 
-		var pr int = instrT.Params[0].Ref
+		var pr interface{} = instrT.Params[0]
 
 		argsT := p.ParamsToStrs(r, instrT, 2)
 
@@ -11450,7 +12980,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 			return p.Errf(r, "not enough parameters(参数不够)")
 		}
 
-		var p1 int = instrT.Params[0].Ref
+		var p1 interface{} = instrT.Params[0]
 
 		argsT := p.ParamsToList(r, instrT, 2)
 
@@ -11902,6 +13432,2185 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		rsT := tk.DecryptDataByTXDEF(v1, v2)
 
 		p.SetVar(r, pr, rsT)
+
+		return ""
+	case 26001: // getRandomPort
+		var pr interface{} = -5
+		// v1p := 0
+
+		if instrT.ParamLen > 0 {
+			pr = instrT.Params[0]
+			// v1p = 1
+		}
+
+		listener, errT := net.Listen("tcp", ":0")
+		if errT != nil {
+			return p.Errf(r, "获取随机端口失败：%v", errT)
+		}
+
+		portT := listener.Addr().(*net.TCPAddr).Port
+		// fmt.Println("Using port:", portT)
+		listener.Close()
+
+		p.SetVar(r, pr, portT)
+
+		return ""
+
+	case 32101: // dbConnect
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 2 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		dbT := sqltk.ConnectDBX(tk.ToStr(p.GetVarValue(r, instrT.Params[v1p])), tk.ToStr(p.GetVarValue(r, instrT.Params[v1p+1])))
+
+		p.SetVar(r, pr, dbT)
+
+		return ""
+
+	case 32102: // dbClose
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		errT := sqltk.CloseDBX(p.GetVarValue(r, instrT.Params[v1p]).(*sql.DB))
+
+		p.SetVar(r, pr, errT)
+
+		return ""
+
+	case 32103: // dbQuery
+		if instrT.ParamLen < 3 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		p1 := instrT.Params[0]
+
+		v2 := p.GetVarValue(r, instrT.Params[1])
+
+		v3 := p.GetVarValue(r, instrT.Params[2])
+
+		listT := p.ParamsToList(r, instrT, 3)
+
+		rs := sqltk.QueryDBX(v2.(*sql.DB), tk.ToStr(v3), listT...)
+
+		if tk.IsError(rs) {
+			p.SetVar(r, p1, rs)
+		} else {
+			p.SetVar(r, p1, rs)
+		}
+
+		return ""
+
+	case 32104: // dbQueryMap
+		if instrT.ParamLen < 4 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		p1 := instrT.Params[0]
+
+		v2 := p.GetVarValue(r, instrT.Params[1])
+
+		v3 := p.GetVarValue(r, instrT.Params[2])
+
+		v4 := p.GetVarValue(r, instrT.Params[3])
+
+		listT := p.ParamsToList(r, instrT, 4)
+
+		rs := sqltk.QueryDBMapX(v2.(*sql.DB), tk.ToStr(v3), tk.ToStr(v4), listT...)
+
+		if tk.IsError(rs) {
+			p.SetVar(r, p1, rs)
+		} else {
+			p.SetVar(r, p1, rs)
+		}
+
+		return ""
+
+	case 32105: // dbQueryRecs
+		if instrT.ParamLen < 3 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		p1 := instrT.Params[0]
+
+		v2 := p.GetVarValue(r, instrT.Params[1])
+
+		v3 := p.GetVarValue(r, instrT.Params[2])
+
+		listT := p.ParamsToList(r, instrT, 3)
+
+		rs := sqltk.QueryDBRecsX(v2.(*sql.DB), tk.ToStr(v3), listT...)
+
+		if tk.IsError(rs) {
+			p.SetVar(r, p1, rs)
+		} else {
+			p.SetVar(r, p1, rs)
+		}
+
+		return ""
+
+	case 32106: // dbQueryCount
+		if instrT.ParamLen < 3 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		p1 := instrT.Params[0]
+
+		v2 := p.GetVarValue(r, instrT.Params[1])
+
+		v3 := p.GetVarValue(r, instrT.Params[2])
+
+		listT := p.ParamsToList(r, instrT, 3)
+
+		rs := sqltk.QueryCountX(v2.(*sql.DB), tk.ToStr(v3), listT...)
+
+		if tk.IsError(rs) {
+			p.SetVar(r, p1, rs)
+		} else {
+			p.SetVar(r, p1, rs)
+		}
+
+		return ""
+
+	case 32107: // dbQueryFloat
+		if instrT.ParamLen < 3 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		p1 := instrT.Params[0]
+
+		v2 := p.GetVarValue(r, instrT.Params[1])
+
+		v3 := p.GetVarValue(r, instrT.Params[2])
+
+		listT := p.ParamsToList(r, instrT, 3)
+
+		rs := sqltk.QueryFloatX(v2.(*sql.DB), tk.ToStr(v3), listT...)
+
+		if tk.IsError(rs) {
+			p.SetVar(r, p1, rs)
+		} else {
+			p.SetVar(r, p1, rs)
+		}
+
+		return ""
+
+	case 32108: // dbQueryString
+		if instrT.ParamLen < 3 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		p1 := instrT.Params[0]
+
+		v2 := p.GetVarValue(r, instrT.Params[1])
+
+		v3 := p.GetVarValue(r, instrT.Params[2])
+
+		listT := p.ParamsToList(r, instrT, 3)
+
+		rs := sqltk.QueryStringX(v2.(*sql.DB), tk.ToStr(v3), listT...)
+
+		if tk.IsError(rs) {
+			p.SetVar(r, p1, rs)
+		} else {
+			p.SetVar(r, p1, rs)
+		}
+
+		return ""
+
+	case 32109: // dbQueryMapArray
+		if instrT.ParamLen < 4 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		p1 := instrT.Params[0]
+
+		v2 := p.GetVarValue(r, instrT.Params[1])
+
+		v3 := p.GetVarValue(r, instrT.Params[2])
+
+		v4 := p.GetVarValue(r, instrT.Params[3])
+
+		listT := p.ParamsToList(r, instrT, 4)
+
+		rs := sqltk.QueryDBMapArrayX(v2.(*sql.DB), tk.ToStr(v3), tk.ToStr(v4), listT...)
+
+		if tk.IsError(rs) {
+			p.SetVar(r, p1, rs)
+		} else {
+			p.SetVar(r, p1, rs)
+		}
+
+		return ""
+
+	case 32111: // dbExec
+		if instrT.ParamLen < 3 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		p1 := instrT.Params[0]
+
+		v2 := p.GetVarValue(r, instrT.Params[1])
+
+		v3 := p.GetVarValue(r, instrT.Params[2])
+
+		listT := p.ParamsToList(r, instrT, 3)
+
+		rs := sqltk.ExecDBX(v2.(*sql.DB), tk.ToStr(v3), listT...)
+
+		if tk.IsError(rs) {
+			p.SetVar(r, p1, rs)
+		} else {
+			nv := rs.([]int64)
+			p.SetVar(r, p1, []interface{}{int(nv[0]), int(nv[1])})
+		}
+
+		return ""
+
+	case 40001: // renderMarkdown
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+
+		p.SetVar(r, pr, tk.RenderMarkdown(v1))
+
+		return ""
+
+	case 41101: // pngEncode
+		if instrT.ParamLen < 3 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		pr := instrT.Params[0]
+		v1p := 1
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+		v2 := p.GetVarValue(r, instrT.Params[v1p+1]).(image.Image)
+
+		v1w, ok := v1.(io.Writer)
+		if ok {
+			errT := png.Encode(v1w, v2)
+
+			p.SetVar(r, pr, errT)
+			return ""
+
+		}
+
+		v1s := tk.ToStr(v1)
+
+		fileT, errT := os.Create(v1s)
+
+		if errT != nil {
+			p.SetVar(r, pr, errT)
+			return ""
+		}
+
+		defer fileT.Close()
+
+		errT = png.Encode(fileT, v2)
+
+		p.SetVar(r, pr, errT)
+		return ""
+
+	case 41103: // jpegEnocde/jpgEncode
+		if instrT.ParamLen < 3 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		pr := instrT.Params[0]
+		v1p := 1
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p]).(io.Writer)
+		v2 := p.GetVarValue(r, instrT.Params[v1p+1]).(image.Image)
+
+		vs := p.ParamsToStrs(r, instrT, v1p+2)
+
+		qualityT := tk.ToInt(tk.GetSwitch(vs, "-quality=", "90"), 90)
+
+		if qualityT < 1 || qualityT > 100 {
+			return p.Errf(r, "质量参数错误（1-100）：%v", qualityT)
+		}
+
+		v1w, ok := v1.(io.Writer)
+		if ok {
+			errT := jpeg.Encode(v1w, v2, &jpeg.Options{Quality: qualityT})
+
+			p.SetVar(r, pr, errT)
+			return ""
+
+		}
+
+		v1s := tk.ToStr(v1)
+
+		fileT, errT := os.Create(v1s)
+
+		if errT != nil {
+			p.SetVar(r, pr, errT)
+			return ""
+		}
+
+		defer fileT.Close()
+
+		errT = jpeg.Encode(fileT, v2, &jpeg.Options{Quality: qualityT})
+
+		p.SetVar(r, pr, errT)
+		return ""
+
+	case 45001: // getActiveDisplayCount
+		var pr interface{} = -5
+		// v1p := 0
+
+		if instrT.ParamLen > 0 {
+			pr = instrT.Params[0]
+			// v1p = 1
+		}
+
+		p.SetVar(r, pr, screenshot.NumActiveDisplays())
+
+		return ""
+
+	case 45011: // getScreenResolution
+		pr := instrT.Params[0]
+
+		vs := p.ParamsToStrs(r, instrT, 1)
+
+		formatT := p.GetSwitchVarValue(r, vs, "-format=", "")
+
+		idxStrT := p.GetSwitchVarValue(r, vs, "-index=", "0")
+
+		idxT := tk.StrToInt(idxStrT, 0)
+
+		rectT := screenshot.GetDisplayBounds(idxT)
+
+		var vr interface{}
+
+		if formatT == "" {
+			vr = []interface{}{rectT.Max.X, rectT.Max.Y}
+		} else if formatT == "raw" || formatT == "rect" {
+			vr = rectT
+		} else if formatT == "json" {
+			vr = tk.ToJSONX(rectT, "-sort")
+		}
+
+		// return []interface{}{rectT.Max.X, rectT.Max.Y}
+		p.SetVar(r, pr, vr)
+
+		return ""
+
+	case 45021: // captureDisplay
+		// var pr interface{} = -5
+		// v1p := 0
+
+		// if instrT.ParamLen > 0 {
+		pr := instrT.Params[0]
+		v1p := 1
+		// }
+
+		v1 := tk.ToInt(p.GetVarValue(r, GetVarRefFromArray(instrT.Params, v1p)), 0)
+
+		imageA, errT := screenshot.CaptureDisplay(v1)
+
+		if errT != nil {
+			p.SetVar(r, pr, errT)
+			return ""
+		}
+
+		p.SetVar(r, pr, imageA)
+		return ""
+
+	case 45023: // captureScreen/captureScreenRect
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+		// var pr interface{} = -5
+		// v1p := 0
+
+		// if instrT.ParamLen > 0 {
+		pr := instrT.Params[0]
+		v1p := 1
+		// }
+
+		var v1, v2, v3, v4 int
+
+		var errT error
+
+		if instrT.ParamLen > 1 {
+			v1 = tk.ToInt(p.GetVarValue(r, instrT.Params[v1p]), 0)
+		} else {
+			v1 = 0
+		}
+
+		if instrT.ParamLen > 2 {
+			v2 = tk.ToInt(p.GetVarValue(r, instrT.Params[v1p+1]), 0)
+		} else {
+			v2 = 0
+		}
+
+		if instrT.ParamLen > 3 {
+			v3 = tk.ToInt(p.GetVarValue(r, instrT.Params[v1p+2]), 0)
+		} else {
+			v3 = 0
+		}
+
+		if instrT.ParamLen > 4 {
+			v4 = tk.ToInt(p.GetVarValue(r, instrT.Params[v1p+3]), 0)
+		} else {
+			v4 = 0
+		}
+
+		var imageT *image.RGBA
+
+		if v3 == 0 && v4 == 0 {
+			imageT, errT = screenshot.CaptureDisplay(0)
+
+		} else {
+			imageT, errT = screenshot.Capture(v1, v2, v3, v4)
+		}
+
+		if errT != nil {
+			p.SetVar(r, pr, errT)
+			return ""
+		}
+
+		p.SetVar(r, pr, imageT)
+		return ""
+
+	case 50001: // genToken
+		if instrT.ParamLen < 4 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		pr := instrT.Params[0]
+
+		v1p := 1
+
+		v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+		v2 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p+1]))
+		v3 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p+2]))
+
+		p.SetVar(r, pr, tk.GenerateToken(v1, v2, v3, p.ParamsToStrs(r, instrT, 4)...))
+
+		return ""
+
+	case 50003: // checkToken
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		pr := instrT.Params[0]
+
+		v1p := 1
+
+		v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+
+		p.SetVar(r, pr, tk.CheckToken(v1, p.ParamsToStrs(r, instrT, 2)...))
+
+		return ""
+
+	case 70001: // leClear
+		leClear()
+
+		return ""
+
+	case 70003: // leLoadStr/leSetAll
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		// var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			// pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+
+		leLoadString(v1)
+
+		// p.SetVar(r, pr, rs)
+
+		return ""
+
+	case 70007: // leSaveStr/leGetAll
+		// if instrT.ParamLen < 1 {
+		// 	return p.Errf(r, "not enough parameters(参数不够)")
+		// }
+
+		var pr interface{} = -5
+		// v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			// v1p = 1
+		}
+
+		// v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+
+		// leLoadString(v1)
+
+		p.SetVar(r, pr, leSaveString())
+
+		return ""
+
+	case 70011: // leLoad/leLoadFile
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+
+		rs := leLoadFile(v1)
+
+		p.SetVar(r, pr, rs)
+
+		return ""
+
+	case 70012: // leLoadClip
+		// if instrT.ParamLen < 1 {
+		// 	return p.Errf(r, "not enough parameters(参数不够)")
+		// }
+
+		var pr interface{} = -5
+		// v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			// v1p = 1
+		}
+
+		// v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+
+		rs := leLoadClip()
+
+		p.SetVar(r, pr, rs)
+
+		return ""
+
+	case 70015: // leLoadSSH
+		if instrT.ParamLen < 5 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		pr := instrT.Params[0]
+		v1p := 1
+
+		pa := p.ParamsToStrs(r, instrT, v1p)
+
+		var v1, v2, v3, v4, v5 string
+
+		v1 = tk.SafelyGetStringForKeyWithDefault(leSSHInfoG, "Host")
+		v2 = tk.SafelyGetStringForKeyWithDefault(leSSHInfoG, "Port")
+		v3 = tk.SafelyGetStringForKeyWithDefault(leSSHInfoG, "User")
+		v4 = tk.SafelyGetStringForKeyWithDefault(leSSHInfoG, "Password")
+		v5 = tk.SafelyGetStringForKeyWithDefault(leSSHInfoG, "Path")
+
+		v1 = p.GetSwitchVarValue(r, pa, "-host=", v1)     // tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+		v2 = p.GetSwitchVarValue(r, pa, "-port=", v2)     // tk.ToStr(p.GetVarValue(r, instrT.Params[v1p+1]))
+		v3 = p.GetSwitchVarValue(r, pa, "-user=", v3)     // tk.ToStr(p.GetVarValue(r, instrT.Params[v1p+2]))
+		v4 = p.GetSwitchVarValue(r, pa, "-password=", v4) // tk.ToStr(p.GetVarValue(r, instrT.Params[v1p+3]))
+		if strings.HasPrefix(v4, "740404") {
+			v4 = tk.DecryptStringByTXDEF(v4)
+		}
+		v5 = p.GetSwitchVarValue(r, pa, "-path=", v5) // tk.ToStr(p.GetVarValue(r, instrT.Params[v1p+4]))
+
+		sshT, errT := tk.NewSSHClient(v1, v2, v3, v4)
+
+		if errT != nil {
+			p.SetVar(r, pr, errT)
+			if !leSilentG {
+				tk.Pl("连接服务器失败：%v", errT)
+			}
+
+			return ""
+		}
+
+		defer sshT.Close()
+
+		basePathT, errT := tk.EnsureBasePath("xie")
+		if errT != nil {
+			p.SetVar(r, pr, errT)
+			if !leSilentG {
+				tk.Pl("谢语言根路径不存在")
+			}
+			return ""
+		}
+
+		tmpFileT := filepath.Join(basePathT, "leSSHTmp.txt")
+
+		errT = sshT.Download(v5, tmpFileT)
+
+		if errT != nil {
+			p.SetVar(r, pr, errT)
+			if !leSilentG {
+				tk.Pl("从服务器读取文件失败（%v）：%v", v5, errT)
+			}
+			return ""
+		}
+
+		leSSHInfoG["Host"] = v1
+		leSSHInfoG["Port"] = v2
+		leSSHInfoG["User"] = v3
+		leSSHInfoG["Password"] = v4
+		leSSHInfoG["Path"] = v5
+
+		errT = leLoadFile(tmpFileT)
+		if errT != nil {
+			p.SetVar(r, pr, errT)
+			if !leSilentG {
+				tk.Pl("加载文件失败（%v）：%v", tmpFileT, errT)
+			}
+			return ""
+		}
+
+		p.SetVar(r, pr, errT)
+
+		return ""
+
+	case 70017: // leSave/leSaveFile
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+
+		rs := leSaveFile(v1)
+
+		p.SetVar(r, pr, rs)
+
+		return ""
+
+	case 70023: // leSaveClip
+		// if instrT.ParamLen < 1 {
+		// 	return p.Errf(r, "not enough parameters(参数不够)")
+		// }
+
+		var pr interface{} = -5
+		// v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			// v1p = 1
+		}
+
+		rs := leSaveClip()
+
+		p.SetVar(r, pr, rs)
+
+		return ""
+	case 70025: // leSaveSSH
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		pr := instrT.Params[0]
+		v1p := 1
+
+		pa := p.ParamsToStrs(r, instrT, v1p)
+
+		var v1, v2, v3, v4, v5 string
+
+		v1 = tk.SafelyGetStringForKeyWithDefault(leSSHInfoG, "Host")
+		v2 = tk.SafelyGetStringForKeyWithDefault(leSSHInfoG, "Port")
+		v3 = tk.SafelyGetStringForKeyWithDefault(leSSHInfoG, "User")
+		v4 = tk.SafelyGetStringForKeyWithDefault(leSSHInfoG, "Password")
+		v5 = tk.SafelyGetStringForKeyWithDefault(leSSHInfoG, "Path")
+
+		v1 = p.GetSwitchVarValue(r, pa, "-host=", v1)     // tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+		v2 = p.GetSwitchVarValue(r, pa, "-port=", v2)     // tk.ToStr(p.GetVarValue(r, instrT.Params[v1p+1]))
+		v3 = p.GetSwitchVarValue(r, pa, "-user=", v3)     // tk.ToStr(p.GetVarValue(r, instrT.Params[v1p+2]))
+		v4 = p.GetSwitchVarValue(r, pa, "-password=", v4) // tk.ToStr(p.GetVarValue(r, instrT.Params[v1p+3]))
+		if strings.HasPrefix(v4, "740404") {
+			v4 = tk.DecryptStringByTXDEF(v4)
+		}
+		v5 = p.GetSwitchVarValue(r, pa, "-path=", v5) // tk.ToStr(p.GetVarValue(r, instrT.Params[v1p+4]))
+
+		// tk.Plvsr(v1, v2, v3, v4, v5)
+
+		sshT, errT := tk.NewSSHClient(v1, v2, v3, v4)
+
+		if errT != nil {
+			p.SetVar(r, pr, errT)
+			if !leSilentG {
+				tk.Pl("连接服务器失败：%v", errT)
+			}
+			return ""
+		}
+
+		defer sshT.Close()
+
+		basePathT, errT := tk.EnsureBasePath("xie")
+		if errT != nil {
+			p.SetVar(r, pr, errT)
+			if !leSilentG {
+				tk.Pl("谢语言根路径不存在")
+			}
+			return ""
+		}
+
+		tmpFileT := filepath.Join(basePathT, "leSSHTmp.txt")
+
+		errT = leSaveFile(tmpFileT)
+		if errT != nil {
+			p.SetVar(r, pr, errT)
+			if !leSilentG {
+				tk.Pl("保存临时文件失败：%v", errT)
+			}
+			return ""
+		}
+
+		errT = sshT.Upload(tmpFileT, v5, pa...)
+
+		if errT != nil {
+			p.SetVar(r, pr, errT)
+			if !leSilentG {
+				tk.Pl("保存文件到服务器失败（%v）：%v", v5, errT)
+			}
+
+			return ""
+		}
+
+		p.SetVar(r, pr, errT)
+
+		return ""
+
+	case 70016: // leLoadUrl
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+
+		rs := leLoadUrl(v1)
+
+		p.SetVar(r, pr, rs)
+
+		return ""
+
+	case 70027: // leInsert
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 2 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := tk.ToInt(p.GetVarValue(r, instrT.Params[v1p]))
+		v2 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p+1]))
+
+		rs := leInsertLine(v1, v2)
+
+		p.SetVar(r, pr, rs)
+
+		return ""
+
+	case 70029: // leAppend/leAppendLine
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+
+		rs := leAppendLine(v1)
+
+		p.SetVar(r, pr, rs)
+
+		return ""
+
+	case 70033: // leSet/leSetLine
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 2 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := tk.ToInt(p.GetVarValue(r, instrT.Params[v1p]))
+		v2 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p+1]))
+
+		rs := leSetLine(v1, v2)
+
+		p.SetVar(r, pr, rs)
+
+		return ""
+
+	case 70037: // leSetLines
+		if instrT.ParamLen < 3 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 3 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := tk.ToInt(p.GetVarValue(r, instrT.Params[v1p]))
+		v2 := tk.ToInt(p.GetVarValue(r, instrT.Params[v1p+1]))
+		v3 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p+2]))
+
+		rs := leSetLines(v1, v2, v3)
+
+		p.SetVar(r, pr, rs)
+
+		return ""
+
+	case 70039: // leRemove/leRemoveLine
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := tk.ToInt(p.GetVarValue(r, instrT.Params[v1p]))
+
+		rs := leRemoveLine(v1)
+
+		p.SetVar(r, pr, rs)
+
+		return ""
+
+	case 70043: // leRemoveLines
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 2 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := tk.ToInt(p.GetVarValue(r, instrT.Params[v1p]))
+		v2 := tk.ToInt(p.GetVarValue(r, instrT.Params[v1p+1]))
+
+		rs := leRemoveLines(v1, v2)
+
+		p.SetVar(r, pr, rs)
+
+		return ""
+
+	case 70045: // leViewAll
+		// if instrT.ParamLen < 1 {
+		// 	return p.Errf(r, "not enough parameters(参数不够)")
+		// }
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 0 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		vs := p.ParamsToStrs(r, instrT, v1p)
+
+		rs := leViewAll(vs...)
+
+		if tk.IsError(rs) {
+			if !leSilentG {
+				tk.Pl("内部行编辑器操作失败：%v", rs)
+			}
+		}
+
+		p.SetVar(r, pr, rs)
+
+		return ""
+
+	case 70047: // leView/leViewLine
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := tk.ToInt(p.GetVarValue(r, instrT.Params[v1p]))
+
+		rs := leViewLine(v1)
+
+		if tk.IsError(rs) {
+			if !leSilentG {
+				tk.Pl("内部行编辑器操作失败：%v", rs)
+			}
+		}
+
+		p.SetVar(r, pr, rs)
+
+		return ""
+
+	case 70049: // leSort
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := tk.ToBool(p.GetVarValue(r, instrT.Params[v1p]))
+
+		rs := leSort(v1)
+
+		p.SetVar(r, pr, rs)
+
+		return ""
+
+	case 70051: // leEnc
+		// if instrT.ParamLen < 1 {
+		// 	return p.Errf(r, "not enough parameters(参数不够)")
+		// }
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		vs := p.ParamsToStrs(r, instrT, v1p)
+
+		rs := leConvertToUTF8(vs...)
+
+		p.SetVar(r, pr, rs)
+
+		return ""
+
+	case 70061: // leLineEnd
+		// if instrT.ParamLen < 1 {
+		// 	return p.Errf(r, "not enough parameters(参数不够)")
+		// }
+
+		pr := instrT.Params[0]
+		v1p := 1
+
+		if instrT.ParamLen > 1 {
+			v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+			rs := leLineEnd(v1)
+			p.SetVar(r, pr, rs)
+
+			return ""
+		}
+
+		rs := leLineEnd()
+
+		p.SetVar(r, pr, rs)
+
+		return ""
+
+	case 70071: // leSilent
+
+		pr := instrT.Params[0]
+		v1p := 1
+
+		if instrT.ParamLen < 2 {
+			p.SetVar(r, pr, leSilent())
+
+			return ""
+		}
+
+		rs := leSilent(tk.ToBool(p.GetVarValue(r, instrT.Params[v1p])))
+
+		p.SetVar(r, pr, rs)
+
+		return ""
+
+	case 70081: // leFind
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		rs := leFind(tk.ToStr(p.GetVarValue(r, instrT.Params[v1p])))
+
+		if rs != nil {
+			if !leSilentG {
+				for _, v := range rs {
+					tk.Pl("%v", v)
+				}
+			}
+		}
+
+		p.SetVar(r, pr, rs)
+
+		return ""
+
+	case 70083: // leReplace
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 2 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+		v2 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p+1]))
+
+		rs := leReplace(v1, v2)
+
+		if rs != nil {
+			if !leSilentG {
+				for _, v := range rs {
+					tk.Pl("%v", v)
+				}
+				tk.Pl("共替换 %v 处", len(rs))
+			}
+		}
+
+		p.SetVar(r, pr, rs)
+
+		return ""
+
+	case 70091: // leSSHInfo/leSshInfo
+		var pr interface{} = -5
+		// v1p := 0
+
+		if instrT.ParamLen > 0 {
+			pr = instrT.Params[0]
+			// v1p = 1
+		}
+
+		p.SetVar(r, pr, leSSHInfoG)
+
+		if !leSilentG {
+			tk.Pl("leSSHInfo: %v", leSSHInfoG)
+		}
+
+		return ""
+
+	case 70098: // leRun
+		// if instrT.ParamLen < 2 {
+		// 	return p.Errf(r, "not enough parameters(参数不够)")
+		// }
+
+		// var pr interface{} = -5
+		// v1p := 0
+
+		// if instrT.ParamLen > 1 {
+		pr := instrT.Params[0]
+		v1p := 1
+		// }
+
+		codeT := leSaveString()
+
+		inputT := p.GetVarValue(r, GetVarRefInParams(instrT.Params, v1p))
+
+		if tk.IsUndefined(inputT) {
+			inputT = nil
+		}
+
+		objT := p.GetVarValue(r, GetVarRefInParams(instrT.Params, v1p+1))
+
+		obj1, ok := objT.(map[string]interface{})
+
+		if !ok {
+			obj1 = nil
+		}
+
+		vs := p.ParamsToStrs(r, instrT, v1p+2)
+
+		rs := RunCode(codeT, inputT, obj1, vs...)
+
+		p.SetVar(r, pr, rs)
+
+		p.SetVar(r, pr, rs)
+
+		return ""
+	case 80001: // getMimeType
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+
+		extT := filepath.Ext(v1)
+
+		p.SetVar(r, pr, tk.GetMimeTypeByExt(extT))
+
+		return ""
+
+	case 90101: // archiveFilesToZip
+		if instrT.ParamLen < 3 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		pr := instrT.Params[0]
+		v1p := 1
+
+		v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+		vs := p.ParamsToList(r, instrT, v1p+1)
+
+		fileNamesT := make([]string, 0, len(vs))
+		args1T := make([]string, 0, len(vs))
+
+		for _, vi1 := range vs {
+			nvs, ok := vi1.(string)
+
+			if ok {
+				if !strings.HasPrefix(nvs, "-") {
+					fileNamesT = append(fileNamesT, nvs)
+				} else {
+					args1T = append(args1T, nvs)
+				}
+
+				continue
+			}
+
+			nvsa, ok := vi1.([]string)
+			if ok {
+				for _, vj1 := range nvsa {
+					fileNamesT = append(fileNamesT, vj1)
+				}
+
+				continue
+			}
+
+			nvsi, ok := vi1.([]interface{})
+			if ok {
+				for _, vj1 := range nvsi {
+					fileNamesT = append(fileNamesT, tk.ToStr(vj1))
+				}
+
+				continue
+			}
+
+		}
+
+		z := &archiver.Zip{
+			// CompressionLevel:       3,
+			OverwriteExisting: tk.IfSwitchExistsWhole(args1T, "-overwrite"),
+			MkdirAll:          tk.IfSwitchExistsWhole(args1T, "-makeDirs"),
+			// SelectiveCompression:   true,
+			// ImplicitTopLevelFolder: false,
+			// ContinueOnError:        false,
+		}
+
+		errT := z.Archive(fileNamesT, v1)
+		// if errT != nil {
+		// 	tk.Plv(errT)
+		// 	// tk.AppendStringToFile(tk.Spr("Archive error(%v): %v", filePathA, errT), logFileNameT)
+		// 	tk.SaveStringToFile(tk.Spr("Archive error(%v): %v", filePathA, errT), errFileNameT)
+		// 	return
+		// }
+
+		p.SetVar(r, pr, errT)
+
+		return ""
+
+	case 90111: // extractFilesFromZip
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		pr := instrT.Params[0]
+		v1p := 1
+
+		v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+
+		destT := "."
+
+		if instrT.ParamLen > 2 {
+			destT = tk.ToStr(p.GetVarValue(r, instrT.Params[v1p+1]))
+		}
+
+		z := &archiver.Zip{
+			// CompressionLevel:       3,
+			OverwriteExisting: true,
+			MkdirAll:          true,
+			// SelectiveCompression:   true,
+			// ImplicitTopLevelFolder: false,
+			// ContinueOnError:        false,
+		}
+
+		errT := z.Unarchive(v1, destT)
+		// if errT != nil {
+		// 	tk.Plv(errT)
+		// 	// tk.AppendStringToFile(tk.Spr("Archive error(%v): %v", filePathA, errT), logFileNameT)
+		// 	tk.SaveStringToFile(tk.Spr("Archive error(%v): %v", filePathA, errT), errFileNameT)
+		// 	return
+		// }
+
+		p.SetVar(r, pr, errT)
+
+		return ""
+
+	case 90201: // compressData
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		pr := instrT.Params[0]
+		v1p := 1
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		v1vb, ok := v1.([]byte)
+
+		if !ok {
+			v1vs, ok := v1.(string)
+
+			if ok {
+				v1vb = []byte(v1vs)
+			} else {
+				return p.Errf(r, "参数格式错误（invalid param type）：%T(%v)", v1, v1)
+			}
+		}
+
+		vs := p.ParamsToStrs(r, instrT, v1p+1)
+
+		methodT := p.GetSwitchVarValue(r, vs, "-method=", "gzip")
+
+		nameT := p.GetSwitchVarValue(r, vs, "-name=", "")
+		commentT := p.GetSwitchVarValue(r, vs, "-comment=", "")
+		timeT := tk.ToTime(p.GetSwitchVarValue(r, vs, "-time=", ""), time.Now()).(time.Time)
+
+		var buf bytes.Buffer
+		zw := gzip.NewWriter(&buf)
+
+		if methodT == "gzip" {
+			zw.Name = nameT
+			zw.Comment = commentT
+			zw.ModTime = timeT
+
+			_, err := zw.Write(v1vb)
+			if err != nil {
+				p.SetVar(r, pr, fmt.Errorf("压缩数据时发生错误（failed to compress data）：%v", err))
+				return ""
+			}
+
+			if err := zw.Close(); err != nil {
+				p.SetVar(r, pr, fmt.Errorf("压缩数据关闭文件时发生错误（failed to compress data file）：%v", err))
+				return ""
+			}
+
+			p.SetVar(r, pr, buf.Bytes())
+			return ""
+		}
+
+		p.SetVar(r, pr, fmt.Errorf("不支持的压缩格式（unsupported compress method）：%v", methodT))
+		return ""
+
+	case 100001: // initWebGUIW/initWebGuiW
+		applicationPathT := tk.GetApplicationPath()
+
+		osT := tk.GetOSName()
+
+		if tk.Contains(osT, "inux") {
+		} else if tk.Contains(osT, "arwin") {
+		} else {
+			if !tk.IfFileExists(filepath.Join(applicationPathT, "xiewbr.exe")) {
+				// _, errT := exec.LookPath("xiewbr.exe")
+
+				// if errT != nil {
+				if !leSilentG {
+					tk.Pl("初始化WEB图形界面环境……")
+				}
+
+				rs := tk.DownloadFile("http://xie.topget.org/pub/xiewbr.exe", applicationPathT, "xiewbr.exe")
+
+				if tk.IsErrorString(rs) {
+					return p.Errf(r, "初始化WEB图形界面环境失败")
+				}
+
+				rs = tk.DownloadFile("http://xie.topget.org/pub/scapp.exe", applicationPathT, "scapp.exe")
+
+				if tk.IsErrorString(rs) {
+					return p.Errf(r, "初始化WEB图形界面环境失败")
+				}
+			}
+		}
+
+		return ""
+
+	case 100003: // updateWebGuiW
+		applicationPathT := tk.GetApplicationPath()
+
+		osT := tk.GetOSName()
+
+		if tk.Contains(osT, "inux") {
+		} else if tk.Contains(osT, "arwin") {
+		} else {
+			if !leSilentG {
+				tk.Pl("更新WEB图形界面环境……")
+			}
+
+			rs := tk.DownloadFile("http://xie.topget.org/pub/xiewbr.exe", applicationPathT, "xiewbr.exe")
+
+			if tk.IsErrorString(rs) {
+				return p.Errf(r, "更新WEB图形界面环境失败")
+			}
+
+			rs = tk.DownloadFile("http://xie.topget.org/pub/scapp.exe", applicationPathT, "scapp.exe")
+
+			if tk.IsErrorString(rs) {
+				return p.Errf(r, "初始化WEB图形界面环境失败")
+			}
+		}
+
+		return ""
+
+	case 100011: // initWebGUIC/initWebGuiC
+		applicationPathT := tk.GetApplicationPath()
+
+		osT := tk.GetOSName()
+
+		if tk.Contains(osT, "inux") {
+		} else if tk.Contains(osT, "arwin") {
+		} else {
+			zipPathT := filepath.Join(applicationPathT, "xiecbr.zip")
+			if !tk.IfFileExists(zipPathT) {
+				// _, errT := exec.LookPath("xiewbr.exe")
+
+				// if errT != nil {
+				if !leSilentG {
+					tk.Pl("初始化WEB图形界面环境（CEF）……")
+				}
+
+				rs := tk.DownloadFile("http://xie.topget.org/pub/xiecbr.zip", applicationPathT, "xiecbr.zip")
+
+				if tk.IsErrorString(rs) {
+					return p.Errf(r, "初始化WEB图形界面环境失败")
+				}
+
+				z := &archiver.Zip{
+					// CompressionLevel:       3,
+					// OverwriteExisting:      false,
+					// MkdirAll:               true,
+					// SelectiveCompression:   true,
+					// ImplicitTopLevelFolder: false,
+					// ContinueOnError:        false,
+				}
+
+				errT := z.Unarchive(zipPathT, applicationPathT)
+				if errT != nil {
+					return p.Errf(r, "解压缩图形环境压缩包失败：%v", errT)
+				}
+
+			}
+		}
+
+		return ""
+
+	case 200001: // sshConnect/sshOpen
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		pr := instrT.Params[0]
+		v1p := 1
+
+		pa := p.ParamsToStrs(r, instrT, v1p)
+
+		var v1, v2, v3, v4 string
+
+		v1 = strings.TrimSpace(p.GetSwitchVarValue(r, pa, "-host=", v1))
+		v2 = strings.TrimSpace(p.GetSwitchVarValue(r, pa, "-port=", "22"))
+		v3 = strings.TrimSpace(p.GetSwitchVarValue(r, pa, "-user=", v3))
+		v4 = strings.TrimSpace(p.GetSwitchVarValue(r, pa, "-password=", v4))
+		if strings.HasPrefix(v4, "740404") {
+			v4 = strings.TrimSpace(tk.DecryptStringByTXDEF(v4))
+		}
+
+		if v1 == "" {
+			p.SetVar(r, pr, fmt.Errorf("host不能为空"))
+			return ""
+		}
+
+		if v2 == "" {
+			p.SetVar(r, pr, fmt.Errorf("port不能为空"))
+			return ""
+		}
+
+		if v3 == "" {
+			p.SetVar(r, pr, fmt.Errorf("user不能为空"))
+			return ""
+		}
+
+		if v4 == "" {
+			p.SetVar(r, pr, fmt.Errorf("password不能为空"))
+			return ""
+		}
+
+		sshT, errT := tk.NewSSHClient(v1, v2, v3, v4)
+
+		if errT != nil {
+			p.SetVar(r, pr, errT)
+
+			return ""
+		}
+
+		p.SetVar(r, pr, sshT)
+		return ""
+
+	case 200003: // sshClose
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		sshT, ok := v1.(*goph.Client)
+
+		if !ok {
+			return p.Errf(r, "参数类型错误：%T(%v)", sshT, sshT)
+		}
+
+		rsT := sshT.Close()
+
+		p.SetVar(r, pr, rsT)
+		return ""
+
+	case 200011: // sshUpload
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		pr := instrT.Params[0]
+		v1p := 1
+
+		pa := p.ParamsToStrs(r, instrT, v1p)
+
+		var v1, v2, v3, v4, v5, v6 string
+
+		v1 = strings.TrimSpace(p.GetSwitchVarValue(r, pa, "-host=", v1))
+		v2 = strings.TrimSpace(p.GetSwitchVarValue(r, pa, "-port=", v2))
+		v3 = strings.TrimSpace(p.GetSwitchVarValue(r, pa, "-user=", v3))
+		v4 = strings.TrimSpace(p.GetSwitchVarValue(r, pa, "-password=", v4))
+		if strings.HasPrefix(v4, "740404") {
+			v4 = strings.TrimSpace(tk.DecryptStringByTXDEF(v4))
+		}
+		v5 = strings.TrimSpace(p.GetSwitchVarValue(r, pa, "-path=", v5))
+		v6 = strings.TrimSpace(p.GetSwitchVarValue(r, pa, "-remotePath=", v6))
+
+		withProgressT := tk.IfSwitchExistsWhole(pa, "-progress")
+
+		if v1 == "" {
+			p.SetVar(r, pr, fmt.Errorf("host不能为空"))
+			return ""
+		}
+
+		if v2 == "" {
+			p.SetVar(r, pr, fmt.Errorf("port不能为空"))
+			return ""
+		}
+
+		if v3 == "" {
+			p.SetVar(r, pr, fmt.Errorf("user不能为空"))
+			return ""
+		}
+
+		if v4 == "" {
+			p.SetVar(r, pr, fmt.Errorf("password不能为空"))
+			return ""
+		}
+
+		if v5 == "" {
+			p.SetVar(r, pr, fmt.Errorf("path不能为空"))
+			return ""
+		}
+
+		if v6 == "" {
+			p.SetVar(r, pr, fmt.Errorf("remotePath不能为空"))
+			return ""
+		}
+
+		sshT, errT := tk.NewSSHClient(v1, v2, v3, v4)
+
+		if errT != nil {
+			p.SetVar(r, pr, errT)
+
+			return ""
+		}
+
+		defer sshT.Close()
+
+		if withProgressT {
+			fmt.Println()
+			errT = sshT.UploadWithProgressFunc(v5, v6, func(i interface{}) interface{} {
+				fmt.Printf("\rprogress: %v                ", tk.IntToKMGT(i))
+				return ""
+			}, pa...)
+		} else {
+			errT = sshT.Upload(v5, v6, pa...)
+		}
+
+		if errT != nil {
+			p.SetVar(r, pr, errT)
+
+			return ""
+		}
+
+		p.SetVar(r, pr, nil)
+		return ""
+
+	case 200013: // sshUploadBytes
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		pr := instrT.Params[0]
+		v1p := 2
+
+		v0 := p.GetVarValue(r, instrT.Params[1])
+
+		// tk.Plvx(v0)
+
+		v0v, ok := v0.([]byte)
+
+		if !ok {
+			v0vs, ok := v0.(string)
+
+			if !ok {
+				return p.Errf(r, "参数类型错误：%T(%v)", v0, v0)
+			}
+
+			v0v = []byte(v0vs)
+		}
+
+		pa := p.ParamsToStrs(r, instrT, v1p)
+
+		var v1, v2, v3, v4, v6 string
+
+		v2 = "22"
+
+		v1 = strings.TrimSpace(p.GetSwitchVarValue(r, pa, "-host=", v1))
+		v2 = strings.TrimSpace(p.GetSwitchVarValue(r, pa, "-port=", v2))
+		v3 = strings.TrimSpace(p.GetSwitchVarValue(r, pa, "-user=", v3))
+		v4 = strings.TrimSpace(p.GetSwitchVarValue(r, pa, "-password=", v4))
+		if strings.HasPrefix(v4, "740404") {
+			v4 = strings.TrimSpace(tk.DecryptStringByTXDEF(v4))
+		}
+		// v5 = strings.TrimSpace(p.GetSwitchVarValue(pa, "-path=", v5))
+		v6 = strings.TrimSpace(p.GetSwitchVarValue(r, pa, "-remotePath=", v6))
+
+		if v1 == "" {
+			p.SetVar(r, pr, fmt.Errorf("host不能为空"))
+			return ""
+		}
+
+		if v2 == "" {
+			p.SetVar(r, pr, fmt.Errorf("port不能为空"))
+			return ""
+		}
+
+		if v3 == "" {
+			p.SetVar(r, pr, fmt.Errorf("user不能为空"))
+			return ""
+		}
+
+		if v4 == "" {
+			p.SetVar(r, pr, fmt.Errorf("password不能为空"))
+			return ""
+		}
+
+		// if v5 == "" {
+		// 	p.SetVar(r, pr, fmt.Errorf("path不能为空"))
+		// 	return ""
+		// }
+
+		if v6 == "" {
+			p.SetVar(r, pr, fmt.Errorf("remotePath不能为空"))
+			return ""
+		}
+
+		sshT, errT := tk.NewSSHClient(v1, v2, v3, v4)
+
+		if errT != nil {
+			p.SetVar(r, pr, errT)
+
+			return ""
+		}
+
+		defer sshT.Close()
+
+		errT = sshT.UploadFileContent(v0v, v6, pa...)
+
+		if errT != nil {
+			p.SetVar(r, pr, errT)
+
+			return ""
+		}
+
+		p.SetVar(r, pr, nil)
+		return ""
+
+	case 200021: // sshDownload
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		pr := instrT.Params[0]
+		v1p := 1
+
+		pa := p.ParamsToStrs(r, instrT, v1p)
+
+		var v1, v2, v3, v4, v5, v6 string
+
+		v2 = "22"
+
+		v1 = strings.TrimSpace(p.GetSwitchVarValue(r, pa, "-host=", v1))
+		v2 = strings.TrimSpace(p.GetSwitchVarValue(r, pa, "-port=", v2))
+		v3 = strings.TrimSpace(p.GetSwitchVarValue(r, pa, "-user=", v3))
+		v4 = strings.TrimSpace(p.GetSwitchVarValue(r, pa, "-password=", v4))
+		if strings.HasPrefix(v4, "740404") {
+			v4 = strings.TrimSpace(tk.DecryptStringByTXDEF(v4))
+		}
+		v5 = strings.TrimSpace(p.GetSwitchVarValue(r, pa, "-path=", v5))
+		v6 = strings.TrimSpace(p.GetSwitchVarValue(r, pa, "-remotePath=", v6))
+
+		if v1 == "" {
+			p.SetVar(r, pr, fmt.Errorf("host不能为空"))
+			return ""
+		}
+
+		if v2 == "" {
+			p.SetVar(r, pr, fmt.Errorf("port不能为空"))
+			return ""
+		}
+
+		if v3 == "" {
+			p.SetVar(r, pr, fmt.Errorf("user不能为空"))
+			return ""
+		}
+
+		if v4 == "" {
+			p.SetVar(r, pr, fmt.Errorf("password不能为空"))
+			return ""
+		}
+
+		if v5 == "" {
+			p.SetVar(r, pr, fmt.Errorf("path不能为空"))
+			return ""
+		}
+
+		if v6 == "" {
+			p.SetVar(r, pr, fmt.Errorf("remotePath不能为空"))
+			return ""
+		}
+
+		sshT, errT := tk.NewSSHClient(v1, v2, v3, v4)
+
+		if errT != nil {
+			p.SetVar(r, pr, errT)
+
+			return ""
+		}
+
+		defer sshT.Close()
+
+		errT = sshT.Download(v6, v5)
+
+		if errT != nil {
+			p.SetVar(r, pr, errT)
+
+			return ""
+		}
+
+		p.SetVar(r, pr, nil)
+		return ""
+
+	case 200023: // sshDownloadBytes
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		pr := instrT.Params[0]
+		v1p := 1
+
+		pa := p.ParamsToStrs(r, instrT, v1p)
+
+		var v1, v2, v3, v4, v6 string
+
+		v2 = "22"
+
+		v1 = strings.TrimSpace(p.GetSwitchVarValue(r, pa, "-host=", v1))
+		v2 = strings.TrimSpace(p.GetSwitchVarValue(r, pa, "-port=", v2))
+		v3 = strings.TrimSpace(p.GetSwitchVarValue(r, pa, "-user=", v3))
+		v4 = strings.TrimSpace(p.GetSwitchVarValue(r, pa, "-password=", v4))
+		if strings.HasPrefix(v4, "740404") {
+			v4 = strings.TrimSpace(tk.DecryptStringByTXDEF(v4))
+		}
+		// v5 = strings.TrimSpace(p.GetSwitchVarValue(pa, "-path=", v5))
+		v6 = strings.TrimSpace(p.GetSwitchVarValue(r, pa, "-remotePath=", v6))
+
+		if v1 == "" {
+			p.SetVar(r, pr, fmt.Errorf("host不能为空"))
+			return ""
+		}
+
+		if v2 == "" {
+			p.SetVar(r, pr, fmt.Errorf("port不能为空"))
+			return ""
+		}
+
+		if v3 == "" {
+			p.SetVar(r, pr, fmt.Errorf("user不能为空"))
+			return ""
+		}
+
+		if v4 == "" {
+			p.SetVar(r, pr, fmt.Errorf("password不能为空"))
+			return ""
+		}
+
+		// if v5 == "" {
+		// 	p.SetVar(r, pr, fmt.Errorf("path不能为空"))
+		// 	return ""
+		// }
+
+		if v6 == "" {
+			p.SetVar(r, pr, fmt.Errorf("remotePath不能为空"))
+			return ""
+		}
+
+		sshT, errT := tk.NewSSHClient(v1, v2, v3, v4)
+
+		if errT != nil {
+			p.SetVar(r, pr, errT)
+
+			return ""
+		}
+
+		defer sshT.Close()
+
+		rsT, errT := sshT.GetFileContent(v6)
+
+		if errT != nil {
+			p.SetVar(r, pr, errT)
+
+			return ""
+		}
+
+		p.SetVar(r, pr, rsT)
+		return ""
+
+	case 210001: // excelNew
+		// if instrT.ParamLen < 1 {
+		// 	return p.Errf(r, "not enough parameters(参数不够)")
+		// }
+
+		var pr interface{} = -5
+		// v1p := 0
+
+		if instrT.ParamLen > 0 {
+			pr = instrT.Params[0]
+			// v1p = 1
+		}
+
+		// v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+
+		f := excelize.NewFile()
+		if f == nil {
+			p.SetVar(r, pr, fmt.Errorf("无法创建新的Excel文件（failed to create Excel file）"))
+			return ""
+		}
+
+		p.SetVar(r, pr, f)
+		return ""
+
+	case 210003: // excelOpen
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+
+		f, err := excelize.OpenFile(v1)
+		if err != nil {
+			p.SetVar(r, pr, err)
+			return ""
+		}
+
+		p.SetVar(r, pr, f)
+		return ""
+
+	case 210005: // excelClose
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		f1, ok := v1.(*excelize.File)
+
+		if !ok {
+			return p.Errf(r, "参数类型错误：%T(%v)", v1, v1)
+		}
+
+		// tk.Pl("close excel: %v", f1)
+
+		err := f1.Close()
+		if err != nil {
+			p.SetVar(r, pr, err)
+			return ""
+		}
+
+		p.SetVar(r, pr, nil)
+		return ""
+
+	case 210007: // excelSaveAs
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		f1, ok := v1.(*excelize.File)
+
+		if !ok {
+			return p.Errf(r, "参数类型错误：%T(%v)", v1, v1)
+		}
+
+		v2 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p+1]))
+
+		err := f1.SaveAs(v2)
+		if err != nil {
+			p.SetVar(r, pr, err)
+			return ""
+		}
+
+		p.SetVar(r, pr, nil)
+		return ""
+
+	case 210009: // excelWrite
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		f1, ok := v1.(*excelize.File)
+
+		if !ok {
+			return p.Errf(r, "参数类型错误：%T(%v)", v1, v1)
+		}
+
+		v2 := p.GetVarValue(r, instrT.Params[v1p+1])
+
+		err := f1.Write(v2.(io.Writer))
+		if err != nil {
+			p.SetVar(r, pr, err)
+			return ""
+		}
+
+		p.SetVar(r, pr, nil)
+		return ""
+
+	case 210101: // excelReadSheet
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 2 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		f1, ok := v1.(*excelize.File)
+
+		if !ok {
+			return p.Errf(r, "参数类型错误：%T(%v)", v1, v1)
+		}
+
+		v2 := p.GetVarValue(r, instrT.Params[v1p+1])
+
+		v2i, ok := v2.(int)
+
+		if ok {
+			rowsT, errT := f1.GetRows(f1.GetSheetName(v2i))
+
+			if errT != nil {
+				p.SetVar(r, pr, errT)
+				return ""
+			}
+
+			p.SetVar(r, pr, rowsT)
+			return ""
+		}
+
+		rowsT, errT := f1.GetRows(tk.ToStr(v2))
+		if errT != nil {
+			p.SetVar(r, pr, errT)
+			return ""
+		}
+		p.SetVar(r, pr, rowsT)
+		return ""
+
+	case 210103: // excelReadCell
+		if instrT.ParamLen < 3 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 3 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		f1, ok := v1.(*excelize.File)
+
+		if !ok {
+			return p.Errf(r, "参数类型错误：%T(%v)", v1, v1)
+		}
+
+		v2 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p+1]))
+
+		v3 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p+2]))
+
+		valueT, errT := f1.GetCellValue(v2, v3)
+		if errT != nil {
+			p.SetVar(r, pr, errT)
+			return ""
+		}
+
+		p.SetVar(r, pr, valueT)
+		return ""
+
+	case 210105: // excelWriteCell/excelSetCell
+		if instrT.ParamLen < 4 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 4 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		// tk.Pl("v1p: %v, %#v", v1p, v1)
+
+		f1, ok := v1.(*excelize.File)
+
+		if !ok {
+			return p.Errf(r, "参数类型错误：%T(%v)", v1, v1)
+		}
+
+		v2 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p+1]))
+
+		v3 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p+2]))
+
+		v4 := p.GetVarValue(r, instrT.Params[v1p+3])
+
+		errT := f1.SetCellValue(v2, v3, v4)
+		if errT != nil {
+			p.SetVar(r, pr, errT)
+			return ""
+		}
+
+		p.SetVar(r, pr, nil)
+		return ""
+
+	case 210201: // excelGetSheetList
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		f1, ok := v1.(*excelize.File)
+
+		if !ok {
+			return p.Errf(r, "参数类型错误：%T(%v)", v1, v1)
+		}
+
+		p.SetVar(r, pr, f1.GetSheetList())
+		return ""
+
+	case 400000: // guiInit
+		// if instrT.ParamLen < 1 {
+		// 	return p.Errf(r, "not enough parameters(参数不够)")
+		// }
+
+		var pr interface{} = -5
+		// v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			// v1p = 1
+		}
+
+		v0, ok := p.GetVarValue(r, ParseVar("$guiG")).(tk.TXDelegate)
+
+		if !ok {
+			return p.Errf(r, "全局变量guiG不存在（$guiG not exists）")
+		}
+
+		rs := v0("init", p, nil)
+
+		// if tk.IsErrX(rs) {
+		p.SetVar(r, pr, rs)
+		// 	return p.ErrStrf(tk.GetErrStrX(rs))
+		// }
 
 		return ""
 
@@ -13177,8 +16886,212 @@ func init() {
 
 	GlobalsG.Vars["backQuote"] = "`"
 
-	GlobalsG.Vars["timeFormat"] = "`"
+	GlobalsG.Vars["timeFormat"] = "2006-01-02 15:04:05"
 
-	GlobalsG.Vars["timeFormatCompact"] = "`"
+	GlobalsG.Vars["timeFormatCompact"] = "20060102150405"
 
+}
+
+// w2d
+type XieObject interface {
+	TypeName() string
+
+	Init(argsA ...interface{}) interface{}
+
+	SetValue(argsA ...interface{}) interface{}
+
+	GetValue(argsA ...interface{}) interface{}
+
+	Call(argsA ...interface{}) interface{}
+
+	SetMember(argsA ...interface{}) interface{}
+
+	GetMember(argsA ...interface{}) interface{}
+}
+
+// type XieObjectImpl struct {
+// 	Members map[string]XieObject
+// 	Methods map[string]*XieObject
+// }
+
+// var _ XieObject = XieObjectImpl{}
+
+type XieString struct {
+	Value string
+
+	Members map[string]interface{}
+}
+
+func (v XieString) TypeName() string {
+	return "string"
+}
+
+func (v XieString) String() string {
+	return v.Value
+}
+
+func (p *XieString) Init(argsA ...interface{}) interface{} {
+	if len(argsA) > 0 {
+		p.Value = tk.ToStr(argsA[0])
+	} else {
+		p.Value = ""
+	}
+
+	return nil
+}
+
+func (p *XieString) SetValue(argsA ...interface{}) interface{} {
+	if len(argsA) > 0 {
+		p.Value = tk.ToStr(argsA[0])
+	} else {
+		p.Value = ""
+	}
+
+	return nil
+}
+
+func (v XieString) GetValue(argsA ...interface{}) interface{} {
+	return v.Value
+}
+
+func (p *XieString) SetMember(argsA ...interface{}) interface{} {
+	// if len(argsA) < 2 {
+	// 	return fmt.Errorf("参数个数不够")
+	// }
+
+	// return nil
+	return fmt.Errorf("不支持此方法")
+}
+
+func (p *XieString) GetMember(argsA ...interface{}) interface{} {
+	// if len(argsA) < 2 {
+	// 	return fmt.Errorf("参数个数不够")
+	// }
+
+	// return nil
+	return fmt.Errorf("不支持此方法")
+}
+
+func (p *XieString) Call(argsA ...interface{}) interface{} {
+	if len(argsA) < 1 {
+		return fmt.Errorf("参数个数不够")
+	}
+
+	methodNameT := tk.ToStr(argsA[0])
+
+	switch methodNameT {
+	case "toStr":
+		return p.Value
+	case "len":
+		return len(p.Value)
+	case "toRuneArray":
+		return []rune(p.Value)
+	case "runeLen":
+		return len([]rune(p.Value))
+	case "toByteArray":
+		return []byte(p.Value)
+	case "trim":
+		p.Value = strings.TrimSpace(p.Value)
+		return nil
+	case "trimSet":
+		if len(argsA) < 2 {
+			return fmt.Errorf("参数个数不够")
+		}
+
+		p.Value = strings.Trim(p.Value, tk.ToStr(argsA[1]))
+		return nil
+	case "add":
+		if len(argsA) < 2 {
+			return fmt.Errorf("参数个数不够")
+		}
+
+		p.Value = p.Value + tk.ToStr(argsA[1])
+
+		return nil
+	default:
+		return fmt.Errorf("未知方法")
+	}
+
+	return nil
+}
+
+type XieAny struct {
+	Value interface{}
+
+	Members map[string]interface{}
+}
+
+func (v XieAny) TypeName() string {
+	return "any"
+}
+
+func (v XieAny) String() string {
+	return tk.ToJSONX(v)
+}
+
+func (p *XieAny) Init(argsA ...interface{}) interface{} {
+	if len(argsA) > 0 {
+		p.Value = argsA[0]
+	} else {
+		p.Value = nil
+	}
+
+	p.Members = make(map[string]interface{})
+
+	return nil
+}
+
+func (p *XieAny) SetValue(argsA ...interface{}) interface{} {
+	if len(argsA) > 0 {
+		p.Value = argsA[0]
+	} else {
+		p.Value = ""
+	}
+
+	return nil
+}
+
+func (v XieAny) GetValue(argsA ...interface{}) interface{} {
+	return v.Value
+}
+
+func (p *XieAny) SetMember(argsA ...interface{}) interface{} {
+	if len(argsA) < 2 {
+		return fmt.Errorf("参数个数不够")
+	}
+
+	p.Members[tk.ToStr(argsA[0])] = argsA[1]
+
+	return nil
+}
+
+func (p *XieAny) GetMember(argsA ...interface{}) interface{} {
+	if len(argsA) < 1 {
+		return fmt.Errorf("参数个数不够")
+	}
+
+	nv, ok := p.Members[tk.ToStr(argsA[0])]
+
+	if !ok {
+		return tk.Undefined
+	}
+
+	return nv
+}
+
+func (p *XieAny) Call(argsA ...interface{}) interface{} {
+	if len(argsA) < 1 {
+		return fmt.Errorf("参数个数不够")
+	}
+
+	methodNameT := tk.ToStr(argsA[0])
+
+	switch methodNameT {
+	case "toStr":
+		return p.String()
+	default:
+		return fmt.Errorf("未知方法")
+	}
+
+	return nil
 }
