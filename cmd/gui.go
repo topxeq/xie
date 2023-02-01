@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"strings"
 
+	jsoniter "github.com/json-iterator/go"
 	"github.com/ncruces/zenity"
 	"github.com/topxeq/dlgs"
 	"github.com/topxeq/xie"
@@ -188,6 +189,12 @@ func newWindowWebView2(objA interface{}, paramsA []interface{}) interface{} {
 				// strT := args[0].String()
 
 				rsT := deleT(args...)
+
+				if tk.IsErrX(rsT) {
+					if xie.GlobalsG.VerboseLevel > 0 {
+						tk.Pl("error occurred in QuickVarDelegate: %v", rsT)
+					}
+				}
 
 				// 最后一定要返回一个值，空字符串也可以
 				return rsT
@@ -436,6 +443,16 @@ func guiHandler(actionA string, objA interface{}, dataA interface{}, paramsA ...
 			return fmt.Errorf("参数不够")
 		}
 		return getConfirmGUI(tk.ToStr(paramsA[0]), tk.ToStr(paramsA[1]), paramsA[2:]...)
+	case "selectFile":
+		// if len(paramsA) < 2 {
+		// 	return fmt.Errorf("参数不够")
+		// }
+		return selectFileGUI(tk.InterfaceToStringArray(paramsA)...)
+	case "selectFileToSave":
+		// if len(paramsA) < 2 {
+		// 	return fmt.Errorf("参数不够")
+		// }
+		return selectFileToSaveGUI(tk.InterfaceToStringArray(paramsA)...)
 	case "getActiveDisplayCount":
 		return screenshot.NumActiveDisplays()
 	case "getScreenResolution":
@@ -734,6 +751,104 @@ func getConfirmGUI(titleA string, formatA string, messageA ...interface{}) inter
 func showErrorGUI(titleA string, formatA string, messageA ...interface{}) interface{} {
 	rs, errT := dlgs.Error(titleA, fmt.Sprintf(formatA, messageA...))
 	if errT != nil {
+		return errT
+	}
+
+	return rs
+}
+
+// mt $pln $guiG selectFileToSave -confirmOverwrite -title=保存文件…… -default=c:\test\test.txt `-filter=[{"Name":"Go and TextFiles", "Patterns":["*.go","*.txt"], "CaseFold":true}]`
+
+func selectFileToSaveGUI(argsA ...string) interface{} {
+	optionsT := []zenity.Option{}
+
+	optionsT = append(optionsT, zenity.ShowHidden())
+
+	titleT := tk.GetSwitch(argsA, "-title=", "")
+
+	if titleT != "" {
+		optionsT = append(optionsT, zenity.Title(titleT))
+	}
+
+	defaultT := tk.GetSwitch(argsA, "-default=", "")
+
+	if defaultT != "" {
+		optionsT = append(optionsT, zenity.Filename(defaultT))
+	}
+
+	if tk.IfSwitchExistsWhole(argsA, "-confirmOverwrite") {
+		optionsT = append(optionsT, zenity.ConfirmOverwrite())
+	}
+
+	filterStrT := tk.GetSwitch(argsA, "-filter=", "")
+
+	// tk.Plv(filterStrT)
+
+	var filtersT zenity.FileFilters
+
+	if filterStrT != "" {
+
+		errT := jsoniter.Unmarshal([]byte(filterStrT), &filtersT)
+
+		if errT != nil {
+			return errT
+		}
+
+		optionsT = append(optionsT, filtersT)
+	}
+
+	rs, errT := zenity.SelectFileSave(optionsT...)
+
+	if errT != nil {
+		if errT == zenity.ErrCanceled {
+			return nil
+		}
+
+		return errT
+	}
+
+	return rs
+}
+
+func selectFileGUI(argsA ...string) interface{} {
+	optionsT := []zenity.Option{}
+
+	optionsT = append(optionsT, zenity.ShowHidden())
+
+	titleT := tk.GetSwitch(argsA, "-title=", "")
+
+	if titleT != "" {
+		optionsT = append(optionsT, zenity.Title(titleT))
+	}
+
+	defaultT := tk.GetSwitch(argsA, "-default=", "")
+
+	if defaultT != "" {
+		optionsT = append(optionsT, zenity.Filename(defaultT))
+	}
+
+	filterStrT := tk.GetSwitch(argsA, "-filter=", "")
+
+	var filtersT zenity.FileFilters
+
+	if filterStrT != "" {
+
+		errT := jsoniter.Unmarshal([]byte(filterStrT), &filtersT)
+
+		if errT != nil {
+			return errT
+		}
+
+		optionsT = append(optionsT, filtersT)
+	}
+
+	rs, errT := zenity.SelectFile(optionsT...)
+
+	if errT != nil {
+		if errT == zenity.ErrCanceled {
+			return nil
+		}
+
 		return errT
 	}
 

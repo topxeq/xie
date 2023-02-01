@@ -47,7 +47,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var VersionG string = "1.0.1"
+var VersionG string = "1.0.2"
 
 func Test() {
 	tk.Pl("test")
@@ -496,6 +496,7 @@ var InstrNameSet map[string]int = map[string]int{
 
 	// err string(TXERROR:) related TXERROR错误字符串相关
 	"isErrStr":  10910, // 判断是否是TXERROR字符串，用法：isErrStr $result $str1 $errMsg，第三个参数可选（结果参数不可省略），如有则当str1为TXERROR字符串时，会放入错误原因信息
+	"errStrf":   10915, // 生成TXERROR字符串，用法：errStrf $result "error: %v" $errMsg\
 	"getErrStr": 10921, // 获取TXERROR字符串中的错误原因信息（即TXERROR:后的内容）
 
 	"checkErrStr": 10931, // 判断是否是TXERROR字符串，是则退出程序运行
@@ -509,6 +510,8 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"checkErrX":  10945, // check if variable is error or err string, and terminate the program if true(检查后续变量或数值是否是error对象或TXERROR字符串，是则输出后中止)
 	"getErrStrX": 10947, // 获取error对象或TXERROR字符串中的错误原因信息（即TXERROR:后的内容）
+
+	"errf": 10949, // 生成错误对象，类似printf
 
 	// http request/response related HTTP请求相关
 	"writeResp":       20110, // 写一个HTTP请求的响应
@@ -973,7 +976,15 @@ func ParseLine(commandA string) ([]string, string, error) {
 		c := command[i]
 
 		if escapeNext {
+			// if c == 'n' {
+			// 	current += string('\n')
+			// } else if c == 'r' {
+			// 	current += string('\r')
+			// } else if c == 't' {
+			// 	current += string('\t')
+			// } else {
 			current += string(c)
+			// }
 			escapeNext = false
 			continue
 		}
@@ -9624,6 +9635,8 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		v3 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p+2]))
 
+		// tk.Plo(v1, v2, v3)
+
 		p.SetVar(r, pr, strings.ReplaceAll(v1, v2, v3))
 
 		return ""
@@ -11128,6 +11141,28 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		return ""
 
+	case 10915: // errStrf
+		pr := instrT.Params[0]
+
+		list1T := []interface{}{}
+
+		formatT := ""
+
+		for i, v := range instrT.Params {
+			if i == 0 {
+				continue
+			}
+			if i == 1 {
+				formatT = tk.ToStr(v.Value)
+				continue
+			}
+
+			list1T = append(list1T, p.GetVarValue(r, v))
+		}
+
+		p.SetVar(r, pr, tk.ErrStrf(formatT, list1T...))
+		return ""
+
 	case 10921: // getErrStr
 		if instrT.ParamLen < 1 {
 			return p.Errf(r, "not enough parameters(参数不够)")
@@ -11282,6 +11317,28 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		p.SetVar(r, pr, tk.GetErrStrX(v1))
 
+		return ""
+
+	case 10949: // errf
+		pr := instrT.Params[0]
+
+		list1T := []interface{}{}
+
+		formatT := ""
+
+		for i, v := range instrT.Params {
+			if i == 0 {
+				continue
+			}
+			if i == 1 {
+				formatT = tk.ToStr(v.Value)
+				continue
+			}
+
+			list1T = append(list1T, p.GetVarValue(r, v))
+		}
+
+		p.SetVar(r, pr, tk.Errf(formatT, list1T...))
 		return ""
 
 	case 20110: // writeResp
@@ -15916,6 +15973,7 @@ func (p *XieVM) RunCompiledCode(codeA interface{}, inputA interface{}) interface
 	for {
 		// tk.Pl("-- [%v] %v", p.CodePointerM, tk.LimitString(p.SourceM[p.CodeSourceMapM[p.CodePointerM]], 50))
 		resultT := RunInstr(p, rp, &rp.InstrList[rp.CodePointer])
+		// tk.Pl("RunInstr: %v: %#v", rp.InstrList[rp.CodePointer], resultT)
 
 		c1T, ok := resultT.(int)
 

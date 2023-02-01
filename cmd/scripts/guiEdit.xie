@@ -1,0 +1,314 @@
+getSwitch $fileNameT $argsG -file= ""
+ifSwitchExists $fromClipT $argsG -fromClip
+
+= $htmlT `
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<script>TX_jQuery_XT</script>
+<style>TX_codeMirrorCSS_XT</style>
+<script>TX_codeMirrorJS_XT</script>
+<script>TX_codeMirrorGoJS_XT</script>
+<script>TX_swal_XT</script>
+<style>
+	.CodeMirror {
+		border: 1px solid #eee;
+		height: auto;
+        font-size: 20px;
+	}
+
+</style>
+<script>
+    var myCodeMirrorG;
+
+    var fileNameT = '';
+    var fromClipT = false;
+
+	window.onload = function (){
+		myCodeMirrorG = CodeMirror.fromTextArea(document.getElementById("mainTextID"), {
+			lineNumbers: true,
+			lineWrapping: true,
+			viewportMargin: Infinity,
+			mode: "go"
+		});
+
+		$("#mainTextID")[0].dispatchEvent(new Event('input'));
+
+		document.onkeydown = function(e) {
+			if (e.ctrlKey) {
+				if (e.keyCode == 83) {
+					console.log("ctrl-s");
+					saveIt();
+					// e.stopPropagation(); 
+					e.preventDefault(); 
+					e.returnValue = false;
+
+					return false;
+				}
+
+				return true;
+			} 
+
+			return true;
+		};  
+
+        var rs;
+
+        if (fileNameT != "") {
+            rs = quickDelegateDo("loadFile", fileNameT);
+        } else if (fromClipT) {
+            rs = quickDelegateDo("getClipText");
+        } else {
+            document.getElementById("mainTextID").focus();
+            return;
+        }
+
+
+		rs.then(res => {
+            console.log("res: ", res);
+            if (res.startsWith("TXERROR:")) {
+                alertx(res.substr(8));
+                return;
+            }
+
+            myCodeMirrorG.setValue(res);
+			$("#mainTextID")[0].dispatchEvent(new Event('input'));
+            document.getElementById("mainTextID").focus();
+		});
+
+        document.getElementById("mainTextID").focus();
+
+	};
+
+	function infox(titleA, msgA, typeA) {
+		if (!titleA) {
+			titleA = "Info";
+			msgA = "";
+			typeA = "success";
+		} else if (!msgA) {
+			msgA = titleA;
+			titleA = "Info";
+		} else if (!typeA) {
+			typeA = "success";
+		}
+
+		if (typeof(msgA) != "string") {
+			msgA = msgA.toString();
+		}
+
+		Swal.fire({title: titleA, text: msgA, icon: typeA});
+	}
+
+	function alertx(titleA, msgA, typeA) {
+		if (!titleA) {
+			titleA = "Alert";
+			msgA = "";
+			typeA = "success";
+		} else if (!msgA) {
+			msgA = titleA;
+			titleA = "Alert";
+		} else if (!typeA) {
+			typeA = "error";
+		}
+
+		if (typeof(msgA) != "string") {
+			msgA = msgA.toString();
+		}
+
+		Swal.fire({title: titleA, text: msgA, icon: typeA});
+	}
+
+	function copyIt() {
+		quickDelegateDo("setClipText", myCodeMirrorG.getValue());
+	}
+
+	function saveIt() {
+		var rs = quickDelegateDo("saveText", myCodeMirrorG.getValue());
+
+		rs.then(res => {
+			infox("save result: " + res);
+		});
+
+	}
+
+	function loadIt() {
+		var rs = quickDelegateDo("loadText");
+
+		rs.then(res => {
+            myCodeMirrorG.setValue(res);
+			$("#mainTextID")[0].dispatchEvent(new Event('input'));
+            document.getElementById("mainTextID").focus();
+		});
+
+	}
+
+	function pasteIt() {
+        var rs = quickDelegateDo("getClipText");
+
+		rs.then(res => {
+            myCodeMirrorG.setValue(res);
+			$("#mainTextID")[0].dispatchEvent(new Event('input'));
+            document.getElementById("mainTextID").focus();
+		});
+	}
+
+	function clearIt() {
+		myCodeMirrorG.setValue("");
+	}
+
+	function checkJSON() {
+		var codeT = myCodeMirrorG.getValue();
+
+		var objT;
+
+		try {
+			objT = JSON.parse(codeT);    
+		} catch (error) {
+			alertx(error);
+			return;
+		}
+
+		infox("check passed");
+	}
+
+</script>
+</head>
+<body>
+<div id="div1">
+	<button onclick="javascript:clearIt();">Clear</button>
+	<button onclick="javascript:copyIt();">Copy</button>
+	<button onclick="javascript:pasteIt();">Paste</button>
+	<button onclick="javascript:checkJSON();">Check JSON</button>
+	<button onclick="javascript:loadIt();">Load</button>
+	<button onclick="javascript:saveIt();">Save</button>
+</div>
+<div id="div3" style="margin-top: 1.0em; text-align: left;">
+<textarea id="mainTextID" style="width: 90%; height: 80vh; font-size: 16px; text-align: left;"></textarea>
+</div>
+</body>
+</html>
+`
+
+getResource $replT "js/jquery.min.js"
+strReplace $htmlT $htmlT TX_jQuery_XT $replT
+
+getResource $replT "css/codemirror.css"
+strReplace $htmlT $htmlT TX_codeMirrorCSS_XT $replT
+
+getResource $replT "js/codemirror.js"
+strReplace $htmlT $htmlT TX_codeMirrorJS_XT $replT
+
+getResource $replT "js/codemirror/mode/go/go.js"
+strReplace $htmlT $htmlT TX_codeMirrorGoJS_XT $replT
+
+getResource $replT "js/sweetalert2.all.min.js"
+strReplace $htmlT $htmlT TX_swal_XT $replT
+
+strReplace $htmlT $htmlT ~~~ $backQuoteG
+
+strReplace $fileNameT $fileNameT "\\" "\\\\"
+
+spr $str1 `var fileNameT = '%v';` $fileNameT
+
+strReplace $htmlT $htmlT `var fileNameT = '';` $str1
+
+spr $str1 `var fromClipT = %v;` $fromClipT
+
+strReplace $htmlT $htmlT `var fromClipT = false;` $str1
+
+guiNewWindow $w "-title=Tmp Editor" -width=1280 -height=928 -center -debug
+
+checkErrX $w
+
+new $dele1 quickDelegate `  
+[] $cmdT $inputL 0
+
+if @"$cmdT == getClipText" :+1 :+3
+    getClipText $outL 
+    exit
+
+if @"$cmdT == loadFile" :+1 :next5
+    [] $fileNameT $inputL 1
+
+    pl "loading file(%v)..." $fileNameT
+    loadText $rsn $fileNameT
+
+    ifErrX $rsn :+1 :+3
+        errStrf $outL "%v" $rsn
+        exit
+
+    spr $outL "%v" $rsn
+    exit
+
+:next5
+if @"$cmdT == loadText" :+1 :next4
+	mt $rsa $guiG selectFile "-title=Load file..."
+
+	pln $rsa
+
+	typeOf $typeT $rsa
+
+	if @"$typeT == string" :+1 :nexti3 
+		loadText $rsn $rsa
+		spr $outL "%v" $rsn
+		exit
+	
+	:nexti3
+	spr $outL "%#v" $rsa
+    exit
+
+:next4
+if @"$cmdT == saveText" :+1 :next3
+	pl "save text"
+	[] $textT $inputL 1
+    
+	mt $rsa $guiG selectFileToSave -confirmOverwrite "-title=Save file to..."~~~
+
+	pln $rsa
+
+	typeOf $typeT $rsa
+
+	if @"$typeT == string" :+1 :nexti2 
+		saveText $rsn $textT $rsa
+		spr $outL "%v" $rsn
+		exit
+	
+	:nexti2
+	spr $outL "%#v" $rsa
+    exit
+
+:next3
+if @"$cmdT == setClipText" :+1 :next2
+	[] $textT $inputL 1
+    setClipText $textT
+
+	= $outL ""
+    exit
+
+:next2
+:next1
+
+= $outL #s""
+`
+
+checkErrX $dele1
+
+mt $rs $w setQuickDelegate $dele1
+
+checkErrX $rs
+
+mt $rs $w setHtml $htmlT
+
+checkErrX $rs
+
+mt $rs $w show
+
+checkErrX $rs
+
+mt $rs $w close
+
+exit
+

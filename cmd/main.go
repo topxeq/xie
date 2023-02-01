@@ -363,7 +363,7 @@ func test() {
 }
 
 func runInteractiveShell() int {
-	tk.Pl(`Xie V%v`, xie.VersionG)
+	tk.Pl(`Xielang(谢语言) V(版本)%v`, xie.VersionG)
 	xie.GlobalsG.Vars["ShellModeG"] = true
 	xie.GlobalsG.Vars["leSilentG"] = true
 
@@ -373,8 +373,8 @@ func runInteractiveShell() int {
 
 	vm0T := xie.NewVM()
 
-	if tk.IsErrX(vm0T) {
-		tk.Pl("failed to initialize VM: %v", tk.GetErrStrX(vm0T))
+	if tk.IsError(vm0T) {
+		tk.Pl("failed to initialize VM(初始化虚拟机失败): %v", tk.GetErrStrX(vm0T))
 		os.Exit(1)
 	}
 
@@ -417,10 +417,10 @@ func runInteractiveShell() int {
 
 		lrs := vmT.Load(vmT.Running, source)
 
-		if tk.IsErrX(lrs) {
+		if tk.IsError(lrs) {
 			following = false
 			source = ""
-			fmt.Println("failed to load source code of the script: ", tk.GetErrStrX(lrs))
+			fmt.Println("failed to load source code of the script(载入代码失败): ", tk.GetErrStrX(lrs))
 			continue
 		}
 
@@ -429,7 +429,7 @@ func runInteractiveShell() int {
 		noResultT := tk.IsUndefined(rs) // == "TXERROR:no result")
 
 		if tk.IsErrX(rs) {
-			fmt.Fprintln(os.Stderr, "failed to run: "+tk.GetErrStrX(rs))
+			fmt.Fprintln(os.Stderr, "failed to run(运行失败): "+tk.GetErrStrX(rs))
 			following = false
 			source = ""
 			continue
@@ -445,7 +445,7 @@ func runInteractiveShell() int {
 
 	if err := scanner.Err(); err != nil {
 		if err != io.EOF {
-			fmt.Fprintln(os.Stderr, "failed to read char:", err)
+			fmt.Fprintln(os.Stderr, "failed to read char(获取键盘输入失败):", err)
 			return 12
 		}
 	}
