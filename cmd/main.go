@@ -1094,6 +1094,7 @@ func main() {
 	ifCloudT := tk.IfSwitchExistsWhole(argsT, "-cloud")
 	ifRemoteT := tk.IfSwitchExistsWhole(argsT, "-remote")
 	ifClipT := tk.IfSwitchExistsWhole(argsT, "-clip")
+	ifEditT := tk.IfSwitchExistsWhole(argsT, "-edit")
 	ifLocalT := tk.IfSwitchExistsWhole(argsT, "-local")
 	ifViewT := tk.IfSwitchExistsWhole(argsT, "-view")
 	ifCompileT := tk.IfSwitchExistsWhole(argsT, "-compile")
@@ -1309,6 +1310,17 @@ func main() {
 
 	if ifViewT {
 		tk.Pl("%v", scriptT)
+
+		return
+	}
+
+	if ifEditT {
+		guiHandlerG = guiHandler
+
+		rs := xie.RunCode(tk.DecryptStringByTXDEF(editCodeG), scriptT, map[string]interface{}{"guiG": guiHandlerG, "scriptPathG": scriptPathG}, argsT...)
+		if !tk.IsUndefined(rs) {
+			tk.Pl("%v", rs)
+		}
 
 		return
 	}

@@ -1,5 +1,6 @@
 getSwitch $fileNameT $argsG -file= ""
 ifSwitchExists $fromClipT $argsG -fromClip
+ifSwitchExists $fromInputT $argsG -fromInput
 
 = $htmlT `
 <!DOCTYPE html>
@@ -26,6 +27,7 @@ ifSwitchExists $fromClipT $argsG -fromClip
 
     var fileNameT = '';
     var fromClipT = false;
+    var fromInputT = false;
 
 	window.onload = function (){
 		myCodeMirrorG = CodeMirror.fromTextArea(document.getElementById("mainTextID"), {
@@ -61,6 +63,8 @@ ifSwitchExists $fromClipT $argsG -fromClip
             rs = quickDelegateDo("loadFile", fileNameT);
         } else if (fromClipT) {
             rs = quickDelegateDo("getClipText");
+        } else if (fromInputT) {
+            rs = quickDelegateDo("getInputG");
         } else {
             document.getElementById("mainTextID").focus();
             return;
@@ -254,6 +258,10 @@ spr $str1 `var fromClipT = %v;` $fromClipT
 
 strReplace $htmlT $htmlT `var fromClipT = false;` $str1
 
+spr $str1 `var fromInputT = %v;` $fromInputT
+
+strReplace $htmlT $htmlT `var fromInputT = false;` $str1
+
 guiNewWindow $w "-title=Tmp Editor" -width=1280 -height=928 -center -debug
 
 checkErrX $w
@@ -267,6 +275,12 @@ if @"$cmdT == getClipText" :+1 :+3
     getClipText $outL 
     exit
 
+if @"$cmdT == getInputG" :+1 :next9
+
+    = $outL "%v" $inputG
+    exit
+
+:next9
 if @"$cmdT == setParam" :+1 :next8
 
     + $phT "-default="$paramG 
