@@ -1317,7 +1317,7 @@ func main() {
 	if ifEditT {
 		guiHandlerG = guiHandler
 
-		rs := xie.RunCode(tk.DecryptStringByTXDEF(editCodeG), scriptT, map[string]interface{}{"guiG": guiHandlerG, "scriptPathG": scriptPathG}, argsT...)
+		rs := xie.RunCode(tk.DecryptStringByTXDEF(editCodeG), scriptT, map[string]interface{}{"guiG": guiHandlerG, "scriptPathG": scriptPathG}, append(argsT, "-fromInput")...)
 		if !tk.IsUndefined(rs) {
 			tk.Pl("%v", rs)
 		}
