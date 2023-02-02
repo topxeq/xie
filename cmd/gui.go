@@ -223,6 +223,8 @@ func newWindowWebView2(objA interface{}, paramsA []interface{}) interface{} {
 
 				vmT := xie.NewVMQuick()
 
+				vmT.SetVar(p.Running, "guiG", guiHandler)
+
 				lrs := vmT.Load(vmT.Running, sv1)
 
 				if tk.IsError(lrs) {
@@ -349,7 +351,7 @@ func guiHandler(actionA string, objA interface{}, dataA interface{}, paramsA ...
 		runtime.LockOSThread()
 		return nil
 	case "method", "mt":
-		if len(paramsA) < 2 {
+		if len(paramsA) < 1 {
 			return fmt.Errorf("参数不够")
 		}
 
@@ -443,6 +445,11 @@ func guiHandler(actionA string, objA interface{}, dataA interface{}, paramsA ...
 			return fmt.Errorf("参数不够")
 		}
 		return getConfirmGUI(tk.ToStr(paramsA[0]), tk.ToStr(paramsA[1]), paramsA[2:]...)
+	case "getInput":
+		// if len(paramsA) < 2 {
+		// 	return fmt.Errorf("参数不够")
+		// }
+		return getInputGUI(tk.InterfaceToStringArray(paramsA)...)
 	case "selectFile":
 		// if len(paramsA) < 2 {
 		// 	return fmt.Errorf("参数不够")
@@ -847,6 +854,70 @@ func selectFileGUI(argsA ...string) interface{} {
 	if errT != nil {
 		if errT == zenity.ErrCanceled {
 			return nil
+		}
+
+		return errT
+	}
+
+	return rs
+}
+
+func getInputGUI(argsA ...string) interface{} {
+	optionsT := []zenity.Option{}
+
+	optionsT = append(optionsT, zenity.ShowHidden())
+
+	titleT := tk.GetSwitch(argsA, "-title=", "")
+
+	if titleT != "" {
+		optionsT = append(optionsT, zenity.Title(titleT))
+	}
+
+	defaultT := tk.GetSwitch(argsA, "-default=", "")
+
+	if defaultT != "" {
+		optionsT = append(optionsT, zenity.EntryText(defaultT))
+	}
+
+	hideTextT := tk.IfSwitchExistsWhole(argsA, "-hideText")
+	if hideTextT {
+		optionsT = append(optionsT, zenity.HideText())
+	}
+
+	modalT := tk.IfSwitchExistsWhole(argsA, "-modal")
+	if modalT {
+		optionsT = append(optionsT, zenity.Modal())
+	}
+
+	textT := tk.GetSwitch(argsA, "-text=", "")
+
+	okLabelT := tk.GetSwitch(argsA, "-okLabel=", "")
+
+	if okLabelT != "" {
+		optionsT = append(optionsT, zenity.OKLabel(okLabelT))
+	}
+
+	cancelLabelT := tk.GetSwitch(argsA, "-cancelLabel=", "")
+
+	if cancelLabelT != "" {
+		optionsT = append(optionsT, zenity.CancelLabel(cancelLabelT))
+	}
+
+	extraButtonT := tk.GetSwitch(argsA, "-extraButton=", "")
+
+	if extraButtonT != "" {
+		optionsT = append(optionsT, zenity.ExtraButton(extraButtonT))
+	}
+
+	rs, errT := zenity.Entry(textT, optionsT...)
+
+	if errT != nil {
+		if errT == zenity.ErrCanceled {
+			return nil
+		}
+
+		if errT == zenity.ErrExtraButton {
+			return fmt.Errorf("extraButton")
 		}
 
 		return errT

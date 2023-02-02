@@ -362,6 +362,8 @@ func test() {
 
 }
 
+var guiHandlerG tk.TXDelegate
+
 func runInteractiveShell() int {
 	tk.Pl(`Xielang(谢语言) V(版本)%v`, xie.VersionG)
 	xie.GlobalsG.Vars["ShellModeG"] = true
@@ -382,7 +384,7 @@ func runInteractiveShell() int {
 
 	vmT.SetVar(vmT.Running, "argsG", os.Args)
 
-	var guiHandlerG tk.TXDelegate = guiHandler
+	guiHandlerG = guiHandler
 
 	vmT.SetVar(vmT.Running, "guiG", guiHandlerG)
 
@@ -1139,7 +1141,7 @@ func main() {
 		// tk.Pln(fileListT)
 		// }
 
-		var guiHandlerG tk.TXDelegate = guiHandler
+		guiHandlerG = guiHandler
 
 		if len(fileListT) > 0 {
 			for i, v := range fileListT {
@@ -1386,7 +1388,7 @@ func main() {
 		tk.Pln(fileListT)
 	}
 
-	var guiHandlerG tk.TXDelegate = guiHandler
+	guiHandlerG = guiHandler
 
 	rs := xie.RunCode(scriptT, nil, map[string]interface{}{"guiG": guiHandlerG, "scriptPathG": scriptPathG}, argsT...)
 	if !tk.IsUndefined(rs) {

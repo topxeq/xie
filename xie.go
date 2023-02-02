@@ -117,7 +117,7 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"const": 205, // 获取预定义常量
 
-	// "ref": 210, // 获取变量的引用（取地址）
+	"ref": 210, //-> 获取变量的引用（取地址）
 
 	// "refNative": 211,
 
@@ -450,6 +450,8 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"ifSwitchNotExists": 10005,
 	"switchNotExists":   10005,
+
+	"parseCommandLine": 10011, //-> 分析命令行字符串，类似os.Args的获取过程
 
 	// print related
 	"pln": 10410, // same as println function in other languages
@@ -1302,6 +1304,10 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 				s1DT := s1T[2:] // tk.UrlDecode(s1T[2:])
 
 				if strings.HasPrefix(s1DT, "`") && strings.HasSuffix(s1DT, "`") {
+					s1DT = s1DT[1 : len(s1DT)-1]
+				} else if strings.HasPrefix(s1DT, "'") && strings.HasSuffix(s1DT, "'") {
+					s1DT = s1DT[1 : len(s1DT)-1]
+				} else if strings.HasPrefix(s1DT, "\"") && strings.HasSuffix(s1DT, "\"") {
 					s1DT = s1DT[1 : len(s1DT)-1]
 				}
 
@@ -3340,7 +3346,7 @@ func NewVar(p *XieVM, r *RunningContext, typeA string, argsA ...interface{}) int
 
 		rs = blT
 
-	case "strList": // 后面可接多个字符串，其中可以有字节数组或字符串（会逐一加入字节列表中）
+	case "strList", "[]string": // 后面可接多个字符串，其中可以有字节数组或字符串（会逐一加入字节列表中）
 		blT := make([]string, 0, argsLenT)
 
 		for _, vvv := range argsA {
@@ -3408,9 +3414,9 @@ func NewVar(p *XieVM, r *RunningContext, typeA string, argsA ...interface{}) int
 		}
 
 		rs = blT
-	case "map":
+	case "map", "{}", "map[string]interface{}":
 		rs = map[string]interface{}{}
-	case "strMap":
+	case "strMap", "map[string]string":
 		rs = map[string]string{}
 	case "bytesBuffer", "bytesBuf":
 		rs = new(bytes.Buffer)
@@ -3657,7 +3663,7 @@ func (p *XieVM) QuickRunCode(codeA interface{}) interface{} {
 	tmpPointerT := 0
 
 	for (tmpPointerT >= 0) && (tmpPointerT < lenT) {
-		rs := RunInstr(p, p.Running, &nrr.InstrList[nrr.CodePointer])
+		rs := RunInstr(p, p.Running, &nrr.InstrList[tmpPointerT])
 
 		nv, ok := rs.(int)
 
@@ -4544,9 +4550,37 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 			obj1 = nil
 		}
 
-		vs := p.ParamsToStrs(r, instrT, v1p+3)
+		// vs := p.ParamsToStrs(r, instrT, v1p+3)
+		args1 := p.GetVarValue(r, GetVarRefInParams(instrT.Params, v1p+3))
 
-		rs := RunCode(codeT, inputT, obj1, vs...)
+		var errT error
+
+		args2a, ok := args1.([]string)
+		if !ok {
+			args2i, ok := args1.([]interface{})
+
+			if ok {
+				args2a = make([]string, 0, len(args2i))
+				for _, va := range args2i {
+					args2a = append(args2a, tk.ToStr(va))
+				}
+			} else {
+				args2s, ok := args1.(string)
+				if ok {
+					args2a, errT = tk.ParseCommandLine(args2s)
+
+					if errT == nil {
+
+					} else {
+						args2a = []string{args2s}
+					}
+				} else {
+					args2a = []string{tk.ToStr(args1)}
+				}
+			}
+		}
+
+		rs := RunCode(codeT, inputT, obj1, args2a...)
 
 		p.SetVar(r, pr, rs)
 
@@ -4966,6 +5000,31 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		return ""
 
+	case 210: // ref
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		valueT := reflect.ValueOf(v1)
+
+		if !valueT.CanAddr() {
+			p.SetVar(r, pr, fmt.Errorf("not addressable(无法取引用)"))
+			return ""
+		}
+
+		p.SetVar(r, pr, valueT.Addr().Interface())
+		return ""
+
 	case 215: // unref
 		if instrT.ParamLen < 1 {
 			return p.Errf(r, "not enough parameters(参数不够)")
@@ -5002,7 +5061,6 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		case *strings.Builder:
 			p.SetVar(r, pr, *nv)
 		default:
-			tk.Pl("hereee")
 			valueT := reflect.ValueOf(v2)
 			kindT := valueT.Kind()
 
@@ -5011,7 +5069,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 				return ""
 			}
 
-			return p.Errf(r, "无法处理的类型：%T", v2)
+			return p.Errf(r, "unsupport type(无法处理的类型): %T", v2)
 		}
 
 		return ""
@@ -8401,7 +8459,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 				return ""
 			}
 
-			return p.Errf(r, "参数类型错误: %T(%#v)", v1)
+			return p.Errf(r, "参数类型错误: %T(%#v)", v1, v1)
 		}
 
 		return ""
@@ -10449,6 +10507,29 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		}
 
 		return p.Errf(r, "invalid parameter type: %T(%#v)", v1)
+	case 10011: // parseCommandLine
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough paramters")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 2 {
+			v1p = 1
+			pr = instrT.Params[0]
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		rs, errT := tk.ParseCommandLine(tk.ToStr(v1))
+		if errT != nil {
+			p.SetVar(r, pr, errT)
+			return ""
+		}
+
+		p.SetVar(r, pr, rs)
+		return ""
 
 	case 10410: // pln
 		list1T := []interface{}{}
@@ -11245,9 +11326,16 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 			v1p = 1
 		}
 
-		v1 := p.GetVarValue(r, instrT.Params[v1p]).(error)
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
 
-		p.SetVar(r, pr, v1.Error())
+		v1v, ok := v1.(error)
+
+		if !ok {
+			p.SetVar(r, pr, fmt.Errorf("type not match: %T(%#v)", v1, v1))
+			return ""
+		}
+
+		p.SetVar(r, pr, v1v.Error())
 
 		return ""
 
@@ -15687,6 +15775,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		v1 := p.GetVarValue(r, instrT.Params[v1p])
 
 		rs := v0("showInfo", p, nil, "", fmt.Sprintf("%v", v1))
+		tk.Plv(rs)
 
 		if tk.IsErrX(rs) {
 			return p.Errf(r, tk.GetErrStrX(rs))
@@ -15950,7 +16039,15 @@ func (p *XieVM) Run(posA ...int) interface{} {
 
 }
 
-func (p *XieVM) RunCompiledCode(codeA interface{}, inputA interface{}) interface{} {
+func (p *XieVM) RunCompiledCode(codeA interface{}, inputA interface{}) (rst interface{}) {
+	defer func() {
+		if r1 := recover(); r1 != nil {
+			rst = fmt.Errorf("runtime exception: %v\n%v", r1, string(debug.Stack()))
+
+			return
+		}
+	}()
+
 	r := NewRunningContext(codeA)
 
 	if tk.IsError(r) {
@@ -15981,6 +16078,10 @@ func (p *XieVM) RunCompiledCode(codeA interface{}, inputA interface{}) interface
 			rp.CodePointer = c1T
 		} else {
 			if tk.IsErrX(resultT) {
+				if GlobalsG.VerboseLevel > 1 {
+					tk.Pln(p.Errf(rp, "[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), tk.GetErrStrX(resultT)))
+				}
+
 				rp.RunDeferUpToRoot(p)
 				return p.Errf(rp, "[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), tk.GetErrStrX(resultT))
 				// tk.Pl("[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), p.CodeSourceMapM[p.CodePointerM]+1, tk.GetErrStr(rs))
@@ -16051,7 +16152,19 @@ func (p *XieVM) RunCompiledCode(codeA interface{}, inputA interface{}) interface
 	return outT
 }
 
-func RunCode(codeA interface{}, inputA interface{}, objA map[string]interface{}, optsA ...string) interface{} {
+func RunCode(codeA interface{}, inputA interface{}, objA map[string]interface{}, optsA ...string) (rst interface{}) {
+	defer func() {
+		if r1 := recover(); r1 != nil {
+			rst = fmt.Errorf("runtime exception: %v\n%v", r1, string(debug.Stack()))
+
+			return
+		}
+
+		// rst = fmt.Errorf("runtime exception: unknown error")
+
+		// return
+	}()
+
 	vmAnyT := NewVM()
 
 	if tk.IsError(vmAnyT) {
@@ -16074,7 +16187,7 @@ func RunCode(codeA interface{}, inputA interface{}, objA map[string]interface{},
 
 	lrs := vmT.Load(vmT.Running, codeA)
 
-	if tk.IsErrX(lrs) {
+	if tk.IsError(lrs) {
 		return lrs
 	}
 

@@ -134,6 +134,38 @@ ifSwitchExists $fromClipT $argsG -fromClip
 
 	}
 
+	function quickRunIt() {
+		var rs = quickDelegateDo("quickRun", myCodeMirrorG.getValue());
+
+		rs.then(res => {
+            if (!(!res)) {
+                infox("quick run result: " + JSON.stringify(res));
+            }
+		});
+
+	}
+
+	function runIt() {
+		var rs = quickDelegateDo("run", myCodeMirrorG.getValue());
+
+        rs.then(res => {
+            console.log("res:", res)
+            if (!(!res)) {
+                infox("run result: " + JSON.stringify(res));
+            }
+		});
+
+	}
+
+	function setParamIt() {
+		var rs = quickDelegateDo("setParam", myCodeMirrorG.getValue());
+
+		rs.then(res => {
+			infox("setParam result: " + JSON.stringify(res));
+		});
+
+	}
+
 	function loadIt() {
 		var rs = quickDelegateDo("loadText");
 
@@ -184,6 +216,9 @@ ifSwitchExists $fromClipT $argsG -fromClip
 	<button onclick="javascript:checkJSON();">Check JSON</button>
 	<button onclick="javascript:loadIt();">Load</button>
 	<button onclick="javascript:saveIt();">Save</button>
+	<button onclick="javascript:quickRunIt();">Quick Run</button>
+	<button onclick="javascript:runIt();">Run</button>
+	<button onclick="javascript:setParamIt();">Param</button>
 </div>
 <div id="div3" style="margin-top: 1.0em; text-align: left;">
 <textarea id="mainTextID" style="width: 90%; height: 80vh; font-size: 16px; text-align: left;"></textarea>
@@ -223,6 +258,8 @@ guiNewWindow $w "-title=Tmp Editor" -width=1280 -height=928 -center -debug
 
 checkErrX $w
 
+global $paramG string
+
 new $dele1 quickDelegate `  
 [] $cmdT $inputL 0
 
@@ -230,6 +267,69 @@ if @"$cmdT == getClipText" :+1 :+3
     getClipText $outL 
     exit
 
+if @"$cmdT == setParam" :+1 :next8
+
+    + $phT "-default="$paramG 
+    mt $rsn $guiG "getInput" "-title=Set run parameters..." "-text=Run parameters:" $phT
+
+    plo $rsn
+
+    eval $evr "{isNil $rsn} || ({isErr $rsn} && ({getErrMsg $rsn} == extraButton))"
+
+    plo $evr
+
+    if @"{isNil $rsn} || ({isErr $rsn} && ({getErrMsg $rsn} == extraButton))" :+2 :+1
+        assignGlobal $paramG $rsn
+
+    pl "paramG: %v" $paramG
+    spr $outL "%v" $rsn
+    exit
+
+:next8
+if @"$cmdT == run" :+1 :next7
+    [] $codeT $inputL 1
+
+    pl "run code(%v)..." $codeT
+
+    var $objsT {}
+
+    setMapItem $objsT guiG $guiG
+
+    runCode $rsn $codeT $nilG $objsT $paramG
+
+    pl "run result: %#v" $rsn
+
+    ifEmpty $rsn :+1 :nextii1
+        = $outL ""
+        exit
+
+    :nextii1
+    ifErrX $rsn :+1 :nextii2
+        errStrf $outL "%v" $rsn
+        exit
+
+    :nextii2
+    spr $outL "%v" $rsn
+    exit
+
+:next7
+if @"$cmdT == quickRun" :+1 :next6
+    [] $codeT $inputL 1
+
+    pl "quick run code(%v)..." $codeT
+
+    quickRun $rsn $codeT 
+
+    pl "quickRun result: %#v" $rsn
+
+    ifEmpty $rsn :+3 :+1
+        spr $outL "%v" $rsn
+        exit
+
+    = $outL ""
+    exit
+
+:next6
 if @"$cmdT == loadFile" :+1 :next5
     [] $fileNameT $inputL 1
 
