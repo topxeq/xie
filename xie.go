@@ -47,7 +47,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var VersionG string = "1.0.2"
+var VersionG string = "1.0.3"
 
 func Test() {
 	tk.Pl("test")
@@ -1068,7 +1068,11 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 		s1T = s1T[1 : len(s1T)-1]
 
 		return VarRef{-3, s1T} // value(string)
-	} else if strings.HasPrefix(s1T, `"`) && strings.HasSuffix(s1T, `"`) {
+	} else if strings.HasPrefix(s1T, "'") && strings.HasSuffix(s1T, "'") {
+		s1T = s1T[1 : len(s1T)-1]
+
+		return VarRef{-3, s1T} // value(string)
+	} else if strings.HasPrefix(s1T, `"`) && strings.HasSuffix(s1T, `"`) { // quoted string
 		tmps, errT := strconv.Unquote(s1T)
 
 		if errT != nil {
@@ -1105,6 +1109,22 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 			} else {
 				return VarRef{3, s1T[1:]}
 			}
+		} else if strings.HasPrefix(s1T, "&") { // ref
+			vNameT := s1T[1:]
+
+			if len(vNameT) < 1 {
+				return VarRef{-3, s1T}
+			}
+
+			return VarRef{-15, ParseVar(vNameT)}
+		} else if strings.HasPrefix(s1T, "*") { // unref
+			vNameT := s1T[1:]
+
+			if len(vNameT) < 1 {
+				return VarRef{-3, s1T}
+			}
+
+			return VarRef{-12, ParseVar(vNameT)}
 		} else if strings.HasPrefix(s1T, ":") { // labels
 			vNameT := s1T[1:]
 
@@ -2124,7 +2144,20 @@ func (p *XieVM) GetVarValue(runA *RunningContext, vA VarRef) interface{} {
 
 	if idxT == -17 { // regs
 		return p.Regs[tk.ToInt(vA.Value, 0)]
-		return nil
+	}
+
+	if idxT == -12 { // unref
+		rs, errT := tk.GetRefValue(p.GetVarValue(runA, vA.Value.(VarRef)))
+
+		if errT != nil {
+			return tk.Undefined
+		}
+
+		return rs
+	}
+
+	if idxT == -15 { // ref
+		return tk.Undefined
 	}
 
 	if idxT == 3 { // normal variables
@@ -2204,6 +2237,20 @@ func (p *XieVM) GetVarValueGlobal(runA *RunningContext, vA VarRef) interface{} {
 	if idxT == -17 { // regs
 		return p.Regs[tk.ToInt(vA.Value, 0)]
 		return nil
+	}
+
+	if idxT == -12 { // unref
+		rs, errT := tk.GetRefValue(p.GetVarValueGlobal(runA, vA.Value.(VarRef)))
+
+		if errT != nil {
+			return tk.Undefined
+		}
+
+		return rs
+	}
+
+	if idxT == -15 { // ref
+		return tk.Undefined
 	}
 
 	if idxT == 3 { // normal variables
@@ -2360,6 +2407,20 @@ func (p *XieVM) SetVar(runA *RunningContext, refA interface{}, setValueA interfa
 		return nil
 	}
 
+	if refIntT == -12 { // unref
+		return nil
+	}
+
+	if refIntT == -15 { // ref
+		errT := tk.SetByRef(p.GetVarValue(runA, refT.Value.(VarRef)), setValueA)
+
+		if errT != nil {
+			return errT
+		}
+
+		return nil
+	}
+
 	if refIntT != 3 {
 		return fmt.Errorf("unsupported var reference")
 	}
@@ -2461,6 +2522,20 @@ func (p *XieVM) SetVarLocal(runA *RunningContext, refA interface{}, setValueA in
 		return nil
 	}
 
+	if refIntT == -12 { // unref
+		return nil
+	}
+
+	if refIntT == -15 { // ref
+		errT := tk.SetByRef(p.GetVarValue(runA, refT.Value.(VarRef)), setValueA)
+
+		if errT != nil {
+			return errT
+		}
+
+		return nil
+	}
+
 	if refIntT != 3 {
 		return fmt.Errorf("unsupported var reference")
 	}
@@ -2535,6 +2610,14 @@ func (p *XieVM) SetVarGlobal(refA interface{}, setValueA interface{}) error {
 
 	if refIntT == -17 { // regs
 		p.Regs[refT.Value.(int)] = setValueA
+		return nil
+	}
+
+	if refIntT == -12 { // unref
+		return nil
+	}
+
+	if refIntT == -15 { // ref
 		return nil
 	}
 
@@ -5152,80 +5235,84 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 	// 	}
 
 	// 	return ""
-	// case 218: // assignRef
-	// 	if instrT.ParamLen < 2 {
-	// 		return p.Errf(r, "not enough parameters(参数不够)")
-	// 	}
+	case 218: // assignRef
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
 
-	// 	// nameT := instrT.Params[0].Ref
-	// 	p1a := p.GetVarValue(r, instrT.Params[0])
+		// nameT := instrT.Params[0].Ref
+		p1a := p.GetVarValue(r, instrT.Params[0])
 
-	// 	// p1, ok := p1a.(*interface{})
+		// p1, ok := p1a.(*interface{})
 
-	// 	var p1 *interface{}
-	// 	v1p := 1
+		// var p1 *interface{}
+		v1p := 1
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
 
-	// 	switch nv := p1a.(type) {
-	// 	case *interface{}:
-	// 		p1 = nv
-	// 		break
-	// 	case *byte:
-	// 		*nv = tk.ToByte(p.GetVarValue(r, instrT.Params[v1p]))
-	// 		return ""
-	// 	case *rune:
-	// 		*nv = tk.ToRune(p.GetVarValue(r, instrT.Params[v1p]))
-	// 		return ""
-	// 	case *int:
-	// 		*nv = tk.ToInt(p.GetVarValue(r, instrT.Params[v1p]))
-	// 		return ""
-	// 	default:
-	// 		return p.Errf(r, "无法处理的类型：%T", p1a)
-	// 	}
+		switch nv := p1a.(type) {
+		case *interface{}:
+			*nv = v1
+			return ""
+			// p1 = nv
+			// break
+		case *byte:
+			*nv = tk.ToByte(v1)
+			return ""
+		case *rune:
+			*nv = tk.ToRune(v1)
+			return ""
+		case *int:
+			*nv = tk.ToInt(v1)
+			return ""
+		default:
 
-	// 	if instrT.ParamLen > 2 {
-	// 		valueTypeT := instrT.Params[1].Value
-	// 		valueT := p.GetVarValue(r, instrT.Params[2])
+			return p.Errf(r, "无法处理的类型：%T", p1a)
+		}
 
-	// 		if valueTypeT == "bool" {
-	// 			*p1 = tk.ToBool(valueT)
-	// 		} else if valueTypeT == "int" {
-	// 			*p1 = tk.ToInt(valueT)
-	// 		} else if valueTypeT == "byte" {
-	// 			*p1 = tk.ToByte(valueT)
-	// 		} else if valueTypeT == "rune" {
-	// 			*p1 = tk.ToRune(valueT)
-	// 		} else if valueTypeT == "float" {
-	// 			*p1 = tk.ToFloat(valueT)
-	// 		} else if valueTypeT == "str" {
-	// 			*p1 = tk.ToStr(valueT)
-	// 		} else if valueTypeT == "list" || valueT == "array" || valueT == "[]" {
-	// 			*p1 = valueT.([]interface{})
-	// 		} else if valueTypeT == "strList" {
-	// 			*p1 = valueT.([]string)
-	// 		} else if valueTypeT == "byteList" {
-	// 			*p1 = valueT.([]byte)
-	// 		} else if valueTypeT == "runeList" {
-	// 			*p1 = valueT.([]rune)
-	// 		} else if valueTypeT == "map" {
-	// 			*p1 = valueT.(map[string]interface{})
-	// 		} else if valueTypeT == "strMap" {
-	// 			*p1 = valueT.(map[string]string)
-	// 		} else if valueTypeT == "time" {
-	// 			*p1 = valueT.(time.Time)
-	// 		} else {
-	// 			*p1 = valueT
-	// 		}
+		// if instrT.ParamLen > 2 {
+		// 	valueTypeT := instrT.Params[v1p].Value
+		// 	valueT := p.GetVarValue(r, instrT.Params[v1p+1])
 
-	// 		return ""
-	// 	}
+		// 	if valueTypeT == "bool" {
+		// 		*p1 = tk.ToBool(valueT)
+		// 	} else if valueTypeT == "int" {
+		// 		*p1 = tk.ToInt(valueT)
+		// 	} else if valueTypeT == "byte" {
+		// 		*p1 = tk.ToByte(valueT)
+		// 	} else if valueTypeT == "rune" {
+		// 		*p1 = tk.ToRune(valueT)
+		// 	} else if valueTypeT == "float" {
+		// 		*p1 = tk.ToFloat(valueT)
+		// 	} else if valueTypeT == "str" {
+		// 		*p1 = tk.ToStr(valueT)
+		// 	} else if valueTypeT == "list" || valueT == "array" || valueT == "[]" {
+		// 		*p1 = valueT.([]interface{})
+		// 	} else if valueTypeT == "strList" {
+		// 		*p1 = valueT.([]string)
+		// 	} else if valueTypeT == "byteList" {
+		// 		*p1 = valueT.([]byte)
+		// 	} else if valueTypeT == "runeList" {
+		// 		*p1 = valueT.([]rune)
+		// 	} else if valueTypeT == "map" {
+		// 		*p1 = valueT.(map[string]interface{})
+		// 	} else if valueTypeT == "strMap" {
+		// 		*p1 = valueT.(map[string]string)
+		// 	} else if valueTypeT == "time" {
+		// 		*p1 = valueT.(time.Time)
+		// 	} else {
+		// 		*p1 = valueT
+		// 	}
 
-	// 	valueT := p.GetVarValue(r, instrT.Params[1])
+		// 	return ""
+		// }
 
-	// 	*p1 = valueT
+		// valueT := p.GetVarValue(r, instrT.Params[1])
 
-	// 	// (*(p.CurrentVarsM))[nameT] = valueT
+		// *p1 = valueT
 
-	// 	return ""
+		// // (*(p.CurrentVarsM))[nameT] = valueT
+
+		// return ""
 
 	case 220: // push
 		if instrT.ParamLen < 1 {
