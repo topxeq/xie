@@ -1356,6 +1356,10 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 				s1T = s1T[1 : len(s1T)-1]
 
 				return VarRef{-10, s1T} // quick eval value
+			} else if strings.HasPrefix(s1T, "'") && strings.HasSuffix(s1T, "'") {
+				s1T = s1T[1 : len(s1T)-1]
+
+				return VarRef{-10, s1T} // quick eval value
 			} else if strings.HasPrefix(s1T, `"`) && strings.HasSuffix(s1T, `"`) {
 				tmps, errT := strconv.Unquote(s1T)
 

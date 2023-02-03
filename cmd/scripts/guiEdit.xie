@@ -70,7 +70,6 @@ ifSwitchExists $fromInputT $argsG -fromInput
             return;
         }
 
-
 		rs.then(res => {
             console.log("res: ", res);
             if (res.startsWith("TXERROR:")) {
@@ -283,7 +282,7 @@ if @"$cmdT == getInputG" :+1 :next9
 :next9
 if @"$cmdT == setParam" :+1 :next8
 
-    + $phT "-default="$paramG 
+    + $phT "-default=" $paramG 
     mt $rsn $guiG "getInput" "-title=Set run parameters..." "-text=Run parameters:" $phT
 
     plo $rsn

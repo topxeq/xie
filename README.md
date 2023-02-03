@@ -1,4 +1,4 @@
-- [介绍](#介绍)
+- [介绍（introduction）](#介绍introduction)
 - [语言特点](#语言特点)
 - [语言设计构思](#语言设计构思)
 - [安装教程](#安装教程)
@@ -91,20 +91,25 @@
 - [参与贡献者](#参与贡献者)
 &nbsp;
 
-#### 介绍
+#### 介绍（introduction）
 
 &nbsp;
 
 谢语言（英文名称为：Xielang，官网 [xie.topget.org](http://xie.topget.org/)）是一门开源、免费的解释型编程语言（也称作脚本语言），最大的特色包括：跨平台；跨语言（目前支持Go语言、JavaScript语言等，即将支持Java语言）可嵌入（即可在这些语言中调用）；结合了汇编语言和高级语言的优点；支持全中文编程（包括提示信息），语法简单易懂；单文件无依赖；可编译成单独可执行文件发布等。
 
-<font color="#777777">Xielang: a simple, easy, quick, open-source, cross-platform, embeddable, ASM/shell-like script language.</font>
-
+Xielang(official website [xie.topget.org](http://xie.topget.org/)) is an open source and free interpretative programming language (also known as script language). Main features include: cross-platform, cross language (currently supports Go language, JavaScript language, etc., and will soon support Java language), embeddable (in other languages), combines the advantages of assembly language and high-level language, and the syntax is simple, ASM/shell-script like and easy to rewrite in any other languages; minimum dependency, a single executable main program, code can be compiled into a separate executable file and distributed.
 
 谢语言支持各种基本的语法元素和结构，包括变量、条件分支、循环、函数、递归函数调用、多线程等，支持作为嵌入型语言在不同语言中调用，也支持独立运行（单文件的可执行程序），还支持作为后台微服务运行。同时，谢语言也提供一个命令行交互式编程环境，可用于一般的测试。
 
+Xielang supports various basic syntax elements and structures, including variables, conditional branches, loops, functions, recursive function calls, multi-threading, etc. It supports calls in other languages as embedded languages, minimum runtime dependency (single file executable), and supports system-service mode and micro-service mode. At the same time, Xielang also provides a command-line interactive programming environment, which can be used for general testing.
+
 谢语言的Go语言版本，单文件即可执行，包含了脚本执行功能（无需安装其他依赖环境）、交互式命令行环境和微服务器模式，支持图形界面编程（可采用多种方式，无需或仅需附加一个动态链接库文件）。
 
-谢语言的JavaScript版本（官网[xie.topget.org](http://xie.topget.org)），使用时仅需在网页中引用两个JavaScript文件，即可使用谢语言的功能，并且可以与JavaScript良好互通，充分发挥JavaScript中既有功能以及丰富的第三方库的优势。
+The Go language version of Xielang, which can be executed in a single file, includes script execution function (no need to install other dependent environments), interactive command-line environment and micro-service mode, and supports graphical interface programming (GUI, multiple methods can be adopted, without or only need to attach a dynamic link library file).
+
+谢语言的JavaScript版本，使用时仅需在网页中引用两个JavaScript文件，即可使用谢语言的功能，并且可以与JavaScript良好互通，充分发挥JavaScript中既有功能以及丰富的第三方库的优势。
+
+The JavaScript version of Xielang can use all the functions of Xielang only by referencing two JavaScript files in the web page, and it can communicate well with JavaScript, benefit of the existing functions in JavaScript and the advantages of rich third-party libraries.
 
 &nbsp;
 
@@ -114,27 +119,29 @@
 
 谢语言特点比较鲜明：
 
-- 语法形式追求极简，类似命令行（Shell脚本），以追求解析的速度；
-- 语法接近于汇编语言，包括一些语言的基础设施（例如堆栈等）和语法结构（条件分支与无条件跳转指令等）；
+- 语法形式追求极简，类似命令行（Shell脚本）和汇编语言，基本结构是一行一条指令，以追求解析的速度，避免繁琐的语法、语义分析；
+- 语法接近于汇编语言，包括一些语言的基础设施（例如堆栈、寄存器等）和语法结构（条件分支与无条件跳转指令等）；
 - 提供很多封装好的、功能丰富的内置指令，因而又使得语言接近于高级语言；
-- 支持自定义函数；
+- 支持自定义函数，提供丰富的函数调用方式，包括轻量级、快速的和隔离较好的；
 - 支持动态加载函数；
 - 支持动态加载模块代码并执行；
 - 支持并发编程；
 - 支持地址引用，类似指针但受一定的保护；
 - 支持编译成单独的可执行文件以便发布或者代码保护；
+- 支持以系统服务的方式运行；
+- 内置网络服务器和微服务框架，可以直接以服务器模式运行；
 - 由于极简的语法结构和超轻量级的脚本运行引擎，因此可以很方便地移植到任意语言中，目前支持的Go、Java、JavaScript就是三种特点很不相同的语言，但都可以轻松实现谢语言的支持；
 
 下面是谢语言常见的欢迎程序代码：
 
 ```go
-输出行 `欢迎来到谢语言的世界！`
+pln `欢迎来到谢语言的世界！`
 ```
 
 命令行上用下面的命令执行后可得结果如下：
 
 ```cmd
-D:\tmp>xie 欢迎.谢
+D:\tmp>xie welcome.xie
 欢迎来到谢语言的世界！
 
 D:\tmp>
@@ -204,12 +211,12 @@ D:\tmp>
 
 谢语言的出现，最初是因为希望有一个能够嵌入在各种语言（初期考虑的语言主要是Go、Java、JavaScript、C/C++、C#、Swift等）内的轻量级脚本语言，能够支持在后端微服务中热加载修改的代码，要求语言的语法简单而又速度相对较快，但是能够充分发挥宿主语言的丰富库函数优势。后来逐渐发现谢语言也具备可以成为一门全栈语言的潜力，希望它最终能够达到。另外，考虑到目前还没有一个开源免费并支持全栈编程的全中文编程语言，也希望谢语言能够作为填补空缺的一员。（* 多说一句，编程中完全不用到英文是不太可能的，希望尽量减少英文不好开发者的难度吧。为满足喜欢输入方便的开发者，谢语言也同时支持英语编程。）
 
-借鉴汇编语言的思路，谢语言引入了堆栈等概念，也因此在某些功能的实现上会比一般的高级语言显得复杂一些，但从速度上（包括语法解析的速度）考虑，还是值得的。但要求开发者对堆栈等概念做一些简单的了解。
+借鉴汇编语言的思路，谢语言引入了堆栈和寄存器等概念，也因此在某些功能的实现上会比一般的高级语言显得复杂一些，但从速度上（包括语法解析的速度）考虑，还是值得的。但要求开发者对堆栈、寄存器等概念做一些简单的了解。
 
 设计的原则包括：
 
 - 尽量减少语法分析的成本，因此拒绝复杂的语法结构，基本都以单行指令为主，只有多行字符串会占超过一行；
-- 不做标准库，只做内置指令集，保证语言短小精悍，功能能够支持一般而言80%以上的开发需求（其余功能可以从源码自行扩充）；
+- 不做标准库，只做内置指令集，保证语言短小精悍，功能能够支持一般而言80%以上的常见开发需求（其余功能可以从源码自行扩充）；
 - 在精简指令集基础上，支持函数和外部函数，支持外部模块的引入，以保证功能扩充的可能性；
 - 要支持并发编程；
 - 面向对象编程属于较低的优先级，甚至可以不实现；
@@ -228,7 +235,7 @@ D:\tmp>
 ```shell
 xie hello.xie
 ```
-3. 谢语言的代码文件一般以“.xie”或“.谢”作为扩展名，但这并不是强制的。注意，由于操作系统的限制，扩展名前的“.”只能是英文的小数点；
+3. 谢语言的代码文件一般以“.xie”作为扩展名，但这并不是强制的。注意，由于操作系统的限制，扩展名前的“.”只能是英文的小数点；
 4. 谢语言的代码文件内部都是纯文本的格式，并且要求使用UTF-8编码；另外，为便于跨平台使用，不建议使用BOM头；
 5. 安装后可以使用下述命令行验证是否安装成功，并且路径设置正常：
 
