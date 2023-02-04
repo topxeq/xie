@@ -1,7 +1,7 @@
-- [介绍（introduction）](#介绍introduction)
-- [语言特点](#语言特点)
-- [语言设计构思](#语言设计构思)
-- [安装教程](#安装教程)
+- [介绍（Introduction）](#介绍introduction)
+- [语言特点（Features）](#语言特点features)
+- [语言设计构思（Language design conception）](#语言设计构思language-design-conception)
+- [安装教程（Installation）](#安装教程installation)
 - [代码编辑器](#代码编辑器)
 - [关于中文编程和英语编程](#关于中文编程和英语编程)
 - [运行和查看例子代码](#运行和查看例子代码)
@@ -89,6 +89,8 @@
 - [编译谢语言](#编译谢语言)
 - [代码示例](#代码示例)
 - [参与贡献者](#参与贡献者)
+
+
 &nbsp;
 
 #### 介绍（Introduction）
@@ -170,6 +172,7 @@ Xielang has distinctive features:
 - Because of its extremely simple syntax structure and ultra-lightweight script running engine, it can be easily transplanted to any language. Currently, Go, Java and JavaScript are three languages with very different characteristics, but they can easily support Xielang;
 &nbsp;<br>
 
+&nbsp;<br>
 下面是谢语言常见的欢迎程序代码：
 The following is the common welcome program code of Xielang:
 
@@ -267,18 +270,23 @@ The design principles include:
 - 尽量减少语法分析的成本，因此拒绝复杂的语法结构，基本都以单行指令为主，只有多行字符串会占超过一行；
 - Try to reduce the cost of syntax analysis, so reject complex syntax structures. Basically, single-line instructions are the main instructions. Only multi-line strings will occupy more than one line;
 &nbsp;<br>
+
 - 不做标准库，只做内置指令集，保证语言短小精悍，功能能够支持一般而言80%以上的常见开发需求（其余功能可以从源码自行扩充）；
 - Do not build a standard library, but only build a built-in instruction set to ensure that the language is short and concise, and the functions can support more than 80% of common development requirements in general (other functions can be expanded from the source code);
 &nbsp;<br>
+
 - 在精简指令集基础上，支持函数和外部函数，支持外部模块的引入，以保证功能扩充的可能性；
 - On the basis of the reduced instruction set, it supports functions and external functions, and supports the introduction of external modules to ensure the possibility of function expansion;
 &nbsp;<br>
+
 - 要支持并发编程（虽然很多脚本语言不支持并发编程）；
 - Support concurrent programming (although most scripting languages do not support concurrent programming);
 &nbsp;<br>
+
 - 面向对象编程属于较低的优先级，甚至可以不实现；
 - Object-oriented programming belongs to a lower priority, and may not even be implemented;
 &nbsp;<br>
+
 谢语言还在积极开发中，欢迎提出各种建议。
 Xielang is still under active development and welcome to put forward various suggestions.
 
