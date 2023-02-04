@@ -91,7 +91,7 @@
 - [参与贡献者](#参与贡献者)
 &nbsp;
 
-#### 介绍（introduction）
+#### 介绍（Introduction）
 
 &nbsp;
 
@@ -113,32 +113,72 @@ The JavaScript version of Xielang can use all the functions of Xielang only by r
 
 &nbsp;
 
-#### 语言特点
+#### 语言特点（Features）
 
 &nbsp;
 
 谢语言特点比较鲜明：
 
+Xielang has distinctive features:
+
 - 语法形式追求极简，类似命令行（Shell脚本）和汇编语言，基本结构是一行一条指令，以追求解析的速度，避免繁琐的语法、语义分析；
+
+- The syntax form pursues minimalism, similar to command line (shell script) and assembly language. The basic structure is one instruction line by line, in order to pursue the speed of parsing and avoid tedious syntax and semantic analysis;
+&nbsp;<br>
+
 - 语法接近于汇编语言，包括一些语言的基础设施（例如堆栈、寄存器等）和语法结构（条件分支与无条件跳转指令等）；
+- Syntax is close to assembly language, including some language infrastructure (such as stack, register, etc.) and syntax structure (conditional branch and unconditional jump instruction, etc.);
+&nbsp;<br>
+
 - 提供很多封装好的、功能丰富的内置指令，因而又使得语言接近于高级语言；
+- It provides many encapsulated and functional built-in instructions, thus making the language close to high-level language;
+&nbsp;<br>
+
 - 支持自定义函数，提供丰富的函数调用方式，包括轻量级、快速的和隔离较好的；
+- Support user-defined functions and provide rich function call methods, including lightweight, fast and well isolated;
+&nbsp;<br>
+
 - 支持动态加载函数；
+- Support dynamic loading function;
+&nbsp;<br>
+
 - 支持动态加载模块代码并执行；
+- Support dynamic loading and execution of module code;
+&nbsp;<br>
+
 - 支持并发编程；
+- Support concurrent programming/thread;
+&nbsp;<br>
+
 - 支持地址引用，类似指针但受一定的保护；
+- Support address reference, similar to pointer but protected to some extent;
+&nbsp;<br>
+
 - 支持编译成单独的可执行文件以便发布或者代码保护；
+- Support compilation into separate executable files for release or code protection;
+&nbsp;<br>
+
 - 支持以系统服务的方式运行；
+- Support running in system service mode;
+&nbsp;<br>
+
 - 内置网络服务器和微服务框架，可以直接以服务器模式运行；
+- Built-in network/API server mode and micro-service framework are natively supported;
+&nbsp;<br>
+
 - 由于极简的语法结构和超轻量级的脚本运行引擎，因此可以很方便地移植到任意语言中，目前支持的Go、Java、JavaScript就是三种特点很不相同的语言，但都可以轻松实现谢语言的支持；
+- Because of its extremely simple syntax structure and ultra-lightweight script running engine, it can be easily transplanted to any language. Currently, Go, Java and JavaScript are three languages with very different characteristics, but they can easily support Xielang;
+&nbsp;<br>
 
 下面是谢语言常见的欢迎程序代码：
+The following is the common welcome program code of Xielang:
 
 ```go
 pln `欢迎来到谢语言的世界！`
 ```
 
 命令行上用下面的命令执行后可得结果如下：
+The following results can be obtained after the command line is executed with the following command:
 
 ```cmd
 D:\tmp>xie welcome.xie
@@ -151,53 +191,58 @@ D:\tmp>
 
 &nbsp;
 
-下面是常见用于性能测试的斐波那契数列生成代码（斐波那契.谢），使用了递归函数调用：
+下面是常见用于性能测试的斐波那契数列生成代码（fib.xie），使用了递归函数调用：
+The following is the Fibonacci sequence generation code (fib. xie) commonly used for performance testing, which uses recursive function calls:
 
 ```go
-入栈 整数 35
+// 用递归函数计算斐波那契数列
+// 计算序列上第18个数
+// cal Fibonacci numbers(the 18th) by recursive function
 
-调用 :斐波那契
+// 压栈一个整数18，表示计算第18个数
+push int 18
 
-输出行 $出栈
+// 调用标号:fib出的函数代码进行计算
+call $drop :fib
 
-终止
+pln $pop
 
-:斐波那契
-    声明变量 $数字1
- 
-    出栈 $数字1
+exit
 
-    小于 $入栈 $数字1 #i2
-  
-    是则 $出栈 :标号1
+// 递归运算的斐波那契计算函数
+:fib
+    var $n1
+    pop $n1
 
-    :否则
-        减一 $数字1
-        入栈 整数 $数字1
-        调用 :斐波那契
+    < $push $n1 #i2
 
+    if $pop :label1
 
-        减一 $数字1
-        入栈 整数 $数字1
-        调用 :斐波那契
+    :else
+        dec $n1
+        push int $n1
+        call $drop :fib
 
-        加 $入栈
+        dec $n1
+        push int $n1
+        call $drop :fib
 
-        返回
+        add $push $pop $pop
 
-    :标号1
-        入栈 $数字1
-        返回
+        ret
 
-
+    :label1
+        push $n1
+        ret
 
 ```
 
-将计算出斐波那契数列第35位数字，如下所示：
+将计算出斐波那契数列第18位数字，如下所示：
+The 18th digit of Fibonacci sequence will be calculated as follows:
 
 ```shell
-D:\tmp>xie 斐波那契.谢
-9227465
+D:\tmp>xie fib.xie
+2584
 
 D:\tmp>
 
@@ -205,27 +250,41 @@ D:\tmp>
 
 &nbsp;
 
-#### 语言设计构思
+#### 语言设计构思（Language design conception）
 
 &nbsp;
 
-谢语言的出现，最初是因为希望有一个能够嵌入在各种语言（初期考虑的语言主要是Go、Java、JavaScript、C/C++、C#、Swift等）内的轻量级脚本语言，能够支持在后端微服务中热加载修改的代码，要求语言的语法简单而又速度相对较快，但是能够充分发挥宿主语言的丰富库函数优势。后来逐渐发现谢语言也具备可以成为一门全栈语言的潜力，希望它最终能够达到。另外，考虑到目前还没有一个开源免费并支持全栈编程的全中文编程语言，也希望谢语言能够作为填补空缺的一员。（* 多说一句，编程中完全不用到英文是不太可能的，希望尽量减少英文不好开发者的难度吧。为满足喜欢输入方便的开发者，谢语言也同时支持英语编程。）
+谢语言的出现，最初是因为希望有一个能够嵌入在各种语言（初期考虑的语言主要是Go、Java、JavaScript、C/C++、C#、Swift等）内的轻量级脚本语言，能够支持在后端微服务中热加载修改的代码，要求语言的语法简单而又速度相对较快，但是能够充分发挥宿主语言的丰富库函数优势。后来逐渐发现谢语言也具备可以成为一门全栈语言的潜力，希望它最终能够达到。
+
+Xielang is expected to be a lightweight scripting language that can be embedded in various languages (the languages considered at the initial stage are mainly Go, Java, JavaScript, C/C++, C #, Swift, etc.), which can support the hot loading and modification of code in back-end micro-services. The syntax of the language is simple and relatively fast, but it can give full play to the advantages of rich library functions of the host language. It seems that Xielang has the potential to become a full-stack language, and hope it will be eventually.
 
 借鉴汇编语言的思路，谢语言引入了堆栈和寄存器等概念，也因此在某些功能的实现上会比一般的高级语言显得复杂一些，但从速度上（包括语法解析的速度）考虑，还是值得的。但要求开发者对堆栈、寄存器等概念做一些简单的了解。
+Referring to the idea of assembly language, Xielang introduces the concepts of stack and register, which makes the implementation of some functions more complex than that of general high-level languages, but it is still worth considering from the speed (including the speed of syntax parsing). However, developers are required to have a simple understanding of the concepts of stack and register.
 
 设计的原则包括：
+The design principles include:
 
 - 尽量减少语法分析的成本，因此拒绝复杂的语法结构，基本都以单行指令为主，只有多行字符串会占超过一行；
+- Try to reduce the cost of syntax analysis, so reject complex syntax structures. Basically, single-line instructions are the main instructions. Only multi-line strings will occupy more than one line;
+&nbsp;<br>
 - 不做标准库，只做内置指令集，保证语言短小精悍，功能能够支持一般而言80%以上的常见开发需求（其余功能可以从源码自行扩充）；
+- Do not build a standard library, but only build a built-in instruction set to ensure that the language is short and concise, and the functions can support more than 80% of common development requirements in general (other functions can be expanded from the source code);
+&nbsp;<br>
 - 在精简指令集基础上，支持函数和外部函数，支持外部模块的引入，以保证功能扩充的可能性；
-- 要支持并发编程；
+- On the basis of the reduced instruction set, it supports functions and external functions, and supports the introduction of external modules to ensure the possibility of function expansion;
+&nbsp;<br>
+- 要支持并发编程（虽然很多脚本语言不支持并发编程）；
+- Support concurrent programming (although most scripting languages do not support concurrent programming);
+&nbsp;<br>
 - 面向对象编程属于较低的优先级，甚至可以不实现；
-
+- Object-oriented programming belongs to a lower priority, and may not even be implemented;
+&nbsp;<br>
 谢语言还在积极开发中，欢迎提出各种建议。
+Xielang is still under active development and welcome to put forward various suggestions.
 
 &nbsp;
 
-#### 安装教程
+#### 安装教程（Installation）
 
 &nbsp;
 
