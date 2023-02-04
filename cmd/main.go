@@ -1178,27 +1178,27 @@ func main() {
 	if ifInExeT && inExeCodeT != "" {
 		scriptT = inExeCodeT
 	} else if ifExampleT {
-		if !tk.EndsWith(filePathT, ".xie") {
-			filePathT += ".xie"
-		}
+		// if !tk.EndsWith(filePathT, ".xie") {
+		// 	filePathT += ".xie"
+		// }
 
 		pathT := "http://xie.topget.org/xc/t/c/xielang/example/" + tk.UrlEncode2(filePathT)
 		scriptT = tk.DownloadWebPageX(pathT)
 		scriptPathG = pathT
 
 	} else if ifExamT {
-		if !tk.EndsWith(filePathT, ".xie") {
-			filePathT += ".xie"
-		}
+		// if !tk.EndsWith(filePathT, ".xie") {
+		// 	filePathT += ".xie"
+		// }
 
 		pathT := "http://xie.topget.org/xc/t/c/xielang/example/" + tk.UrlEncode2(filePathT)
 		scriptT = tk.DownloadWebPageX(pathT)
 		scriptPathG = pathT
 
 	} else if ifGoPathT {
-		if !tk.EndsWith(filePathT, ".xie") {
-			filePathT += ".xie"
-		}
+		// if !tk.EndsWith(filePathT, ".xie") {
+		// 	filePathT += ".xie"
+		// }
 
 		filePathT = filepath.Join(tk.GetEnv("GOPATH"), "src", "github.com", "topxeq", "xie", "cmd", "scripts", filePathT)
 		// tk.Pl(filePathT)
@@ -1222,9 +1222,9 @@ func main() {
 		scriptT = string(b)
 
 	} else if ifCloudT {
-		if !tk.EndsWith(filePathT, ".xie") {
-			filePathT += ".xie"
-		}
+		// if !tk.EndsWith(filePathT, ".xie") {
+		// 	filePathT += ".xie"
+		// }
 
 		basePathT, errT := tk.EnsureBasePath("xie")
 
@@ -1251,9 +1251,9 @@ func main() {
 		}
 
 	} else if ifRemoteT {
-		if !tk.EndsWith(filePathT, ".xie") {
-			filePathT += ".xie"
-		}
+		// if !tk.EndsWith(filePathT, ".xie") {
+		// 	filePathT += ".xie"
+		// }
 
 		scriptPathG = filePathT
 		// tk.Pl("scriptT: %v", filePathT)
@@ -1271,9 +1271,9 @@ func main() {
 		scriptT = tk.GetClipText()
 
 	} else if ifLocalT {
-		if !tk.EndsWith(filePathT, ".xie") {
-			filePathT += ".xie"
-		}
+		// if !tk.EndsWith(filePathT, ".xie") {
+		// 	filePathT += ".xie"
+		// }
 
 		basePathT, _ := tk.EnsureBasePath("xie")
 

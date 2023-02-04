@@ -99,6 +99,8 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"runCode": 156, // 运行一段谢语言代码，在新的虚拟机中执行，除结果参数（不可省略）外，第一个参数是字符串类型的代码（必选，后面参数都是可选），第二个参数为任意类型的传入虚拟机的参数（虚拟机内通过inputG全局变量来获取该参数），后面的参数可以是一个字符串数组类型的变量或者多个字符串类型的变量，虚拟机内通过argsG（字符串数组）来对其进行访问。
 
+	"extractRun": 158, // extract a piece of instrs in a running-context to a new running-context
+
 	"len": 161, // 获取字符串、列表、映射等的长度，参数全省略表示取弹栈值
 
 	"fatalf": 170, // printf then exit the program(类似pl输出信息后退出程序运行)
@@ -123,7 +125,7 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"unref": 215, // 对引用进行解引用
 
-	// "assignRef": 218, // 根据引用进行赋值（将引用指向的变量赋值）
+	"assignRef": 218, // 根据引用进行赋值（将引用指向的变量赋值）
 
 	// push/peek/pop stack related
 
@@ -271,6 +273,8 @@ var InstrNameSet map[string]int = map[string]int{
 	"sealCall": 1050, // new a VM to run a function, output/input through inputG & outG
 
 	"runCall": 1055, //
+
+	"goRunCall": 1056, // runCall in thread
 
 	"threadCall": 1060, // 并发调用函数，第一个参数是传入参数（压栈值）的个数（可省略），第二个参数是字符串类型的源代码，如果后续还有参数，将合并为数组传入调用函数（新虚拟机）的inputG变量中，并发函数体内需要通过outG返回值
 	"goCall":     1060,
@@ -1540,6 +1544,7 @@ func (p *RunningContext) LoadCompiled(compiledA *CompiledCode) error {
 
 	// load labels
 	originalLenT := len(p.CodeList)
+	originalSourceLenT := len(p.Source)
 
 	for k, _ := range compiledA.Labels {
 		_, ok := p.Labels[k]
@@ -1567,10 +1572,58 @@ func (p *RunningContext) LoadCompiled(compiledA *CompiledCode) error {
 	// }
 
 	for k, v := range compiledA.CodeSourceMap {
-		p.CodeSourceMap[originalLenT+k] = originalLenT + v
+		p.CodeSourceMap[originalLenT+k] = originalSourceLenT + v
 	}
 
 	return nil
+}
+
+func (p *RunningContext) Extract(startA, endA int) interface{} {
+	newRunT := NewRunningContext().(*RunningContext)
+
+	originalLenT := len(p.CodeList)
+
+	if startA < 0 || startA >= originalLenT {
+		return fmt.Errorf("start index not in range: %v(%v)", startA, originalLenT)
+	}
+
+	if endA < 0 || endA >= originalLenT {
+		return fmt.Errorf("end index not in range: %v(%v)", endA, originalLenT)
+	}
+
+	if startA > endA {
+		return fmt.Errorf("startA > endA: %v(%v)", startA, endA)
+	}
+
+	newLenT := endA - startA + 1
+
+	// load labels
+
+	for k, v := range p.Labels {
+		if v >= startA && v <= endA {
+			newRunT.Labels[k] = v - startA
+		}
+	}
+
+	// load codeList, instrList
+
+	startSourceA := p.CodeSourceMap[startA]
+	endSourceA := p.CodeSourceMap[endA]
+
+	// tk.Pl("s: %v e: %v", startSourceA, endSourceA)
+
+	for i := startSourceA; i <= endSourceA; i++ {
+		newRunT.Source = append(newRunT.Source, p.Source[i])
+	}
+
+	for i := 0; i < newLenT; i++ {
+		newRunT.CodeList = append(newRunT.CodeList, p.CodeList[startA+i])
+		newRunT.InstrList = append(newRunT.InstrList, p.InstrList[startA+i])
+
+		newRunT.CodeSourceMap[i] = p.CodeSourceMap[startA+i] - startSourceA
+	}
+
+	return newRunT
 }
 
 func (p *RunningContext) LoadCode(codeA string) error {
@@ -1584,6 +1637,46 @@ func (p *RunningContext) LoadCode(codeA string) error {
 
 	if e2 != nil {
 		return e2
+	}
+
+	return nil
+}
+
+func (p *RunningContext) Import(newRunA *RunningContext) error {
+	if newRunA == nil {
+		return nil
+	}
+
+	originalLenT := len(p.CodeList)
+
+	originalSourceLenT := len(p.Source)
+
+	for k, _ := range newRunA.Labels {
+		_, ok := p.Labels[k]
+
+		if ok {
+			return fmt.Errorf("duplicate label: %v", k)
+		}
+	}
+
+	for k, v := range newRunA.Labels {
+		p.Labels[k] = originalLenT + v
+	}
+
+	p.Source = append(p.Source, newRunA.Source...)
+
+	p.CodeList = append(p.CodeList, newRunA.CodeList...)
+	// for _, v := range compiledA.CodeList {
+	// 	p.CodeList = append(p.CodeList, v)
+	// }
+
+	p.InstrList = append(p.InstrList, newRunA.InstrList...)
+	// for _, v := range compiledA.InstrList {
+	// 	p.InstrList = append(p.InstrList, v)
+	// }
+
+	for k, v := range newRunA.CodeSourceMap {
+		p.CodeSourceMap[originalLenT+k] = originalSourceLenT + v
 	}
 
 	return nil
@@ -3275,7 +3368,7 @@ func NewObject(p *XieVM, r *RunningContext, typeA string, argsA ...interface{}) 
 		}
 
 		deleT = func(argsA ...interface{}) interface{} {
-			rs := p.RunCompiledCode(cp1, argsA)
+			rs := RunCodePiece(p, nil, cp1, argsA)
 
 			return rs
 		}
@@ -3564,7 +3657,7 @@ func NewVar(p *XieVM, r *RunningContext, typeA string, argsA ...interface{}) int
 		}
 
 		deleT = func(argsA ...interface{}) interface{} {
-			rs := p.RunCompiledCode(cp1, argsA)
+			rs := RunCodePiece(p, nil, cp1, argsA)
 
 			return rs
 		}
@@ -4672,6 +4765,27 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		p.SetVar(r, pr, rs)
 
 		return ""
+	case 158: // extractRun
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 2 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+		v2 := p.GetVarValue(r, instrT.Params[v1p+1])
+
+		rs := r.Extract(tk.ToInt(v1), tk.ToInt(v2))
+
+		p.SetVar(r, pr, rs)
+
+		return ""
 
 	case 161: // len
 		if instrT.ParamLen < 1 {
@@ -5269,8 +5383,13 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 			*nv = tk.ToInt(v1)
 			return ""
 		default:
+			errT := tk.SetByRef(p1a, v1)
 
-			return p.Errf(r, "无法处理的类型：%T", p1a)
+			if errT != nil {
+				return p.Errf(r, "failed to set value by ref(按引用赋值失败): %v -> %T(%v)", errT, p1a, p1a)
+			}
+
+			return ""
 		}
 
 		// if instrT.ParamLen > 2 {
@@ -6668,119 +6787,86 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		return ""
 
 	case 801: // inc
-		if instrT.ParamLen < 1 {
-			v1 := p.Stack.Pop()
+		var pr interface{} = -5
+		v1p := -5
 
-			nv, ok := v1.(int)
-
-			if ok {
-				p.Stack.Push(nv + 1)
-				return ""
-			}
-
-			nv2, ok := v1.(byte)
-
-			if ok {
-				p.Stack.Push(nv2 + 1)
-				return ""
-			}
-
-			nv3, ok := v1.(rune)
-
-			if ok {
-				p.Stack.Push(nv3 + 1)
-				return ""
-			}
-
-			p.Stack.Push(tk.ToInt(v1) + 1)
-
-			return ""
+		if instrT.ParamLen > 0 {
+			pr = instrT.Params[0]
+			v1p = 0
 		}
 
-		v1 := p.GetVarValue(r, instrT.Params[0])
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
 
 		nv, ok := v1.(int)
 
 		if ok {
-			p.SetVar(r, instrT.Params[0], nv+1)
+			p.SetVar(r, pr, nv+1)
 			return ""
 		}
 
 		nv2, ok := v1.(byte)
 
 		if ok {
-			p.SetVar(r, instrT.Params[0], nv2+1)
+			p.SetVar(r, pr, nv2+1)
 			return ""
 		}
 
 		nv3, ok := v1.(rune)
 
 		if ok {
-			p.SetVar(r, instrT.Params[0], nv3+1)
+			p.SetVar(r, pr, nv3+1)
 			return ""
 		}
 
-		p.SetVar(r, instrT.Params[0], tk.ToInt(v1)+1)
+		p.SetVar(r, pr, tk.ToInt(v1)+1)
 
 		return ""
 
 	case 810: // dec
-		if instrT.ParamLen < 1 {
-			v1 := p.Stack.Pop()
+		var pr interface{} = -5
+		v1p := -5
 
-			nv, ok := v1.(int)
-
-			if ok {
-				p.Stack.Push(nv - 1)
-				return ""
-			}
-
-			nv2, ok := v1.(byte)
-
-			if ok {
-				p.Stack.Push(nv2 - 1)
-				return ""
-			}
-
-			nv3, ok := v1.(rune)
-
-			if ok {
-				p.Stack.Push(nv3 - 1)
-				return ""
-			}
-
-			p.Stack.Push(tk.ToInt(v1) - 1)
-
-			return ""
+		if instrT.ParamLen > 0 {
+			pr = instrT.Params[0]
+			v1p = 0
 		}
 
-		v1 := p.GetVarValue(r, instrT.Params[0])
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
 
 		nv, ok := v1.(int)
 
 		if ok {
-			p.SetVar(r, instrT.Params[0], nv-1)
+			p.SetVar(r, pr, nv-1)
 			return ""
 		}
 
 		nv2, ok := v1.(byte)
 
 		if ok {
-			p.SetVar(r, instrT.Params[0], nv2-1)
+			p.SetVar(r, pr, nv2-1)
 			return ""
 		}
 
 		nv3, ok := v1.(rune)
 
 		if ok {
-			p.SetVar(r, instrT.Params[0], nv3-1)
+			p.SetVar(r, pr, nv3-1)
 			return ""
 		}
 
-		p.SetVar(r, instrT.Params[0], tk.ToInt(v1)-1)
+		p.SetVar(r, pr, tk.ToInt(v1)-1)
 
 		return ""
-
 	case 901: // add/+
 		// tk.Plv(instrT)
 		if instrT.ParamLen < 2 {
@@ -7223,6 +7309,35 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		codeT := p.GetVarValue(r, instrT.Params[v1p])
 
+		if r1, ok := codeT.(*RunningContext); ok {
+			vs := p.ParamsToList(r, instrT, v1p+1)
+			rs := RunCodePiece(NewVMQuick(), r1, "", vs)
+
+			p.SetVar(r, pr, rs)
+			return ""
+		}
+
+		if c1, ok := codeT.(int); ok {
+			if instrT.ParamLen < 3 {
+				return p.Errf(r, "not enough parameters(参数不够)")
+			}
+
+			c2 := tk.ToInt(p.GetVarValue(r, instrT.Params[v1p+1]))
+
+			newRunT := r.Extract(c1, c2)
+
+			if tk.IsError(newRunT) {
+				return p.Errf(r, "failed to runCall: %v", newRunT)
+			}
+
+			vs := p.ParamsToList(r, instrT, v1p+2)
+			rs := RunCodePiece(NewVMQuick(), newRunT, "", vs)
+
+			p.SetVar(r, pr, rs)
+			return ""
+
+		}
+
 		vs := p.ParamsToList(r, instrT, v1p+1)
 
 		rs := RunCode(codeT, vs, nil)
@@ -7239,7 +7354,39 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		pr := instrT.Params[0]
 		v1p := 1
 
+		var rT interface{} = nil
+
 		codeT := p.GetVarValue(r, instrT.Params[v1p])
+
+		if r1, ok := codeT.(*RunningContext); ok {
+			vs := p.ParamsToList(r, instrT, v1p+1)
+			rs := RunCodePiece(p, r1, "", vs)
+
+			p.SetVar(r, pr, rs)
+			return ""
+
+		}
+
+		if c1, ok := codeT.(int); ok {
+			if instrT.ParamLen < 3 {
+				return p.Errf(r, "not enough parameters(参数不够)")
+			}
+
+			c2 := tk.ToInt(p.GetVarValue(r, instrT.Params[v1p+1]))
+
+			newRunT := r.Extract(c1, c2)
+
+			if tk.IsError(newRunT) {
+				return p.Errf(r, "failed to runCall: %v", newRunT)
+			}
+
+			vs := p.ParamsToList(r, instrT, v1p+2)
+			rs := RunCodePiece(p, newRunT, "", vs)
+
+			p.SetVar(r, pr, rs)
+			return ""
+
+		}
 
 		vs := p.ParamsToList(r, instrT, v1p+1)
 
@@ -7255,7 +7402,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		}
 
 		if cp1, ok := codeT.(*CompiledCode); ok {
-			rs := p.RunCompiledCode(cp1, vs)
+			rs := RunCodePiece(p, rT, cp1, vs)
 
 			p.SetVar(r, pr, rs)
 			return ""
@@ -7263,14 +7410,112 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		p.SetVar(r, pr, fmt.Errorf("failed to compile code: %v", codeT))
 		return ""
+	case 1056: // goRunCall
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		// pr := instrT.Params[0]
+		v1p := 0
+
+		var rT interface{} = nil
+
+		codeT := p.GetVarValue(r, instrT.Params[v1p])
+
+		if r1, ok := codeT.(*RunningContext); ok {
+			vs := p.ParamsToList(r, instrT, v1p+1)
+			go RunCodePiece(p, r1, "", vs)
+
+			// p.SetVar(r, pr, rs)
+			return ""
+
+		}
+
+		if c1, ok := codeT.(int); ok {
+			if instrT.ParamLen < 2 {
+				return p.Errf(r, "not enough parameters(参数不够)")
+			}
+
+			c2 := tk.ToInt(p.GetVarValue(r, instrT.Params[v1p+1]))
+
+			newRunT := r.Extract(c1, c2)
+
+			if tk.IsError(newRunT) {
+				return p.Errf(r, "failed to runCall: %v", newRunT)
+			}
+
+			vs := p.ParamsToList(r, instrT, v1p+2)
+			go RunCodePiece(p, newRunT, "", vs)
+
+			// p.SetVar(r, pr, rs)
+			return ""
+
+		}
+
+		vs := p.ParamsToList(r, instrT, v1p+1)
+
+		if s1, ok := codeT.(string); ok {
+			compiledT := Compile(s1)
+
+			if tk.IsError(compiledT) {
+				// p.SetVar(r, pr, compiledT)
+				return p.Errf(r, "failed to compile code: %v", compiledT)
+			}
+
+			codeT = compiledT
+		}
+
+		if cp1, ok := codeT.(*CompiledCode); ok {
+			go RunCodePiece(p, rT, cp1, vs)
+
+			// p.SetVar(r, pr, rs)
+			return ""
+		}
+
+		return p.Errf(r, "failed to runCall code: %v", codeT)
+		// p.SetVar(r, pr, fmt.Errorf("failed to compile code: %v", codeT))
+		// return ""
 	case 1060: // threadCall/goCall
 		if instrT.ParamLen < 1 {
 			return p.Errf(r, "not enough parameters(参数不够)")
 		}
 
 		pr := instrT.Params[0]
+		v1p := 1
 
-		codeT := p.GetVarValue(r, instrT.Params[1])
+		codeT := p.GetVarValue(r, instrT.Params[v1p])
+
+		if r1, ok := codeT.(*RunningContext); ok {
+			vs := p.ParamsToList(r, instrT, v1p+1)
+
+			rs := GoCall(r1, vs...)
+
+			p.SetVar(r, pr, rs)
+			return ""
+
+		}
+
+		if c1, ok := codeT.(int); ok {
+			if instrT.ParamLen < 2 {
+				return p.Errf(r, "not enough parameters(参数不够)")
+			}
+
+			c2 := tk.ToInt(p.GetVarValue(r, instrT.Params[v1p+1]))
+
+			newRunT := r.Extract(c1, c2)
+
+			if tk.IsError(newRunT) {
+				return p.Errf(r, "failed to runCall: %v", newRunT)
+			}
+
+			vs := p.ParamsToList(r, instrT, v1p+2)
+
+			rs := GoCall(newRunT, vs...)
+
+			p.SetVar(r, pr, rs)
+			return ""
+
+		}
 
 		vs := p.ParamsToList(r, instrT, 2)
 
@@ -16130,7 +16375,7 @@ func (p *XieVM) Run(posA ...int) interface{} {
 
 }
 
-func (p *XieVM) RunCompiledCode(codeA interface{}, inputA interface{}) (rst interface{}) {
+func RunCodePiece(p *XieVM, r interface{}, codeA interface{}, inputA interface{}) (rst interface{}) {
 	defer func() {
 		if r1 := recover(); r1 != nil {
 			rst = fmt.Errorf("runtime exception: %v\n%v", r1, string(debug.Stack()))
@@ -16139,13 +16384,22 @@ func (p *XieVM) RunCompiledCode(codeA interface{}, inputA interface{}) (rst inte
 		}
 	}()
 
-	r := NewRunningContext(codeA)
+	var rp *RunningContext
 
-	if tk.IsError(r) {
-		return r
+	if r == nil {
+		r = NewRunningContext()
+		if tk.IsError(r) {
+			return p.Errf(rp, "[%v](xie) runtime error, failed to initialize running contexte: %v", tk.GetNowTimeStringFormal(), r)
+		}
 	}
 
-	rp := r.(*RunningContext)
+	rp = r.(*RunningContext)
+
+	errT := rp.Load(codeA)
+
+	if errT != nil {
+		return p.Errf(rp, "[%v](xie) runtime error, failed to load code: %v", tk.GetNowTimeStringFormal(), errT)
+	}
 
 	if len(rp.CodeList) < 1 {
 		return tk.Undefined
@@ -16168,13 +16422,13 @@ func (p *XieVM) RunCompiledCode(codeA interface{}, inputA interface{}) (rst inte
 		if ok {
 			rp.CodePointer = c1T
 		} else {
-			if tk.IsErrX(resultT) {
+			if tk.IsError(resultT) {
 				if GlobalsG.VerboseLevel > 1 {
-					tk.Pln(p.Errf(rp, "[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), tk.GetErrStrX(resultT)))
+					tk.Pln(p.Errf(rp, "[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), resultT))
 				}
 
 				rp.RunDeferUpToRoot(p)
-				return p.Errf(rp, "[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), tk.GetErrStrX(resultT))
+				return p.Errf(rp, "[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), resultT)
 				// tk.Pl("[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), p.CodeSourceMapM[p.CodePointerM]+1, tk.GetErrStr(rs))
 				// break
 			}
@@ -16186,12 +16440,12 @@ func (p *XieVM) RunCompiledCode(codeA interface{}, inputA interface{}) (rst inte
 				return p.Errf(rp, "return result error: (%T)%v", resultT, resultT)
 			}
 
-			if tk.IsErrStrX(rs) {
-				rp.RunDeferUpToRoot(p)
-				return p.Errf(rp, "[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), tk.GetErrStr(rs))
-				// tk.Pl("[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), p.CodeSourceMapM[p.CodePointerM]+1, tk.GetErrStr(rs))
-				// break
-			}
+			// if tk.IsErrStrX(rs) {
+			// 	rp.RunDeferUpToRoot(p)
+			// 	return p.Errf(rp, "[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), tk.GetErrStr(rs))
+			// 	// tk.Pl("[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), p.CodeSourceMapM[p.CodePointerM]+1, tk.GetErrStr(rs))
+			// 	// break
+			// }
 
 			if rs == "" {
 				rp.CodePointer++
@@ -16229,13 +16483,15 @@ func (p *XieVM) RunCompiledCode(codeA interface{}, inputA interface{}) (rst inte
 
 	rsi := rp.RunDeferUpToRoot(p)
 
-	if tk.IsErrX(rsi) {
-		return tk.ErrStrf("[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), tk.GetErrStrX(rsi))
+	if tk.IsError(rsi) {
+		return tk.ErrStrf("[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), rsi)
 	}
 
 	// tk.Pl(tk.ToJSONX(p, "-indent", "-sort"))
 
 	outT, ok := func1.Vars["outL"]
+	rp.PopFunc()
+
 	if !ok {
 		return tk.Undefined
 	}

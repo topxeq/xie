@@ -70,6 +70,14 @@ systemCmd $rs "xie" "-gopath" "sealCall.xie"
 
 test $rs "num1= 1.62\nnum2= 2.8\n4.536\nseal-function result: 4.536\n" $seq "sealCall.xie"
 
+systemCmd $rs "xie" "-gopath" "goRunCall.xie"
+
+test $rs "a=3.6, *p=99\nmainLoop 0 3.6 abc123 99\narg1= 3.6\narg2= abc123\n*arg3= 99\nsub 3.6 abc123 99 3.6 undefined\nmainLoop 1 4 abc123 101\nsub 4 abc123 101 4 1\nmainLoop 2 5 abc123 103\nmainLoop 3 5 abc123 103\nsub 5 abc123 103 5 2\nmainLoop 4 6 abc123 105\nsub 6 abc123 105 6 3\nmainLoop 5 7 abc123 107\n" $seq "goRunCall.xie"
+
+systemCmd $rs "xie" "-gopath" "extractRun.xie"
+
+test $rs "v1G= abc123\narg1= 0.75\narg2= 0.21\n0.96\nrunCall1 result: 0.96\nv1G= abc123\narg1= 1.6\narg2= 2.3\n3.9\nrunCall2 result: 3.9\nv1G= undefined\narg1= 2.1\narg2= 99.86\n101.96\nsealCall result: 101.96\n" $seq "extractRun.xie"
+
 systemCmd $rs "xie" "-gopath" "loadModule.xie"
 
 strReplace $rs $rs "\r" ""

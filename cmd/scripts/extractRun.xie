@@ -1,0 +1,41 @@
+= $v1G "abc123"
+
+extractRun $func1 :func1Start :func1End
+
+// 调用函数，并传入两个浮点数作为参数，返回结果存入$rs中
+runCall $rs $func1 #f0.75 #f0.21
+
+pln "runCall1 result:" $rs
+
+runCall $rs :func1Start :func1End #f1.6 #f2.3
+
+pln "runCall2 result:" $rs
+
+sealCall $rs :func1Start :func1End #f2.1 #f99.86
+
+pln "sealCall result:" $rs
+
+exit
+
+:func1Start
+# plv $inputL
+
+getArrayItem $f1 $inputL 0
+getArrayItem $f2 $inputL 1
+
+# debugInfo $pln
+
+pln v1G= $v1G
+
+pln arg1= $f1
+pln arg2= $f2
+
+add $result $f1 $f2
+
+pln $result
+
+var $outL
+assign $outL $result
+
+:func1End
+exit
