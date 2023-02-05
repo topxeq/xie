@@ -2,13 +2,12 @@
 - [语言特点（Features）](#语言特点features)
 - [语言设计构思（Language design conception）](#语言设计构思language-design-conception)
 - [安装教程（Installation）](#安装教程installation)
-- [代码编辑器](#代码编辑器)
-- [关于中文编程和英语编程](#关于中文编程和英语编程)
-- [运行和查看例子代码](#运行和查看例子代码)
-- [快速入门及语言要点](#快速入门及语言要点)
-  - [- **基本语法**](#--基本语法)
-  - [- **代码注释**](#--代码注释)
-  - [- **变量声明（定义）**](#--变量声明定义)
+- [代码编辑器（Code Editor）](#代码编辑器code-editor)
+- [运行和查看例子代码（Run and view sample code）](#运行和查看例子代码run-and-view-sample-code)
+- [快速入门及语言要点（Quick Tour and Language Essentials）](#快速入门及语言要点quick-tour-and-language-essentials)
+  - [- **基本语法**（Basic grammar）](#--基本语法basic-grammar)
+  - [- **代码注释**（Comments）](#--代码注释comments)
+  - [- **变量声明（定义）**（Variable declaration/definition）](#--变量声明定义variable-declarationdefinition)
   - [- **数值与类型**](#--数值与类型)
   - [- **给变量赋值**](#--给变量赋值)
   - [- **指定赋值的类型**](#--指定赋值的类型)
@@ -89,6 +88,7 @@
 - [编译谢语言](#编译谢语言)
 - [代码示例](#代码示例)
 - [参与贡献者](#参与贡献者)
+
 
 
 &nbsp;
@@ -297,20 +297,29 @@ Xielang is still under active development and welcome to put forward various sug
 &nbsp;
 
 1.  直接在[官网](http://xie.topget.org/)下载最新的谢语言可执行文件或压缩包，然后将其放在某个目录下，最好在系统路径之内，如果下载的是压缩包则先将其解压。然后即可使用；
+- Download the latest Xielang executable file or compressed package from the [official website](http://xie.topget.org/), and then put it in a directory, preferably within the system path. If you download a compressed package, decompress it first. Then it is ready to use;
+   
 2.  谢语言代码执行的一般方法是在命令行执行（确保谢语言的主程序在路径中，否则需要加上路径）：
+- The general way to execute Xielang code is to execute it on the command line (ensure that the main program of Xielang is in the path, otherwise the path needs to be added in the command-line):
 
 ```shell
 xie hello.xie
 ```
-3. 谢语言的代码文件一般以“.xie”作为扩展名，但这并不是强制的。注意，由于操作系统的限制，扩展名前的“.”只能是英文的小数点；
-4. 谢语言的代码文件内部都是纯文本的格式，并且要求使用UTF-8编码；另外，为便于跨平台使用，不建议使用BOM头；
-5. 安装后可以使用下述命令行验证是否安装成功，并且路径设置正常：
+3. 谢语言的代码文件一般以“.xie”作为扩展名，但这并不是强制的。注意，由于操作系统的限制，扩展名前的“.”只能是英文的小数点；\
+- Code files in Xielang generally use ". xie" as the extension, but this is not mandatory.
+
+3. 谢语言的代码文件内部都是纯文本的格式，并且要求使用UTF-8编码；另外，为便于跨平台使用，不建议使用BOM头；
+- The code files of Xielang are in plain text format, and UTF-8 encoding is required; In addition, in order to facilitate cross-platform use, BOM headers are not recommended;
+
+4. 安装后可以使用下述命令行验证是否安装成功，并且路径设置正常：
+- After installation, you can use the following command line to verify whether the installation is successful and the path setting is normal:
 
 ```shell
 xie -example hello.xie
 ```
 
 如果看到类似下面的输出，说明安装成功，并且开发环境准备就绪。
+If you see output similar to the following, the installation is successful and the development environment is ready.
 
 ```shell
 D:\tmpx>xie -example hello.xie
@@ -321,7 +330,8 @@ D:\tmpx>
 ```
 
 6. 直接不带任何参数运行谢语言主程序，将会进入谢语言的交互式命令行环境，在这里可以直接输入一行一行的命令，然后可以立即得到反馈结果：
-   
+- Run the main program of Xielang directly without any parameters, and you will enter the interactive command line environment of Xielang, where you can directly enter the command line by line, and then you can immediately get the feedback results:
+
 ```shell
 C:\Users\Administrator# xie
 > version
@@ -331,18 +341,21 @@ C:\Users\Administrator# xie
 ```
 
 交互式命令行程序可以用于快速测试一些语句，或进行简单的编程获取结果。
+The interactive command line program can be used to quickly test some statements, or conduct simple programming to obtain results.
 
 7. 另外，可以用-version参数查看当前谢语言的版本号：
+- In addition, you can use the - version parameter to view the version number of the current Xielang:
 
 ```shell
 D:\tmpx>xie -version
-谢语言 版本0.0.1
+Xielang(谢语言) Version(版本) 1.0.5
 
 D:\tmpx>
 
 ```
 
 在交互式命令行环境中，可以用version指令查看版本：
+In the interactive command line environment, you can use the version directive to view the version:
 
 ```shell
 > version $pln
@@ -352,176 +365,149 @@ D:\tmpx>
 
 &nbsp;
 
-#### 代码编辑器
+#### 代码编辑器（Code Editor）
 
 &nbsp;
 
 1.  谢语言的代码编辑器推荐Visual Studio Code或Notepad 3，都是免费的编辑器；也可以使用任何支持UTF-8编码的文本编辑器；
-2.  语法高亮方案建议选择Shell Script（Shell脚本即可），也可以选用Go、C语言等的语法高亮方案，目前还没有专属的；
-3.  谢语言内置命令行形式的行编辑器，简单的代码也可以用它编写；
+- Visual Studio Code or Notepad 3 are recommended by Xielang's code editor, which are free editors; You can also use any text editor that supports UTF-8 encoding;
+
+2.  语法高亮方案建议选择Rust或Shell Script（Shell脚本即可），也可以选用Go、C语言等的语法高亮方案，目前还没有专属的；
+- The syntax highlighting scheme is recommended to select Rust, Shell Script (shell script is enough), or go, C language and other syntax highlighting schemes, which are not exclusive at present;
+
+3.  谢语言也内置了简单的图形化命令行编辑器和的文本行编辑器，简单的代码也可以用它们来编写；
+- Xielang also has built-in simple graphical command line editor and text line editor, and simple code can also be written with them;
 
 &nbsp;
 
-#### 关于中文编程和英语编程
+#### 运行和查看例子代码（Run and view sample code）
 
 &nbsp;
 
-1.  谢语言支持全中文编程，包括关键字、命令（指令）、函数、变量、标号等均可以使用中文，前面的例子中已经有所演示；
-2.  为输入方便，谢语言也支持英文编程，所有内置函数同时具有中文和英文两种写法，由开发者自行选择使用哪个，具体参考相关文档；
-3.  代码文件名一般来说，中文代码使用“.谢”作为扩展名，英文代码使用“.xie”作为扩展名；
-4.  下面的讲解与示例中，为了简洁起见，一般使用英文方式；
-5.  前例中的斐波那契数列代码，如果用英文编写，将是类似这样的（fib.xie）：
-
-```go
-push int 35
-call :fib
-pln $pop
-
-exit
-
-:fib
-    var $n1
- 
-    pop $n1
-
-    < $push $n1 #i2
-
-    if $pop :label1
-
-    :else
-        dec $n1
-        push int $n1
-        call :fib
-
-        dec $n1
-        push int $n1
-        call :fib
-
-        add $push
-
-        ret
-
-    :label1
-        push $n1
-        ret
-
-
-```
-
-*本例子代码是fib.xie*
-
-&nbsp;
-
-#### 运行和查看例子代码
-
-&nbsp;
-
-谢语言提供各种例子代码，可以在命令行中加上-example参数直接运行，例如上述斐波那契数列代码中文版就可以直接用下面的命令行运行：
+谢语言提供各种例子代码，可以在命令行中加上-example参数直接运行，例如上述斐波那契数列代码就可以直接用下面的命令行运行：
+Xielang provides various example codes, which can be run directly with the -example parameter in the command line. For example, the Fibonacci sequence code can be run directly with the following command line:
 
 ```shell
-xie -example 斐波那契.谢
+xie -example fib.xie
 ```
 
 运行后结果类似：
+The results after operation are similar:
 
 ```shell
 
-D:\tmpx>xie -example 斐波那契.谢
-9227465
+D:\tmpx>xie -example fib.xie
+2584
 
 D:\tmpx>
 
 ```
 
 如果需要查看例子代码，可以再加上-view参数，就可以看到：
+If you need to view the example code, you can add the -view parameter to get it:
 
 ```shell
-D:\tmpx>xie -example -view 斐波那契.谢
-入栈 整数 35
+D:\tmpx>xie -example -view fib.xie
+// 用递归函数计算斐波那契数列
+// 计算序列上第18个数
+// cal Fibonacci numbers(the 18th) by recursive function
 
-调用 :斐波那契
+// 压栈一个整数18，表示计算第18个数
+push int 18
 
-输出行 $出栈
+// 调用标号:fib出的函数代码进行计算
+call $drop :fib
 
-……此处省略中间部分
+...
 
-    :标号1
-        入栈 $数字1     
-        返回
-
-
+    :label1
+        push $n1
+        ret
 
 D:\tmpx>
 ```
 
 当然，也可以用“>”等转向符将其输出到其他文件中：
+Of course, you can also use ">" and other steering symbols to output it to other files:
 
 ```
-xie -example -view 斐波那契.谢 > d:\test\new.xie
+xie -example -view fib.xie > d:\test\new.xie
 ```
 
 因此，如果我们后面说道：“请参看例子代码test1.xie”，那么就意味着可以通过
+Therefore, if we say later in this document, "Please see the example code test1.xie", it means that you can use the
 
 ```
 xie -example -view test1.xie
 ```
 
 这样的命令行来参看所述的例子代码。
+for such a command line, to see the example code described.
 
 &nbsp;
 
-#### 快速入门及语言要点
+#### 快速入门及语言要点（Quick Tour and Language Essentials）
 
 &nbsp;
 
-##### - **基本语法**
+##### - **基本语法**（Basic grammar）
 
 &nbsp;
 
   * 作为一门脚本语言，我们设计的初衷是尽可能降低解析语法的开销，因此谢语言选用了类似命令行的语法：一般命令（或者也称作指令或语句）都是一行，单条指令中的元素之间用空格作为分隔，第一个元素叫做指令名，后面的都叫做指令参数。也就是说，每条指令都由一个指令名和若干个指令参数组成，当然，有些指令也可以没有任何参数。例如：
+  * As a script language, our original intention is to reduce the overhead of parsing syntax as much as possible, so Xielang uses a syntax similar to the command line: general commands (or also called instructions or statements) are all one line, and the elements in a single instruction are separated by spaces, the first element is called the instruction name, and the following are called the instruction parameters. In other words, each instruction consists of an instruction name and several instruction parameters. Of course, some instructions can also have no parameters. For example:
 
   ```
     assign $a "abc"
   ```
+
   其中的assign是指令名，后面的$a和"abc"都是指令参数。本条指令将把字符串"abc"赋值给变量a（注意不包括引号）。
+  Where assign is the instruction name, and the following $a and "abc" are the instruction parameters. This instruction will assign the string "abc" to variable a (note that quotation marks are not included).
 
 &nbsp;
 
   * 唯一不是一行的情况是多行字符串，谢语言中用成对的反引号字符“`”来包起多行字符串（实际上也可以包起非多行的字符串，会在一定的情况下有用），例如：
+  * The only case that is not a single line is a multi-line string. In Xielang, a pair of backquote characters "`" are used to enclose multi-line strings (in fact, non-multi-line strings can also be enclosed, which will be useful under certain circumstances), for example:
 
-  ```
+```
     assign $a `abc
     123`
-  ```
+```
 
-    这将把变量a赋值为多行字符串"abc\n123"；
+  这将把变量a赋值为多行字符串"abc\n123"；
+  This will assign the variable **a** to the multiline string "abc\n123";
 
-    &nbsp;
+  &nbsp;
 
   * 命令头尾的空白都将被忽略，因此可以使用适当的缩进来提高代码的可读性。如果参数等值中含有不想省略的空格字符，需要用双引号或反引号括起整个字符串；
+  * The blank space at the beginning and end of the command will be ignored, so you can use appropriate indentation to improve the readability of the code. If the parameter equivalent contains space characters that you do not want to omit, you need to enclose the entire string with double quotation marks or back quotation marks;
   * 所有代码中的指令名、变量、字符串、标号等都是大小写敏感的，也就是说如果仅有大小写不同的两个变量名，将被认为指的是不同的变量。
+  * Instruction names, variables, strings, labels, etc. in all codes are case-sensitive. That is to say, if only two variable names with different case are different, they will be considered to refer to different variables.
   
 &nbsp;
 
-##### - **代码注释**
+##### - **代码注释**（Comments）
 
 &nbsp;
 
   谢语言中仅支持行注释，可以用“//”或“#”来引导注释，支持“#”是为了在文本编辑器中选用“Shell脚本”的语法高亮方案时，可以使用Ctrl+/组合键来切换改行是否注释。
+  In Xielang, only line comments are supported. You can use "//" or "#" to guide the comments. The support of "#" is to select the syntax highlighting scheme of "shell script" in the text editor. You can use Ctrl+/key combination to switch whether the line change is commented or not.
 
 &nbsp;
 
-##### - **变量声明（定义）**
+##### - **变量声明（定义）**（Variable declaration/definition）
 
   &nbsp;
 
-  谢语言使用var命令（中文命令为“声明变量”）进行变量声明：
+  谢语言通常使用var命令（中文命令为“声明变量”）进行变量声明：
+  In Xielang, we usually use the **var** command to declare variables:
 
   ```go
   var $a
   ```
 
   这将定义一个名字为a的变量，谢语言中，变量名前都要加“$”字符以示区别。定义变量时可以加第二个参数指定变量类型，此时其中的值为该类型的空值；不指定类型时，变量默认为nil（无类型的空值）如下所示：
+  This will define a variable named a. In Xielang, the variable name should be preceded by the "\$" character to show the difference. When defining a variable, you can add a second parameter to specify the variable type. At this time, the value is the null value of the type; When no type is specified, the variable defaults to nil (null value without type) as follows:
 
   ```shell
     C:\Users\Administrator# xie
@@ -532,10 +518,12 @@ xie -example -view test1.xie
   ```
 
   注意，pln命令类似于一般语言中的println函数，会将后面的变量和数值一个个输出到命令行，末尾再输出一个换行符。可以看到变量a中的值确实是nil。
+  Note that the pln command is similar to the **println** function in general languages. It outputs the following variables and values to the command line one by one, and then outputs a newline character at the end. You can see that the value in variable a is really nil.
 
 &nbsp;
 
   如果变量未定义就使用，会显示“未定义”字样，例如，下面的代码：
+  If the variable is used without definition, the word "undefined" will be displayed, for example, the following code:
 
   ```go
     pln "a:" $a
@@ -547,13 +535,15 @@ xie -example -view test1.xie
   ```
 
   运行后会显示如下结果：
+  The following results will be displayed after running:
 
   ```
-    a: 未定义
+    a: undefined
     a: <nil>
   ```
     
   因为第一次输出时，变量a尚未被定义。
+  Because the variable a has not been defined at the time of the first output.
 
 &nbsp;
 

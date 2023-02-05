@@ -47,7 +47,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var VersionG string = "1.0.3"
+var VersionG string = "1.0.5"
 
 func Test() {
 	tk.Pl("test")

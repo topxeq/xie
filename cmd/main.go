@@ -871,7 +871,7 @@ func main() {
 	}
 
 	if tk.IfSwitchExistsWhole(argsT, "-version") {
-		tk.Pl("Xie V%v", xie.VersionG)
+		tk.Pl("Xielang(谢语言) Version(版本) %v", xie.VersionG)
 		return
 	}
 
@@ -1088,6 +1088,8 @@ func main() {
 
 	}
 
+	// main start
+
 	ifExampleT := tk.IfSwitchExistsWhole(argsT, "-example")
 	ifExamT := tk.IfSwitchExistsWhole(argsT, "-exam")
 	ifGoPathT := tk.IfSwitchExistsWhole(argsT, "-gopath")
@@ -1135,7 +1137,7 @@ func main() {
 		}
 	}
 
-	if !ifInExeT && len(tk.GetAllParameters(argsT)) < 2 && !ifClipT {
+	if !ifInExeT && len(tk.GetAllParameters(argsT)) < 2 && !ifClipT && !ifEditT {
 		// if tk.IsErrX(scriptT) {
 		fileListT := tk.GetFileList(".", "-pattern=auto*.xie", "-sort=asc", "-sortKey=Name")
 
@@ -1303,6 +1305,9 @@ func main() {
 		} else {
 			scriptT = rsT
 		}
+	} else if filePathT == "" {
+		scriptT = ""
+		scriptPathG = ""
 	} else {
 		scriptT = tk.LoadStringFromFile(filePathT)
 		scriptPathG = filePathT
@@ -1317,7 +1322,13 @@ func main() {
 	if ifEditT {
 		guiHandlerG = guiHandler
 
-		rs := xie.RunCode(tk.DecryptStringByTXDEF(editCodeG), scriptT, map[string]interface{}{"guiG": guiHandlerG, "scriptPathG": scriptPathG}, append(argsT, "-fromInput")...)
+		editCodeT := tk.DownloadWebPageX(`http://xie.topget.org/pub/script/edit.xie`)
+
+		if tk.IsErrX(editCodeT) {
+			editCodeT = tk.DecryptStringByTXDEF(editCodeG)
+		}
+
+		rs := xie.RunCode(editCodeT, scriptT, map[string]interface{}{"guiG": guiHandlerG, "scriptPathG": scriptPathG}, append(argsT, "-fromInput")...)
 		if !tk.IsUndefined(rs) {
 			tk.Pl("%v", rs)
 		}

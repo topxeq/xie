@@ -17,7 +17,8 @@ ifSwitchExists $fromInputT $argsG -fromInput
 <style>
 	.CodeMirror {
 		border: 1px solid #eee;
-		height: auto;
+		// height: auto;
+		height: 90vh;
         font-size: 20px;
 	}
 
@@ -211,8 +212,8 @@ ifSwitchExists $fromInputT $argsG -fromInput
 
 </script>
 </head>
-<body>
-<div id="div1">
+<body style="font-size: 16px;">
+<div id="div1" style="height: 20px;">
 	<button onclick="javascript:clearIt();">Clear</button>
 	<button onclick="javascript:copyIt();">Copy</button>
 	<button onclick="javascript:pasteIt();">Paste</button>
@@ -223,8 +224,8 @@ ifSwitchExists $fromInputT $argsG -fromInput
 	<button onclick="javascript:runIt();">Run</button>
 	<button onclick="javascript:setParamIt();">Param</button>
 </div>
-<div id="div3" style="margin-top: 1.0em; text-align: left;">
-<textarea id="mainTextID" style="width: 90%; height: 80vh; font-size: 16px; text-align: left;"></textarea>
+<div id="div3" style="margin-top: 10px; text-align: left;">
+<textarea id="mainTextID" style="width: 90%; height: 92vh; font-size: 16px; text-align: left;"></textarea>
 </div>
 </body>
 </html>
