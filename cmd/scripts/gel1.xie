@@ -1,0 +1,9 @@
+loadGel $gel1 "http://xie.topget.org/gel/test.gel"
+
+ifErrX $gel1 :+1 :+2
+    fatalf "failed to load gel: %v" $gel1
+
+runCall $rs $gel1 arg1 #i18
+
+pln "rs:" $rs
+

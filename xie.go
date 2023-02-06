@@ -47,7 +47,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var VersionG string = "1.0.5"
+var VersionG string = "1.0.6"
 
 func Test() {
 	tk.Pl("test")
@@ -93,13 +93,16 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"loadCode": 151, // 载入字符串格式的谢语言代码到当前虚拟机中（加在最后），出错则返回error对象说明原因
 
+	"loadGel": 152, // 从网络载入谢语言函数（称为gel，凝胶，取其封装的意思），生成compiled对象，一般作为封装函数调用，建议用runCall或goRunCall调用（函数通过准全局变量inputL和outL进行出入参数的交互），出错则返回error对象说明原因；用法：loadGet http://example.com/gel/get1.xie -key=abc123
+
 	"compile": 153, // compile a piece of code
 
 	"quickRun": 155, // quick run a piece of code, in a new running context
 
 	"runCode": 156, // 运行一段谢语言代码，在新的虚拟机中执行，除结果参数（不可省略）外，第一个参数是字符串类型的代码（必选，后面参数都是可选），第二个参数为任意类型的传入虚拟机的参数（虚拟机内通过inputG全局变量来获取该参数），后面的参数可以是一个字符串数组类型的变量或者多个字符串类型的变量，虚拟机内通过argsG（字符串数组）来对其进行访问。
 
-	"extractRun": 158, // extract a piece of instrs in a running-context to a new running-context
+	"extractRun":      158, // extract a piece of instrs in a running-context to a new running-context
+	"extractCompiled": 159, // extract a piece of instrs in a running-context to a compiled object
 
 	"len": 161, // 获取字符串、列表、映射等的长度，参数全省略表示取弹栈值
 
@@ -271,8 +274,9 @@ var InstrNameSet map[string]int = map[string]int{
 	"ret": 1020, // return from a normal function or a fast call function, while for normal function call, can with a paramter for set $outL
 
 	"sealCall": 1050, // new a VM to run a function, output/input through inputG & outG
+	// 封装函数
 
-	"runCall": 1055, //
+	"runCall": 1055, // 调用称为“行运函数”的代码块
 
 	"goRunCall": 1056, // runCall in thread
 
@@ -1624,6 +1628,54 @@ func (p *RunningContext) Extract(startA, endA int) interface{} {
 	}
 
 	return newRunT
+}
+
+func (p *RunningContext) ExtractCompiled(startA, endA int) interface{} {
+	newT := NewCompiledCode()
+
+	originalLenT := len(p.CodeList)
+
+	if startA < 0 || startA >= originalLenT {
+		return fmt.Errorf("start index not in range: %v(%v)", startA, originalLenT)
+	}
+
+	if endA < 0 || endA >= originalLenT {
+		return fmt.Errorf("end index not in range: %v(%v)", endA, originalLenT)
+	}
+
+	if startA > endA {
+		return fmt.Errorf("startA > endA: %v(%v)", startA, endA)
+	}
+
+	newLenT := endA - startA + 1
+
+	// load labels
+
+	for k, v := range p.Labels {
+		if v >= startA && v <= endA {
+			newT.Labels[k] = v - startA
+		}
+	}
+
+	// load codeList, instrList
+
+	startSourceA := p.CodeSourceMap[startA]
+	endSourceA := p.CodeSourceMap[endA]
+
+	// tk.Pl("s: %v e: %v", startSourceA, endSourceA)
+
+	for i := startSourceA; i <= endSourceA; i++ {
+		newT.Source = append(newT.Source, p.Source[i])
+	}
+
+	for i := 0; i < newLenT; i++ {
+		newT.CodeList = append(newT.CodeList, p.CodeList[startA+i])
+		newT.InstrList = append(newT.InstrList, p.InstrList[startA+i])
+
+		newT.CodeSourceMap[i] = p.CodeSourceMap[startA+i] - startSourceA
+	}
+
+	return newT
 }
 
 func (p *RunningContext) LoadCode(codeA string) error {
@@ -4667,6 +4719,48 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		return ""
 
+	case 152: // loadGel
+
+		// var pr any = -5
+		// v1p := 0
+
+		// if instrT.ParamLen > 1 {
+		pr := instrT.Params[0]
+		v1p := 1
+		// }
+
+		urlT := p.GetVarValue(r, instrT.Params[v1p])
+
+		vs := p.ParamsToStrs(r, instrT, v1p+1)
+
+		keyT := tk.GetSwitch(vs, "-key=", "")
+
+		fcT := tk.DownloadWebPageX(tk.ToStr(urlT))
+
+		if tk.IsErrX(fcT) {
+			p.SetVar(r, pr, fmt.Errorf("failed to load gel: %v", tk.GetErrStrX(fcT)))
+			return
+		}
+
+		if strings.HasPrefix(fcT, "740404") || keyT != "" {
+			fcT = tk.DecryptStringByTXDEF(fcT, keyT)
+			if tk.IsErrX(fcT) {
+				p.SetVar(r, pr, fmt.Errorf("failed to extract gel: %v", tk.GetErrStrX(fcT)))
+				return
+			}
+		}
+
+		rsT := Compile(fcT)
+
+		if tk.IsError(rsT) {
+			p.SetVar(r, pr, fmt.Errorf("failed to compile gel: %v", rsT))
+			return
+		}
+
+		p.SetVar(r, pr, rsT)
+
+		return ""
+
 	case 153: // compile
 		if instrT.ParamLen < 1 {
 			return p.Errf(r, "not enough parameters(参数不够)")
@@ -4782,6 +4876,28 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		v2 := p.GetVarValue(r, instrT.Params[v1p+1])
 
 		rs := r.Extract(tk.ToInt(v1), tk.ToInt(v2))
+
+		p.SetVar(r, pr, rs)
+
+		return ""
+
+	case 159: // extractCompiled
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 2 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+		v2 := p.GetVarValue(r, instrT.Params[v1p+1])
+
+		rs := r.ExtractCompiled(tk.ToInt(v1), tk.ToInt(v2))
 
 		p.SetVar(r, pr, rs)
 
