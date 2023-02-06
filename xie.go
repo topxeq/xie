@@ -93,7 +93,7 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"loadCode": 151, // 载入字符串格式的谢语言代码到当前虚拟机中（加在最后），出错则返回error对象说明原因
 
-	"loadGel": 152, // 从网络载入谢语言函数（称为gel，凝胶，取其封装的意思），生成compiled对象，一般作为封装函数调用，建议用runCall或goRunCall调用（函数通过准全局变量inputL和outL进行出入参数的交互），出错则返回error对象说明原因；用法：loadGet http://example.com/gel/get1.xie -key=abc123
+	"loadGel": 152, // 从网络载入谢语言函数（称为gel，凝胶，取其封装的意思），生成compiled对象，一般作为封装函数调用，建议用runCall或goRunCall调用（函数通过准全局变量inputL和outL进行出入参数的交互），出错则返回error对象说明原因；用法：loadGet http://example.com/gel/get1.xie -key=abc123，-key参数可以输入解密密钥，-file参数表示从本地文件读取（默认从远程读取也可以用file://协议从本地读取）
 
 	"compile": 153, // compile a piece of code
 
@@ -4734,23 +4734,32 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		vs := p.ParamsToStrs(r, instrT, v1p+1)
 
 		keyT := tk.GetSwitch(vs, "-key=", "")
+		ifFileT := tk.IfSwitchExists(vs, "-file")
 
-		fcT := tk.DownloadWebPageX(tk.ToStr(urlT))
+		var fcT interface{}
+
+		if ifFileT {
+			fcT = tk.LoadText(tk.ToStr(urlT))
+		} else {
+			fcT = tk.GetWeb(tk.ToStr(urlT))
+		}
 
 		if tk.IsErrX(fcT) {
 			p.SetVar(r, pr, fmt.Errorf("failed to load gel: %v", tk.GetErrStrX(fcT)))
 			return
 		}
 
-		if strings.HasPrefix(fcT, "740404") || keyT != "" {
-			fcT = tk.DecryptStringByTXDEF(fcT, keyT)
-			if tk.IsErrX(fcT) {
+		fcsT := tk.ToStr(fcT)
+
+		if strings.HasPrefix(fcsT, "740404") || keyT != "" {
+			fcsT = tk.DecryptStringByTXDEF(fcsT, keyT)
+			if tk.IsErrX(fcsT) {
 				p.SetVar(r, pr, fmt.Errorf("failed to extract gel: %v", tk.GetErrStrX(fcT)))
 				return
 			}
 		}
 
-		rsT := Compile(fcT)
+		rsT := Compile(fcsT)
 
 		if tk.IsError(rsT) {
 			p.SetVar(r, pr, fmt.Errorf("failed to compile gel: %v", rsT))

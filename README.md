@@ -8,9 +8,9 @@
   - [- **基本语法**（Basic grammar）](#--基本语法basic-grammar)
   - [- **代码注释**（Comments）](#--代码注释comments)
   - [- **变量声明（定义）**（Variable declaration/definition）](#--变量声明定义variable-declarationdefinition)
-  - [- **数值与类型**](#--数值与类型)
-  - [- **给变量赋值**](#--给变量赋值)
-  - [- **指定赋值的类型**](#--指定赋值的类型)
+  - [- **数值与类型**（Value and types）](#--数值与类型value-and-types)
+  - [- **给变量赋值**（Assignment）](#--给变量赋值assignment)
+  - [- **指定赋值的类型**（Specify the type of assignment）](#--指定赋值的类型specify-the-type-of-assignment)
   - [- **字符串赋值**](#--字符串赋值)
   - [- **各种赋值示例**](#--各种赋值示例)
   - [- **用var指令的时候赋值**](#--用var指令的时候赋值)
@@ -547,11 +547,12 @@ for such a command line, to see the example code described.
 
 &nbsp;
 
-##### - **数值与类型**
+##### - **数值与类型**（Value and types）
 
 &nbsp;
 
   * 谢语言中，常用的基本类型包括：bool/布尔、int/整数、float/浮点数（即小数）、str/字符串，其中整数和浮点数均为64位，还有byte/字节、rune/如痕（用于Unicode字符）。复杂类型在后面再介绍。使用plo命令，可以看到某个变量的类型和数值：
+  * In Xielang, common basic types include: bool(boolean), int(integer), float(floating point number, i.e. decimal), str(string), where both integer and floating point number are 64 bits, and byte(byte), rune(for Unicode characters). Complex types will be introduced later. Use the **plo** command to see the type and value of a variable:
 
   ```shell
     C:\Users\Administrator# xie
@@ -562,30 +563,35 @@ for such a command line, to see the example code described.
   ```
 
   可以看出，变量a被定义为float64即64位浮点数，并初始化为值0。
+  It can be seen that the variable a is defined as float64, which is a 64-bit floating point number, and initialized to the value 0.
 
-  谢语言中的变量的类型可以任意改变，意味着谢语言是一门“弱类型”的语言，而不像Go、C、Java等“强类型”的语言那样，变量一旦声明后只能改变数值而不能改变类型。
-
-&nbsp;
-
-##### - **给变量赋值**
+  谢语言中的变量的类型可以任意改变，意味着谢语言是一门“弱类型”的语言，而不像Go、C/C++、Java等“强类型”的语言那样，变量一旦声明后只能改变数值而不能改变类型。
+  The type of variables in Xie language can be changed at will, which means that Xielang is a "weakly typed" language. Unlike "strongly typed" languages such as Go, C/C++, Java, etc., variables can only change the value but not the type once declared.
 
 &nbsp;
 
-  谢语言中给变量赋值用的是assign/=/赋值（即选用assign、=或中文“赋值”都可以表示这条命令，后面都会用类似的写法）命令：
+##### - **给变量赋值**（Assignment）
+
+&nbsp;
+
+  谢语言中给变量赋值用的是assign/=（即选用assign或=都可以表示这条指令，后面都会用类似的写法）指令：
+  In Xielang, assign/=/assignment is used to assign values to variables (that is, select assign or '=' to indicate this command(instruction), which will be written in a similar way later):
 
   ```go
     assign $a 123
   ```
 
   这条命令将把变量a赋值为123，注意，这是字符串“123”，而不是数字123，因为谢语言中默认数值都是字符串类型。
+  This command will assign the value of variable a to 123. Note that this is the string "123", not the number 123, because the default value in Xielang is string type.
     
 &nbsp;
 
-##### - **指定赋值的类型**
+##### - **指定赋值的类型**（Specify the type of assignment）
 
 &nbsp;
 
   如果想把变量a赋值为一个整数，可以选用下面两种方法之一：
+  If you want to assign variable a to an integer, you can choose one of the following two methods:
 
   ```go
     assign $a #i123
@@ -593,12 +599,16 @@ for such a command line, to see the example code described.
   ```
 
   第一种方法是谢语言中对数值指定类型的方法，在数值前加上“#”号开头带一个指定的英语字母，可以限定数值的类型，对于基本类型，“#i”表示整数，“#f”表示浮点数，“#b”表示布尔数值（后跟true或false），“#s”表示字符串，“#y”表示字节，“#r”表示如痕。
+  The first method is specifying the type of a number in Xielang. The number is preceded by a "#" sign with a specified English letter, which can limit the type of a number. For the basic type, "#i" represents an integer, "#f" represents a floating point number, "#b" represents a Boolean value (followed by true or false), "#s" represents a string, "#y" represents a byte, and "#r" represents a rune(32bit signed int).
+
 
    &nbsp; 
 
-  第二种方法是在数值前再加一个指定数据类型的参数，可以是“int”、“float”、“bool”、“str”、“byte”、“rune”等，分别对应中文的“整数”、“小数”、“布尔”、“字符串”、“字节”、“如痕”。
+  第二种方法是在数值前再加一个指定数据类型的参数，可以是“int”、“float”、“bool”、“str”、“byte”、“rune”等。
+  The second method is to add a parameter of the specified data type before the numerical value, which can be "int", "float", "bool", "str", "byte", "run", etc.
 
-  看下下面的输出，可以看到两种方法得到的结果是一样的：
+  看一下下面的输出，可以看到两种方法得到的结果是一样的：
+  Looking at the following output, we can see that the results obtained by the two methods are the same:
 
   ```shell
     D:\tmpx# xie
@@ -608,8 +618,8 @@ for such a command line, to see the example code described.
     > assign $a int 123
     > plo $a
     (int)123
-    > 赋值 $变量1 整数 123
-    > 输出值类型 $变量1     
+    > = $变量1 整数 123
+    > plo $变量1     
     (int)123
     >      
   ```
