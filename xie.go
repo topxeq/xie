@@ -2,7 +2,6 @@ package xie
 
 import (
 	"bytes"
-	"compress/gzip"
 	"database/sql"
 	"encoding/base64"
 	"encoding/hex"
@@ -47,7 +46,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var VersionG string = "1.0.6"
+var VersionG string = "1.0.7"
 
 func Test() {
 	tk.Pl("test")
@@ -705,8 +704,17 @@ var InstrNameSet map[string]int = map[string]int{
 	"encryptData": 25201, // 用TXDEF方法加密数据（字节列表）
 	"decryptData": 25203, // 用TXDEF方法解密数据（字节列表）
 
+	// compress/uncompress related 压缩/解压缩相关
+	"compress":   26001, // compress string or byte array to byte array
+	"uncompress": 26002,
+	"decompress": 26002,
+
+	"compressText":   26011, // compress string to string, may even be longer than original
+	"uncompressText": 26012,
+	"decompressText": 26012,
+
 	// network relate 网络相关
-	"getRandomPort": 26001, // 获取一个可用的socket端口（注意：获取后应尽快使用，否则仍有可能被占用）
+	"getRandomPort": 27001, // 获取一个可用的socket端口（注意：获取后应尽快使用，否则仍有可能被占用）
 
 	// database related 数据库相关
 	"dbConnect": 32101, // 连接数据库，用法示例：dbConnect $db "sqlite3" `c:\tmpx\test.db`，或dbConnect $db "godror" `user/pass@129.0.9.11:1521/testdb`，结果参数外第一个参数为数据库驱动类型，目前支持sqlite3、mysql、mssql、godror（即oracle）等，第二个参数为连接字串
@@ -806,8 +814,8 @@ var InstrNameSet map[string]int = map[string]int{
 	"archiveFilesToZip":   90101, // 添加多个文件到一个新建的zip文件，第一个参数为zip文件名，后缀必须是.zip，可选参数-overwrite（是否覆盖已有文件），-makeDirs（是否根据需要新建目录），其他参数看做是需要添加的文件或目录，目录将递归加入zip文件，如果参数为一个列表，将看作一个文件名列表，其中的文件都将加入
 	"extractFilesFromZip": 90111, // 添加文件到zip文件
 
-	"compressData":   90201, // 压缩数据，用法：compressData $result $data -method=gzip，压缩方法由-method参数指定，默认为gzip，还支持lzw
-	"decompressData": 90203, // 解压缩数据
+	// "compressData":   90201, // 压缩数据，用法：compressData $result $data -method=gzip，压缩方法由-method参数指定，默认为gzip，还支持lzw
+	// "decompressData": 90203, // 解压缩数据
 
 	// web GUI related 网页界面相关
 	"initWebGUIW":   100001, // 初始化Web图形界面编程环境（Windows下IE11版本），如果没有外嵌式浏览器xiewbr，则将其下载到xie语言目录下
@@ -14040,7 +14048,99 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		p.SetVar(r, pr, rsT)
 
 		return ""
-	case 26001: // getRandomPort
+	case 26001: // compress
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		// bufT, ok := v1.([]byte)
+
+		// if !ok {
+		// 	p.SetVar(r, pr, fmt.Errorf("failed to compress, unsupported type: %T(%v)", v1, v1))
+		// }
+
+		rsT := tk.Compress(v1)
+
+		p.SetVar(r, pr, rsT)
+
+		return ""
+	case 26002: // uncompress
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		// bufT, ok := v1.([]byte)
+
+		// if !ok {
+		// 	p.SetVar(r, pr, fmt.Errorf("failed to uncompress, unsupported type: %T(%v)", v1, v1))
+		// }
+
+		rsT := tk.Uncompress(v1)
+
+		p.SetVar(r, pr, rsT)
+
+		return ""
+	case 26011: // compressText
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+
+		rsT := tk.CompressText(v1)
+
+		p.SetVar(r, pr, rsT)
+
+		return ""
+	case 26012: // uncompressText
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+
+		rsT := tk.UncompressText(v1)
+
+		p.SetVar(r, pr, rsT)
+
+		return ""
+	case 27001: // getRandomPort
 		var pr interface{} = -5
 		// v1p := 0
 
@@ -15349,61 +15449,61 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		return ""
 
-	case 90201: // compressData
-		if instrT.ParamLen < 2 {
-			return p.Errf(r, "not enough parameters(参数不够)")
-		}
+	// case 90201: // compressData
+	// 	if instrT.ParamLen < 2 {
+	// 		return p.Errf(r, "not enough parameters(参数不够)")
+	// 	}
 
-		pr := instrT.Params[0]
-		v1p := 1
+	// 	pr := instrT.Params[0]
+	// 	v1p := 1
 
-		v1 := p.GetVarValue(r, instrT.Params[v1p])
+	// 	v1 := p.GetVarValue(r, instrT.Params[v1p])
 
-		v1vb, ok := v1.([]byte)
+	// 	v1vb, ok := v1.([]byte)
 
-		if !ok {
-			v1vs, ok := v1.(string)
+	// 	if !ok {
+	// 		v1vs, ok := v1.(string)
 
-			if ok {
-				v1vb = []byte(v1vs)
-			} else {
-				return p.Errf(r, "参数格式错误（invalid param type）：%T(%v)", v1, v1)
-			}
-		}
+	// 		if ok {
+	// 			v1vb = []byte(v1vs)
+	// 		} else {
+	// 			return p.Errf(r, "参数格式错误（invalid param type）：%T(%v)", v1, v1)
+	// 		}
+	// 	}
 
-		vs := p.ParamsToStrs(r, instrT, v1p+1)
+	// 	vs := p.ParamsToStrs(r, instrT, v1p+1)
 
-		methodT := p.GetSwitchVarValue(r, vs, "-method=", "gzip")
+	// 	methodT := p.GetSwitchVarValue(r, vs, "-method=", "gzip")
 
-		nameT := p.GetSwitchVarValue(r, vs, "-name=", "")
-		commentT := p.GetSwitchVarValue(r, vs, "-comment=", "")
-		timeT := tk.ToTime(p.GetSwitchVarValue(r, vs, "-time=", ""), time.Now()).(time.Time)
+	// 	nameT := p.GetSwitchVarValue(r, vs, "-name=", "")
+	// 	commentT := p.GetSwitchVarValue(r, vs, "-comment=", "")
+	// 	timeT := tk.ToTime(p.GetSwitchVarValue(r, vs, "-time=", ""), time.Now()).(time.Time)
 
-		var buf bytes.Buffer
-		zw := gzip.NewWriter(&buf)
+	// 	var buf bytes.Buffer
+	// 	zw := gzip.NewWriter(&buf)
 
-		if methodT == "gzip" {
-			zw.Name = nameT
-			zw.Comment = commentT
-			zw.ModTime = timeT
+	// 	if methodT == "gzip" {
+	// 		zw.Name = nameT
+	// 		zw.Comment = commentT
+	// 		zw.ModTime = timeT
 
-			_, err := zw.Write(v1vb)
-			if err != nil {
-				p.SetVar(r, pr, fmt.Errorf("压缩数据时发生错误（failed to compress data）：%v", err))
-				return ""
-			}
+	// 		_, err := zw.Write(v1vb)
+	// 		if err != nil {
+	// 			p.SetVar(r, pr, fmt.Errorf("压缩数据时发生错误（failed to compress data）：%v", err))
+	// 			return ""
+	// 		}
 
-			if err := zw.Close(); err != nil {
-				p.SetVar(r, pr, fmt.Errorf("压缩数据关闭文件时发生错误（failed to compress data file）：%v", err))
-				return ""
-			}
+	// 		if err := zw.Close(); err != nil {
+	// 			p.SetVar(r, pr, fmt.Errorf("压缩数据关闭文件时发生错误（failed to compress data file）：%v", err))
+	// 			return ""
+	// 		}
 
-			p.SetVar(r, pr, buf.Bytes())
-			return ""
-		}
+	// 		p.SetVar(r, pr, buf.Bytes())
+	// 		return ""
+	// 	}
 
-		p.SetVar(r, pr, fmt.Errorf("不支持的压缩格式（unsupported compress method）：%v", methodT))
-		return ""
+	// 	p.SetVar(r, pr, fmt.Errorf("不支持的压缩格式（unsupported compress method）：%v", methodT))
+	// 	return ""
 
 	case 100001: // initWebGUIW/initWebGuiW
 		applicationPathT := tk.GetApplicationPath()
