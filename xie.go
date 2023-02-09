@@ -30,6 +30,7 @@ import (
 	"github.com/domodwyer/mailyak"
 	"github.com/kbinani/screenshot"
 	"github.com/mholt/archiver/v3"
+	"github.com/topxeq/awsapi"
 	"github.com/topxeq/goph"
 	"github.com/topxeq/regexpx"
 	"github.com/topxeq/sqltk"
@@ -852,6 +853,10 @@ var InstrNameSet map[string]int = map[string]int{
 	// mail related
 
 	// "mailNewSender": 220001, // 新建一个邮件发送对象，与 new $result "mailSender" 指令效果类似
+
+	// misc related 杂项相关
+
+	"awsSign": 300101,
 
 	// GUI related 图形界面相关
 	"guiInit": 400000, // 初始化GUI环境
@@ -3088,6 +3093,12 @@ func NewObject(p *XieVM, r *RunningContext, typeA string, argsA ...interface{}) 
 	var rs interface{}
 
 	switch typeA {
+	case "postData", "url.Values":
+		if makeT {
+			rs = url.Values{}
+		} else {
+			rs = &url.Values{}
+		}
 	case "bool":
 		if makeT {
 			rs = false
@@ -3515,6 +3526,8 @@ func NewVar(p *XieVM, r *RunningContext, typeA string, argsA ...interface{}) int
 	var rs interface{}
 
 	switch typeA {
+	case "postData", "url.Values":
+		rs = url.Values{}
 	case "bool":
 		if argsLenT < 1 {
 			rs = false
@@ -8918,6 +8931,10 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 			nv[v2] = tk.ToFloat(v3)
 		case map[string]string:
 			nv[v2] = tk.ToStr(v3)
+		case url.Values:
+			nv.Set(v2, tk.ToStr(v3))
+		case *url.Values:
+			nv.Set(v2, tk.ToStr(v3))
 		default:
 			valueT := reflect.ValueOf(v1)
 
@@ -11382,6 +11399,16 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 			switch nv := v1.(type) {
 			case time.Time:
 				v3 = tk.GetTimeStampMid(nv)
+			default:
+				p.Errf(r, "类型不匹配：%v", v1)
+			}
+		} else if s2 == "postData" || s2 == "url.Values" {
+
+			switch nv := v1.(type) {
+			case map[string]string:
+				v3 = tk.MapToPostData(nv)
+			case map[string]interface{}:
+				v3 = tk.MapToPostDataI(nv)
 			default:
 				p.Errf(r, "类型不匹配：%v", v1)
 			}
@@ -16291,6 +16318,50 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		p.SetVar(r, pr, f1.GetSheetList())
 		return ""
+
+	case 300101: // awsSign
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 2 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+		v2 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p+1]))
+
+		var signT string
+
+		nv1, ok := v1.(url.Values)
+
+		if ok {
+			signT = awsapi.Sign(nv1, v2)
+			p.SetVar(r, pr, signT)
+			return ""
+		}
+
+		nv2, ok := v1.(map[string]interface{})
+		if ok {
+			signT = awsapi.Sign(tk.MapToPostDataI(nv2), v2)
+			p.SetVar(r, pr, signT)
+			return ""
+
+		}
+
+		nv3, ok := v1.(map[string]string)
+		if ok {
+			signT = awsapi.Sign(tk.MapToPostData(nv3), v2)
+			p.SetVar(r, pr, signT)
+			return ""
+
+		}
+
+		return p.Errf(r, "failed to sign AWS, unsupport type: %T(%v)", v1, v1)
 
 	case 400000: // guiInit
 		// if instrT.ParamLen < 1 {

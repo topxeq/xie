@@ -11,6 +11,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.16
 	github.com/mholt/archiver/v3 v3.5.1
 	github.com/sijms/go-ora/v2 v2.5.25
+	github.com/topxeq/awsapi v0.0.0-20191115074250-1192cb0fdb97
 	github.com/topxeq/goph v0.0.0-20230116054750-120b087d86fb
 	github.com/topxeq/regexpx v0.0.0-20200814082553-4bffc7d07029
 	github.com/topxeq/sqltk v0.0.0-20221225082143-d6266faebd41
