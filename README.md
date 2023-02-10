@@ -11,11 +11,11 @@
   - [- **数值与类型**（Value and types）](#--数值与类型value-and-types)
   - [- **给变量赋值**（Assignment）](#--给变量赋值assignment)
   - [- **指定赋值的类型**（Specify the type of assignment）](#--指定赋值的类型specify-the-type-of-assignment)
-  - [- **字符串赋值**](#--字符串赋值)
-  - [- **各种赋值示例**](#--各种赋值示例)
-  - [- **用var指令的时候赋值**](#--用var指令的时候赋值)
-  - [- **堆栈**](#--堆栈)
-  - [- **基本的堆栈操作**](#--基本的堆栈操作)
+  - [- **字符串赋值**（String assignment）](#--字符串赋值string-assignment)
+  - [- **各种赋值示例**（Examples of various assignments）](#--各种赋值示例examples-of-various-assignments)
+  - [- **用var指令的时候赋值**（Assign value when using "var" instruction）](#--用var指令的时候赋值assign-value-when-using-var-instruction)
+  - [- **堆栈**（Stack）](#--堆栈stack)
+  - [- **基本的堆栈操作**（Basic stack operations）](#--基本的堆栈操作basic-stack-operations)
   - [- **与堆栈有关的特殊变量**](#--与堆栈有关的特殊变量)
   - [- **常见运算**](#--常见运算)
   - [- **数值类型转换**](#--数值类型转换)
@@ -626,15 +626,16 @@ for such a command line, to see the example code described.
 
 &nbsp;
 
-##### - **字符串赋值**
+##### - **字符串赋值**（String assignment）
 
 &nbsp;
 
   由于谢语言使用空格作为命令与参数之间的分隔符，因此带有空格的字符串必须做特殊处理，使用双引号或反引号括起来（不含空格的字符串可以不括起来直接使用），反引号还可以括起多行字符串（含有换行符“\n”的字符串），双引号中可以带有\n、\t等转义字符，反引号中则不进行转义。另外，由于使用了反引号，谢语言代码中不应出现其他用途的反引号，如果遇上确需使用的地方，需要用全局变量backQuoteG或者转义字符“\u0096”来代替。
+  Because Xielang uses spaces as the separator between commands and parameters, strings with spaces must be specially treated, including double quotation marks or back quotation marks (strings without spaces can be used directly without being enclosed), back quotation marks can also enclose multiline character strings (strings with newline character "\n"), double quotation marks can contain \n, \t and other escape characters, and back quotation marks can not be escaped. In addition, due to the use of backquotes, backquotes for other purposes should not appear in Xielang code. If there is a need to use them, the global variable backQuoteG or the escape character "\u0096" should be used instead.
 
 &nbsp;
 
-##### - **各种赋值示例**
+##### - **各种赋值示例**（Examples of various assignments）
 
 &nbsp;
 
@@ -662,7 +663,8 @@ for such a command line, to see the example code described.
   ```
 
   本段例子代码（assign.xie）执行后的结果是：
-
+  
+  The result of the execution of this example code (assign. xie) is:
 
   ```shell
     (string)abc
@@ -676,9 +678,11 @@ for such a command line, to see the example code described.
 
 &nbsp;
 
-##### - **用var指令的时候赋值**
+##### - **用var指令的时候赋值**（Assign value when using "var" instruction）
 
 var指令在指定类型后面，也可以带有初始化赋值的数据，例如：
+
+After the specified type, the **var** instruction can also carry data for initialization assignment, for example:
 
 ```go
 
@@ -692,77 +696,85 @@ var $b string "abc非常好"
 
 
 
-##### - **堆栈**
+##### - **堆栈**（Stack）
 
 &nbsp;
 
 堆栈是各种语言都会用到的数据结构，当然除了汇编语言外，一般都是“暗中”使用。但谢语言中将堆栈放开了使用，这有利于程序的性能，以及开发者灵活地操控。当然，对于对编程底层不是很了解的开发者来说，需要有一个适应的过程，容易犯错导致程序运行出乎意料。但熟悉之后，会发现这是一个很有力、很高效的编程基础设施。
 
+Stack is a data structure used by all languages. Except for assembly language, of course, it is generally used "secretly". However, Xie language has released the use of the stack, which is conducive to the performance of the program and the flexible control of developers. Of course, for developers who don't know much about the underlying programming, there needs to be an adaptation process, which is easy to make mistakes and lead to unexpected program operation. But after getting familiar with it, you will find that it is a very powerful and efficient programming infrastructure.
+
 &nbsp;
 
 堆栈实质上是一个“后进先出”的队列，我们一般将其形象地想象为一个竖立的箱子，一般的操作包括“入栈”（英语为push，将一个数值压入堆栈，即放在堆栈的顶部）、“出栈”（英语为pop，将一个数值弹出堆栈，即从堆栈顶部取出一个数值）和“看栈”（英语为peek，即取到堆栈顶部的第一个数值，但并不做出栈操作，并不改变堆栈内容）。
+
+The stack is essentially a "last in, first out" queue. We generally imagine it as an upright box. The general operations include "push" (push a value into the stack, that is, put it on the top of the stack), "Pop" and "peek" (look at the top of the stack).
 
 &nbsp;
 
 形象化地，我们有时候将入栈操作也称为“压入堆栈”，将出栈操作称为“弹出堆栈”、“弹出栈顶数值”，将看栈操作称为“查看栈顶”等。如果后面说道“弹栈值”，是指做了出栈（弹栈）操作后得到的值。另外，堆栈内的数值有可能被称为“元素”。
 
+Visually, we sometimes call stack push operation as "push stack", stack pop operation as "pop stack", "pop stack top value", and stack view operation as "view stack top". If "pop stack value" is mentioned later, it refers to the value obtained after the pop stack operation. In addition, the values in the stack may be called "elements" or "items".
+
 &nbsp;
 
 堆栈在各种数值转移、计算、函数调用等场景中都发挥着重要的作用，谢语言中将其放在了明面上，给开发者提供一种高效的工具。
 
+Stacks play an important role in various numerical transfer, calculation, function call and other scenarios. Xielang puts them on the bright side, providing developers with an efficient tool.
+
 &nbsp;
 
-##### - **基本的堆栈操作**
+##### - **基本的堆栈操作**（Basic stack operations）
 
 &nbsp;
 
 下面的代码（stack.xie）演示了堆栈的各种基本操作，代码中也写有详细的注释说明每条语句的作用，我们后面将大量使用这种方式来做代码示例和语法与指令讲解：
 
+The following code (stack.xie) demonstrates various basic operations of the stack. Detailed comments are also written in the code to explain the function of each statement. We will use this method extensively to explain code examples, syntax and instructions later:
+
   ```go
  
+  // 将整数2压入堆栈
+  // push a integer value 2
+  push #i2
 
-    // 将整数2压入堆栈
-    push #i2
+  // 弹出栈顶数值到变量a中
+  // pop the top item of the stack to variable $a
+  pop $a
 
-    // 弹出栈顶数值到变量a中
-    pop $a
+  // 输出变量a的内容
+  // print the value of variable $a for reference
+  plo $a
 
-    // 输出变量a的内容
-    plo $a
+  // 将整数3压入堆栈
+  // push another integer number 3 to stack
+  push #i3
 
-    // 将整数3压入堆栈
-    push #i3
+  // 将小数2.7压入堆栈，此时栈内从下而上包含两个元素：整数的3和浮点数2.8
+  // push the decimal 2.7 onto the stack. At this time, the stack contains two elements from the bottom up: the integer 3 and the floating point number 2.8
+  push #f2.8
 
-    // 将小数2.7压入堆栈，此时栈内从下而上包含两个元素：整数的3和浮点数2.8
-    push #f2.8
+  // 查看栈顶元素并将其赋值给变量b
+  // view the top element of the stack and assign it to variable b
+  peek $b
 
-    // 查看栈顶元素并将其赋值给变量b
-    peek $b
+  // 输出变量b的内容
+  // view the value of variable $b
+  plo $b
 
-    // 输出变量b的内容
-    plo $b
+  // 弹出栈顶元素到变量c中
+  // pop the stack top element into variable c
+  pop $c
 
-    // 弹出栈顶元素到变量c中
-    pop $c
-
-    // 输出变量b的内容
-    plo $c
-
-    // 中文的堆栈操作
-    // 压入一个布尔数值true
-    入栈 #btrue
-
-    看栈 $变量1
-
-    输出值类型 $变量1
-
-    出栈 $变量2
-
-    输出值类型 $变量2
+  // 输出变量c的内容
+  // view the value of variable $c
+  plo $c
 
   ```
 
 运行这段代码将输出：
+
+After running this code, you will get output like below:
 
   ```shell
     (int)2
@@ -774,6 +786,8 @@ var $b string "abc非常好"
 
 可以根据代码中的注释，详细观察堆栈操作的结果与预期的是否一致。
 
+According to the comments in the code, you can observe in detail whether the result of the stack operation is consistent with the expected.
+
 &nbsp;
 
 ##### - **与堆栈有关的特殊变量**
@@ -782,43 +796,61 @@ var $b string "abc非常好"
 
 谢语言中，有几个与堆栈操作有关特殊变量，属于系统预定义的变量，可以随时使用以便于一些灵活的数值操作。它们是“\$push”、“\$pop”和“\$peek”，分别表示入栈值、出栈值、看栈值。下面是它们的使用例子(stackVar.xie)：
 
+In Xielang, there are several special 'global' variables related to stack operations, which are predefined variables in the system and can be used at any time to facilitate some flexible numerical operations. They are "\$push", "\$pop" and "\$peek", which represent the stack push operation, the stack pop value and the stack peek value respectively. The following are examples of the usage (stackVar.xie):
+
+
   ```go
-    // 将字符串压入堆栈
-    push "我们高兴！"
+  // 将字符串压入堆栈
+  // push string to the stack
+  push "我们高兴！"
 
-    // 弹出栈顶数值，并输出
-    // 注意弹出的数值如果不赋值给变量将丢失
-    plo $pop
+  // 弹出栈顶数值，并输出
+  // 注意弹出的数值如果不赋值给变量将丢失
+  // pop up the value at the top of the stack and output
+  // note that the pop-up value will be lost if it is not assigned to the variable
+  plo $pop
 
-    // 将整数18入栈
-    push #i18
+  // 将整数18入栈
+  // push an integer value 18 to the stack
+  push #i18
 
-    // 将出栈的数值赋值给变量a
-    assign $a $pop
+  // 将出栈的数值赋值给变量a
+  // assign the value on the top of the stack to the variable $a, and "drop" it(from the stack)
+  assign $a $pop
 
-    // 输出变量a
-    plo $a
+  // 输出变量a
+  // output variable a
+  plo $a
 
-    // 将浮点数3.14入栈
-    push #f3.14
+  // 将浮点数3.14入栈
+  // put floating point number 3.14 on the stack
+  push #f3.14
 
-    // 将栈顶值赋值给变量a
-    // 此时堆栈内该数值仍将继续存在
-    assign $a $peek
+  // 将栈顶值赋值给变量a
+  // 此时堆栈内该数值仍将继续存在
+  // assign the stack top value to variable $a
+  // at this time(peek), the value will continue to exist in the stack
+  assign $a $peek
 
-    // 再次输出变量a
-    plo $a
+  // 再次输出变量a
+  // output variable $a again
+  plo $a
 
 
-    // 用assign语句将整数18入栈
-    // $push变量表示将后面的数值压栈
-    assign $push #i3
+  // 用assign语句将整数18入栈
+  // $push变量表示将后面的数值压栈
+  // use the assign statement to put the integer 18 on the stack
+  // the $push variable means to push the following values on the stack
+  assign $push #i3
 
-    // 输出栈顶元素
-    plo $peek
+  // 输出栈顶元素
+  // output stack top element
+  plo $peek
   ```
 
 本段代码运行的结果是：
+
+The result of running this code is:
 
   ```shell
     (string)我们高兴！

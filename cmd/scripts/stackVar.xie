@@ -1,33 +1,46 @@
 // 将字符串压入堆栈
+// push string to the stack
 push "我们高兴！"
 
 // 弹出栈顶数值，并输出
 // 注意弹出的数值如果不赋值给变量将丢失
+// pop up the value at the top of the stack and output
+// note that the pop-up value will be lost if it is not assigned to the variable
 plo $pop
 
 // 将整数18入栈
+// push an integer value 18 to the stack
 push #i18
 
 // 将出栈的数值赋值给变量a
+// assign the value on the top of the stack to the variable $a, and "drop" it(from the stack)
 assign $a $pop
 
 // 输出变量a
+// output variable a
 plo $a
 
 // 将浮点数3.14入栈
+// put floating point number 3.14 on the stack
 push #f3.14
 
 // 将栈顶值赋值给变量a
 // 此时堆栈内该数值仍将继续存在
+// assign the stack top value to variable $a
+// at this time(peek), the value will continue to exist in the stack
 assign $a $peek
 
 // 再次输出变量a
+// output variable $a again
 plo $a
 
 
 // 用assign语句将整数18入栈
 // $push变量表示将后面的数值压栈
+// use the assign statement to put the integer 18 on the stack
+// the $push variable means to push the following values on the stack
 assign $push #i3
 
 // 输出栈顶元素
+// output stack top element
 plo $peek

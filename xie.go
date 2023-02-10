@@ -47,13 +47,13 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var VersionG string = "1.0.7"
+var VersionG string = "1.0.8"
 
 func Test() {
 	tk.Pl("test")
 }
 
-var InstrCodeSet map[int]string = map[int]string{}
+// var InstrCodeSet map[int]string = map[int]string{}
 
 var InstrNameSet map[string]int = map[string]int{
 
@@ -1488,13 +1488,54 @@ func Compile(codeA string) interface{} {
 		codeT, ok := InstrNameSet[instrNameT]
 
 		if !ok {
-			instrT := Instr{Code: codeT, Cmd: InstrCodeSet[codeT], ParamLen: 1, Params: []VarRef{VarRef{Ref: -3, Value: v}}, Line: lineT} //&([]VarRef{})}
+			instrT := Instr{Code: codeT, Cmd: instrNameT, ParamLen: 1, Params: []VarRef{VarRef{Ref: -3, Value: v}}, Line: lineT} //&([]VarRef{})}
 			p.InstrList = append(p.InstrList, instrT)
 
 			return fmt.Errorf("编译错误(行 %v/%v %v): 未知指令", i, p.CodeSourceMap[i]+1, tk.LimitString(p.Source[p.CodeSourceMap[i]], 50))
 		}
 
-		instrT := Instr{Code: codeT, Cmd: InstrCodeSet[codeT], Params: make([]VarRef, 0, lenT-1), Line: lineT} //&([]VarRef{})}
+		if codeT == 109 { // defer
+			if lenT < 2 {
+				instrT := Instr{Code: codeT, Cmd: instrNameT, ParamLen: 1, Params: []VarRef{VarRef{Ref: -3, Value: v}}, Line: lineT} //&([]VarRef{})}
+				p.InstrList = append(p.InstrList, instrT)
+
+				return fmt.Errorf("编译错误(行 %v/%v %v): 空的defer指令", i, p.CodeSourceMap[i]+1, tk.LimitString(p.Source[p.CodeSourceMap[i]], 50))
+			}
+
+			deferCmdT := strings.TrimSpace(listT[1])
+			deferCodeT, ok := InstrNameSet[deferCmdT]
+
+			if !ok {
+				instrT := Instr{Code: deferCodeT, Cmd: deferCmdT, ParamLen: 1, Params: []VarRef{VarRef{Ref: -3, Value: v}}, Line: lineT} //&([]VarRef{})}
+				p.InstrList = append(p.InstrList, instrT)
+
+				return fmt.Errorf("编译错误(行 %v/%v %v): 未知的defer指令", i, p.CodeSourceMap[i]+1, tk.LimitString(p.Source[p.CodeSourceMap[i]], 50))
+
+			}
+
+			instrDeferT := Instr{Code: deferCodeT, Cmd: deferCmdT, Params: make([]VarRef, 0, lenT-2), ParamLen: lenT - 2, Line: tk.RemoveFirstSubString(strings.TrimSpace(lineT), deferCmdT)} //&([]VarRef{})}
+
+			list3T := []VarRef{}
+
+			for j, jv := range listT {
+				if j < 2 {
+					continue
+				}
+
+				list3T = append(list3T, ParseVar(jv, i))
+			}
+
+			instrDeferT.Params = append(instrDeferT.Params, list3T...)
+			instrDeferT.ParamLen = lenT - 2
+
+			instrT := Instr{Code: codeT, Cmd: instrNameT, Params: []VarRef{VarRef{Ref: -3, Value: instrDeferT}}, ParamLen: 1, Line: lineT} //&([]VarRef{})}
+
+			p.InstrList = append(p.InstrList, instrT)
+
+			continue
+		}
+
+		instrT := Instr{Code: codeT, Cmd: instrNameT, Params: make([]VarRef, 0, lenT-1), Line: lineT} //&([]VarRef{})}
 
 		list3T := []VarRef{}
 
@@ -4538,15 +4579,24 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 			return p.Errf(r, "not enough parameters(参数不够)")
 		}
 
-		v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[0]))
+		v1 := p.GetVarValue(r, instrT.Params[0])
 
-		codeT, ok := InstrNameSet[v1]
+		nvi, ok := v1.(Instr)
+
+		if ok {
+			p.GetCurrentFuncContext(r).DeferStack.Push(nvi)
+			return ""
+		}
+
+		nvs := tk.ToStr(v1)
+
+		codeT, ok := InstrNameSet[nvs]
 
 		if !ok {
 			return p.Errf(r, "unknown instruction: %v", v1)
 		}
 
-		instrT := Instr{Code: codeT, Cmd: InstrCodeSet[codeT], Params: instrT.Params[1:], ParamLen: instrT.ParamLen - 1, Line: tk.RemoveFirstSubString(strings.TrimSpace(instrT.Line), v1)} //&([]VarRef{})}
+		instrT := Instr{Code: codeT, Cmd: nvs, Params: instrT.Params[1:], ParamLen: instrT.ParamLen - 1, Line: tk.RemoveFirstSubString(strings.TrimSpace(instrT.Line), nvs)} //&([]VarRef{})}
 
 		p.GetCurrentFuncContext(r).DeferStack.Push(instrT)
 
@@ -16578,7 +16628,10 @@ func (p *XieVM) Run(posA ...int) interface{} {
 	}
 
 	for {
-		// tk.Pl("-- [%v] %v", p.CodePointerM, tk.LimitString(p.SourceM[p.CodeSourceMapM[p.CodePointerM]], 50))
+		if GlobalsG.VerboseLevel > 1 {
+			tk.Pl("-- RunInstr [%v] %v", p.Running.CodePointer, tk.LimitString(p.Running.Source[p.Running.CodeSourceMap[p.Running.CodePointer]], 50))
+		}
+
 		resultT := RunInstr(p, p.Running, &p.Running.InstrList[p.Running.CodePointer])
 
 		c1T, ok := resultT.(int)
@@ -16719,7 +16772,7 @@ func RunCodePiece(p *XieVM, r interface{}, codeA interface{}, inputA interface{}
 			rp.CodePointer = c1T
 		} else {
 			if tk.IsError(resultT) {
-				if GlobalsG.VerboseLevel > 1 {
+				if GlobalsG.VerboseLevel > 0 {
 					tk.Pln(p.Errf(rp, "[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), resultT))
 				}
 
@@ -17688,11 +17741,11 @@ var GlobalsG *GlobalContext
 func init() {
 	// tk.Pl("init")
 
-	InstrCodeSet = make(map[int]string, 0)
+	// InstrCodeSet = make(map[int]string, 0)
 
-	for k, v := range InstrNameSet {
-		InstrCodeSet[v] = k
-	}
+	// for k, v := range InstrNameSet {
+	// 	InstrCodeSet[v] = k
+	// }
 
 	GlobalsG = &GlobalContext{}
 
