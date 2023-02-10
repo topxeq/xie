@@ -42,6 +42,14 @@ systemCmd $rs "xie" "-gopath" "for5.xie"
 
 test $rs "0 : 10\nj: 0\nj: 1\nj: 2\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n1 : 11\nj: 1\nj: 2\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n2 : 12\nj: 2\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n3 : 13\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\n4 : 14\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nend\n" $seq "for5.xie"
 
+systemCmd $rs "xie" "-gopath" "stack.xie"
+
+test $rs "(int)2\n(float64)2.8\n(float64)2.8\n" $seq "stack.xie"
+
+systemCmd $rs "xie" "-gopath" "stackVar.xie"
+
+test $rs "(string)\"我们高兴！\"\n(int)18\n(float64)3.14\n(int)3\n" $seq "stackVar.xie"
+
 systemCmd $rs "xie" "-gopath" "fastCall.xie"
 
 test $rs "124\n" $seq "fastCall.xie"
