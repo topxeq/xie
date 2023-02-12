@@ -10,7 +10,8 @@ push #i5
 // 此处使用了预定义全局变量$push
 // 此时栈中应仅有一个数值（整数5）
 // add 2 values popped from the stack and add them
-// the result push into the (empty now) stack
+// since we used the global predefined variable $push,
+// the result will be pushed into the (empty now) stack
 // after that, there is only one value 7 in the stack
 add $push $pop $pop
 
@@ -23,7 +24,7 @@ plo $pop
 add $push #f1.5 #f2.6
 
 // 弹栈输出
-// print the top value of the stack again
+// print(and pop) the top value of the stack again
 plo $pop
 
 // 将两个字符串相加（连接）后赋值给变量c
@@ -31,23 +32,29 @@ plo $pop
 add $c `abc` `123 456` 
 
 // 输出变量c
+// output variable $c
 plo $c
 
 // 将变量c中的数值压栈
+// push $c to the stack
 push $c
 
 // 将字符串“9.18”压栈
+// push a string "9.18" to the stack
 push "9.18"
 
 // 将栈顶两个字符串相加后赋值给变量d
+// Add the two strings at the top of the stack and assign the value to the variable $d
 add $d $pop $pop
 
 // 输出变量d
+// output variable $d
 plo $d
 
 // 将整数18与190相加后，压入栈中
-// 表示入栈操作
+// Add the integers 18 and 190 and push them onto the stack
 add $push #i18 #i190
 
 // 弹栈输出
+// pop and output the result
 plo $pop

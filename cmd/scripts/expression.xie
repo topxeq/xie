@@ -1,19 +1,26 @@
 // 计算3+(9*1.5)/1.7
+// Calculate 3+(9 * 1.5)/1.7
 
 // 将浮点数9压栈
+// push floating point number 9 onto the stack
 push #f9
 
 // 将浮点数1.5压栈
+// then push floating point number 1.5 onto the stack
 push #f1.5
 
 // 将栈顶两元素弹出相乘后结果存入预设全局变量tmp
-mul
+// store the result of multiplying the two elements at the top of the stack into the preset global variable tmp
+mul $pop $pop
 
 // 将tmp中的值和浮点数1.7相除后再次存入tmp
+// divide the value in tmp and floating point number 1.7 and store it in tmp again
 div $tmp #f1.7
 
 // 将浮点数3和tmp中值相加后存入$tmp
+// add the floating point number 3 and the value of tmp and save it into $tmp
 add #f3 $tmp
 
-// 输出结果
+// 输出结果查看
+// view output results
 pl "3+(9*1.5)/1.7=%v" $tmp

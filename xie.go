@@ -113,7 +113,8 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"wait": 191, // 等待可等待的对象，例如waitGroup或chan，如果没有指定，则无限循环等待（中间会周期性休眠），用于等待用户按键退出或需要静止等待等场景；如果给出一个字符串，则输出字符串后等待输入（回车确认）后继续；如果是整数或浮点数则休眠相应的秒数后继续；
 
-	"exit": 199, // terminate the program, can with a return value(same as assign the global value $outG)
+	"exitL": 197, // terminate the program(maybe quickDelegate), can with a return value(same as assign the semi-global value $outL)
+	"exit":  199, // terminate the program, can with a return value(same as assign the global value $outG)
 
 	// var related
 	"global": 201, // define a global variable
@@ -5104,6 +5105,17 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		}
 
 		return p.Errf(r, "不支持的数据类型（unsupported type）：%T(%v)", v1, v1)
+
+	case 197: // exitL
+		if instrT.ParamLen < 1 {
+			return "exit"
+		}
+
+		valueT := p.GetVarValue(r, instrT.Params[0])
+
+		p.SetVar(r, "outL", valueT)
+
+		return "exit"
 
 	case 199: // exit
 		if instrT.ParamLen < 1 {
@@ -16837,7 +16849,7 @@ func RunCodePiece(p *XieVM, r interface{}, codeA interface{}, inputA interface{}
 	}
 
 	// tk.Pl(tk.ToJSONX(p, "-indent", "-sort"))
-
+	// tk.Pl("%v", tk.ToJSONX(func1, "-indent", "-sort"))
 	outT, ok := func1.Vars["outL"]
 	rp.PopFunc()
 

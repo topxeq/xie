@@ -16,13 +16,13 @@
   - [- **用var指令的时候赋值**（Assign value when using "var" instruction）](#--用var指令的时候赋值assign-value-when-using-var-instruction)
   - [- **堆栈**（Stack）](#--堆栈stack)
   - [- **基本的堆栈操作**（Basic stack operations）](#--基本的堆栈操作basic-stack-operations)
-  - [- **与堆栈有关的特殊变量**](#--与堆栈有关的特殊变量)
-  - [- **常见运算**](#--常见运算)
-  - [- **数值类型转换**](#--数值类型转换)
-  - [- 指令的结果参数](#--指令的结果参数)
-  - [- **pl指令**](#--pl指令)
-  - [- **内置全局变量**](#--内置全局变量)
-  - [- **复杂表达式分解**](#--复杂表达式分解)
+  - [- **与堆栈有关的特殊变量**（Special variables related to stack）](#--与堆栈有关的特殊变量special-variables-related-to-stack)
+  - [- **常见运算**（Common operations）](#--常见运算common-operations)
+  - [- **数值类型转换**（Data type conversion）](#--数值类型转换data-type-conversion)
+  - [- **指令的结果参数**（Result parameter of instruction）](#--指令的结果参数result-parameter-of-instruction)
+  - [- **pl指令**（ the "pl" instr）](#--pl指令-the-pl-instr)
+  - [- **内置全局变量**（Predefined/built-in global variables）](#--内置全局变量predefinedbuilt-in-global-variables)
+  - [- **复杂表达式分解**（Complex expression decomposition）](#--复杂表达式分解complex-expression-decomposition)
   - [- **复杂表达式运算**](#--复杂表达式运算)
   - [- **复杂表达式做参数**](#--复杂表达式做参数)
   - [- **快速表达式**](#--快速表达式)
@@ -59,9 +59,9 @@
   - [- **网络（HTTP）客户端**](#--网络http客户端)
   - [- **手动编写Api服务器**](#--手动编写api服务器)
   - [- **静态WEB服务器**](#--静态web服务器)
-  - [- 动态网页服务器](#--动态网页服务器)
-  - [- 博客系统](#--博客系统)
-  - [- 嵌套运行谢语言代码](#--嵌套运行谢语言代码)
+  - [- **动态网页服务器**](#--动态网页服务器)
+  - [- **博客系统**](#--博客系统)
+  - [- **嵌套运行谢语言代码**](#--嵌套运行谢语言代码)
 - [谢语言做系统服务](#谢语言做系统服务)
 - [图形界面（GUI）编程](#图形界面gui编程)
 - [谢语言GUI编程的基础（WebView2）](#谢语言gui编程的基础webview2)
@@ -73,15 +73,15 @@
   - [- Linux系统中运行图形计算器代码](#--linux系统中运行图形计算器代码)
   - [- Windows编译不带命令行窗口的谢语言主程序](#--windows编译不带命令行窗口的谢语言主程序)
   - [- 制作一个登录框](#--制作一个登录框)
-- [编译运行谢语言代码](#编译运行谢语言代码)
-- [内置命令/指令/函数参考](#内置命令指令函数参考)
-- [内置对象参考](#内置对象参考)
-- [杂项说明](#杂项说明)
-  - [- **指令的参数**](#--指令的参数)
-  - [- **行末注释**](#--行末注释)
-  - [- **自动执行**](#--自动执行)
-  - [- **从剪贴板执行代码**](#--从剪贴板执行代码)
-  - [- **fastCall指令调用的快速函数代码中使用+1等虚拟标号**](#--fastcall指令调用的快速函数代码中使用1等虚拟标号)
+- [编译运行谢语言代码（Compile and run Xielang code）](#编译运行谢语言代码compile-and-run-xielang-code)
+- [内置指令/命令/函数参考（Built-in instruction/command/function reference）](#内置指令命令函数参考built-in-instructioncommandfunction-reference)
+- [内置对象参考（Built-in object reference）](#内置对象参考built-in-object-reference)
+- [杂项说明（Miscellaneous description）](#杂项说明miscellaneous-description)
+  - [- **指令的参数**（Parameter of instruction）](#--指令的参数parameter-of-instruction)
+  - [- **行末注释**（Comment at the end of the line）](#--行末注释comment-at-the-end-of-the-line)
+  - [- **自动执行**（Auto-run scripts）](#--自动执行auto-run-scripts)
+  - [- **从剪贴板执行代码**（Run Xielang code from clipboard）](#--从剪贴板执行代码run-xielang-code-from-clipboard)
+  - [- **fastCall指令调用的快速函数代码中使用+1等虚拟标号**（The "+1" virtual label used in the fast function code called by the fastCall instruction）](#--fastcall指令调用的快速函数代码中使用1等虚拟标号the-1-virtual-label-used-in-the-fast-function-code-called-by-the-fastcall-instruction)
 - [性能方面的考虑（Performance considerations）](#性能方面的考虑performance-considerations)
 - [嵌入式使用谢语言（以虚拟机的方式在其他语言中调用）（Embedded Xielang in other languages）](#嵌入式使用谢语言以虚拟机的方式在其他语言中调用embedded-xielang-in-other-languages)
 - [扩展谢语言（Extended Xielang）](#扩展谢语言extended-xielang)
@@ -454,8 +454,8 @@ for such a command line, to see the example code described.
 
 &nbsp;
 
-  * 作为一门脚本语言，我们设计的初衷是尽可能降低解析语法的开销，因此谢语言选用了类似命令行的语法：一般命令（或者也称作指令或语句）都是一行，单条指令中的元素之间用空格作为分隔，第一个元素叫做指令名，后面的都叫做指令参数。也就是说，每条指令都由一个指令名和若干个指令参数组成，当然，有些指令也可以没有任何参数。例如：
-  * As a script language, our original intention is to reduce the overhead of parsing syntax as much as possible, so Xielang uses a syntax similar to the command line: general commands (or also called instructions or statements) are all one line, and the elements in a single instruction are separated by spaces, the first element is called the instruction name, and the following are called the instruction parameters. In other words, each instruction consists of an instruction name and several instruction parameters. Of course, some instructions can also have no parameters. For example:
+  * 作为一门脚本语言，我们设计的初衷是尽可能降低解析语法的开销，因此谢语言选用了类似命令行的语法：一般命令（或者也称作指令或语句，英文为instruction，常用简称instr）都是一行，单条指令中的元素之间用空格作为分隔，第一个元素叫做指令名，后面的都叫做指令参数。也就是说，每条指令都由一个指令名和若干个指令参数组成，当然，有些指令也可以没有任何参数。例如：
+  * As a script language, our original intention is to reduce the overhead of parsing syntax as much as possible, so Xielang uses a syntax similar to the command line: general commands (or also called instructions or statements, sometimes "instr") are all one line, and the elements in a single instruction are separated by spaces, the first element is called the instruction name, and the following are called the instruction parameters. In other words, each instruction consists of an instruction name and several instruction parameters. Of course, some instructions can also have no parameters. For example:
 
   ```
     assign $a "abc"
@@ -790,7 +790,7 @@ According to the comments in the code, you can observe in detail whether the res
 
 &nbsp;
 
-##### - **与堆栈有关的特殊变量**
+##### - **与堆栈有关的特殊变量**（Special variables related to stack）
 
 &nbsp;
 
@@ -861,61 +861,80 @@ The result of running this code is:
    
 &nbsp;
 
-##### - **常见运算**
+##### - **常见运算**（Common operations）
 
 &nbsp;
 
-先看看这个加法的例子（add.xie）
+先看看这个加法的例子（add.xie）：
+
+First, take a look at the example of addition (add.xie):
 
   ```go
   // 将整数2入栈
+  // push an integer value 2 to stack
   push #i2
 
   // 将整数5入栈
+  // push another integer value 5 to stack
   push #i5
 
   // 将栈顶两个数值取出相加后结果压入栈中
   // 此处使用了预定义全局变量$push
   // 此时栈中应仅有一个数值（整数5）
-  add $push
+  // add 2 values popped from the stack and add them
+  // since we used the global predefined variable $push,
+  // the result will be pushed into the (empty now) stack
+  // after that, there is only one value 7 in the stack
+  add $push $pop $pop
 
   // 输出栈顶数值（同时该数值被弹出）
+  // output the top value of the stack
   plo $pop
 
   // 将浮点数1.5与2.6相加后压栈
+  // add float value 1.5 and 2.6, push the result
   add $push #f1.5 #f2.6
 
   // 弹栈输出
+  // print(and pop) the top value of the stack again
   plo $pop
 
   // 将两个字符串相加（连接）后赋值给变量c
+  // add 2 string value(concat them) and put the result into variable $c
   add $c `abc` `123 456` 
 
   // 输出变量c
+  // output variable $c
   plo $c
 
   // 将变量c中的数值压栈
+  // push $c to the stack
   push $c
 
   // 将字符串“9.18”压栈
+  // push a string "9.18" to the stack
   push "9.18"
 
   // 将栈顶两个字符串相加后赋值给变量d
-  add $d
+  // Add the two strings at the top of the stack and assign the value to the variable $d
+  add $d $pop $pop
 
   // 输出变量d
+  // output variable $d
   plo $d
 
   // 将整数18与190相加后，压入栈中
-  // 表示入栈操作
+  // Add the integers 18 and 190 and push them onto the stack
   add $push #i18 #i190
 
   // 弹栈输出
+  // pop and output the result
   plo $pop
-
   ```
 
-谢语言中，加法运算指令是add/+/加，如果不带任何参数，add指令将把堆栈顶端的两个数值取出来后相加，然后结果存入全局变量\$tmp。如果带有两个参数，则将这两个参数（可以是变量）值进行相加操作后将结果存入\$tmp。如果带有1个或3个参数，则第一个参数是将要放置结果的变量，结果将放于这个变量中。我们使用了预置全局变量\$push表示将结果压栈。这段代码的运行结果是：
+谢语言中，加法运算指令是add/+，将把结果参数之后的两个参数（可以是变量）值进行相加操作后将结果存入结果参数指明的变量中，如果没有指定结果变量，则存入全局预设变量\$tmp中。本例中我们使用了预置全局变量\$push表示将计算结果压入堆栈中。这段代码的运行结果是：
+
+In Xielang, the addition operation instruction is add/+. After adding the values of the two parameters (which can be variables) after the result parameter, the result will be stored in the variable specified by the result parameter. If no result variable is specified, it will be stored in the global preset variable \$tmp. In this example, we use the preset global variable \$push to push the calculation result into the stack. The result of running this code is:
 
   ```shell
     (int)7
@@ -927,47 +946,68 @@ The result of running this code is:
 
 &nbsp;
 
-其他类似的运算指令还有sub/-/减、mul/*/乘、div///除、mod/%/取模等，用法类似。这些都属于二元运算指令，即参与运算的数值是两个。二元运算的两个数值必须是同一类型的。如果是不同类型，例如整数和浮点数相加，则需要先进行类型转换。
+其他类似的运算指令还有sub/-、mul/*、div//、mod/%等，用法类似。这些都属于二元运算指令，即参与运算的数值是两个。二元运算的两个数值必须是同一类型的。如果是不同类型，例如整数和浮点数相加，则需要先进行类型转换。
+
+Other similar operation instructions include sub/-, mul/*, div//, mod/%, etc., with similar usage. These are binary operation instructions, that is, two values are involved in the operation. The two values of a binary operation must be of the same type. If it is of different types, such as adding integer and floating point numbers, type conversion is required first.
 
 &nbsp;
 
-##### - **数值类型转换**
+##### - **数值类型转换**（Data type conversion）
 
 &nbsp;
 
-谢语言中，使用convert指令来转换数值类型，至少需要两个参数，第一个参数是数值或变量，第二个参数是字符串，指定需要转换成为的数据类型，如果有参数有三个，那么第一个参数必须是一个变量，convert指令将会把转换后的结果存入该变量，否则会存入\$tmp。convert指令的使用示例（convert.xie）如下：
+谢语言中，使用convert指令来转换数值类型，至少需要两个参数，第一个参数是数值或变量，第二个参数是字符串，指定需要转换成为的数据类型，如果有参数有三个，那么第一个参数（即结果参数）必须是一个变量，convert指令将会把转换后的结果存入该变量，否则会存入\$tmp。convert指令的使用示例（convert.xie）如下：
+
+In Xielanguage, using the convert instruction to convert a numeric type requires at least two parameters. The first parameter is a numeric value or variable, and the second parameter is a string. Specify the data type to be converted into. If there are three parameters, the first parameter (that is, the result parameter) must be a variable, and the convert instruction will store the converted result in the variable, otherwise it will store it in  $tmp. An example of the use of the convert instruction (convert.xie) is as follows:
 
   ```go
   // 将整数15赋值给变量a
+  // assign integer value to variable $a
   assign $a #i15
 
-  // 此时如果执行指令 add $a #f3.6
+  // 此时如果执行指令 add $result $a #f3.6
   // 将会出现运行时错误
   // 应为加法运算的两个数值类型不一致
   // 一个是整数，一个是浮点数
+  // at this time, if we execute the command "add $result $a # f3.6"
+  // a runtime error will occur
+  // the two numeric types expected for addition operation are inconsistent
+  // one is an integer and the other is a floating point number
 
   // 输出变两个的数据类型和数值进行查看
   // pl指令相当于其他语言中的printf函数，后面再多输出一个换行符\n
+  // Output the data type and value of two variables to view
+  // pl instruction is equivalent to the printf function in other languages, followed by an additional newline character "\n"
   pl `a(%T)=%v` $a $a
 
   // 将变量a转换为浮点数类型
   // 结果将压入栈中
+  // convert the variable $a to float point number
+  // and push the result into the stack
   convert $push $a float
 
   // 输出栈顶值（不弹栈）的类型和数值查看
+  // output the top value of the stack(no pop) for reference
   pl `a(%T)=%v` $peek $peek
 
   // 将栈顶值与浮点数3.6相加后压栈
+  // pop the stack and add it with float point number 3.6
+  // push the result to the stack
   add $push $pop #f3.6
 
   // 输出栈顶值查看类型和结果
   // 注意第一个参数使用$peek是为了不弹栈
   // 以保证第二个参数$pop操作时还能取到该值
+  // output the stack top value to view the type and operation result
+  // note that $peek is used for the first parameter to avoid stack pop action
+  // to ensure that the value of the second parameter $pop can be obtained during operation
   pl "result=(%T)%v" $peek $pop
 
   ```
 
 代码中解释很详细，运行结果如下：
+
+The explanation in the code is very detailed, and the running results are as follows:
 
   ```shell
     a(int)=15
@@ -977,19 +1017,29 @@ The result of running this code is:
 
 &nbsp;
 
-##### - 指令的结果参数
+##### - **指令的结果参数**（Result parameter of instruction）
 
 &nbsp;
 
-谢语言中大多数指令会产生一个或多个结果值（类似于其他语言中的函数会有返回值），谢语言中指令的返回值多数情况下是一个（函数的返回值视情况会有0个、1个或多个）。
+谢语言中大多数指令会产生一个或多个结果值（类似于其他语言中的函数会有返回值），谢语言中指令的返回值多数情况下是一个（函数的返回值视情况会有0个、1个或多个），也有少数指令有多个结果值。
 
-因此，很多指令需要的一个用于指定接收指令执行结果的参数，我们将其称作结果参数。结果参数一般都是一个变量，因此也称作结果变量。结果变量可以是\$push（表示将结果压入堆栈中）、\$drop（表示将结果丢弃）等预置全局变量。结果变量有时可以省略，此时表示将结果存入全局变量\$tmp中（等同于\$tmp）。但当指令的参数个数可变时，结果参数不可省略，以免产生混淆。因此，为清晰起见，一般情况下建议尽量显式使用结果参数。
+Most instructions in Xielang will produce one or more result values (similar to the return values of functions in other languages). The return values of instructions in Xielang are mostly one (the return values of functions may be 0, 1 or more depending on the situation), and a few instructions have multiple result values.
+
+因此，很多指令需要的一个用于指定接收指令执行结果的参数，我们将其称作结果参数。结果参数一般都是一个变量，因此也称作结果变量。结果变量可以是\$push（表示将结果压入堆栈中）、\$drop（表示将结果丢弃）等预置全局变量。结果变量有时可以省略，此时表示将结果存入全局变量\$tmp中（等同于显式声明为\$tmp）。但当指令的参数个数可变时，结果参数不可省略，以免产生混淆。因此，为清晰起见，一般情况下建议尽量显式使用结果参数。
+
+Therefore, many instructions need a parameter to specify the execution result of the received instruction. We call it "the result parameter"(sometime the RP). The result parameter is generally a variable, so it is also called a result variable(i.e. RV). The result variables can be preset global variables such as \$push (meaning to push the result into the stack), \$drop (meaning to discard the result), etc. The result variable can sometimes be omitted, which means that the result is stored in the global variable \$tmp (equivalent to explicitly declared as \$tmp). However, when the number of parameters of an instruction is variable, the resulting parameters cannot be omitted to avoid confusion. Therefore, for the sake of clarity, it is generally recommended to declare the result parameters explicitly as much as possible.
 
 例如toUpper指令被用于将字符串转换为大写，toUpper "abc" 会将大写的ABC存入\$tmp中， 而 toUpper $result "abc" 则会将ABC赋值给变量result。
 
+For example, the toUpper instruction is used to convert strings to uppercase. toUpper "abc" will store uppercase ABC in \$tmp, while toUpper \$result "abc" will assign ABC to variable \$result.
+
 另外，如果指令应返回结果，则文档中当不提结果参数时，“第一个参数”一般指的是除结果参数外的第一个参数，余者类推。
 
+In addition, if the instruction should return a result, when the result parameter is not mentioned in the document, the "first parameter" generally refers to the first parameter except the result parameter, and so on.
+
 对于带有可选个数参数的指令，则一般第一个参数必须是结果变量，不可省略，这样最后才可以接可选的n个参数，否则容易产生混淆。例如getWeb指令，一个典型用法（参看httpClient.xie）是：
+
+For instructions with optional number of parameters, generally the first parameter must be the result variable and cannot be omitted, so that the optional n parameters can be connected at the end, otherwise it is easy to cause confusion. For example, a typical use of the getWeb instruction (see httpClient.xie) is:
 
 ```go
 
@@ -999,82 +1049,158 @@ getWeb $resultT "http://127.0.0.1:80/xms/xmsApi" -method=POST -encoding=UTF-8 -t
 
 因为后面的参数除了URL是必须的外，其他都是可选的，不能确定有几个参数，因此只能把结果变量放在第一个，以便存放获取到的HTTP响应的内容。
 
+Because the following parameters are optional except the URL, and it is uncertain how many parameters there are. Therefore, the result variable can only be placed in the first place to store the content of the obtained HTTP response.
    
 &nbsp;
 
-##### - **pl指令**
+##### - **pl指令**（ the "pl" instr）
 
 &nbsp;
 
 上例中用到的pl指令，类似于一般语言中的printf函数，可以用占位符来控制输出的字符串内容。参数中第一个是格式字符串，可以含有%d、%f、%s、%v等占位符表示不同的数值输出形式，具体请参考Go语言等的参考文档。pln、plo、pl等指令在调试中经常会使用到，需要熟悉。
-   
+
+The pl instruction used in the above example is similar to the printf function in general languages. It can use placeholders to control the output string content. The first of the parameters is a format string, which can contain placeholders such as% d,% f,% s,% v, etc. to represent different numerical output forms. For details, please refer to the reference documents of Go language. Pln, plo, pl and other instructions are often used in debugging and need to be familiar with.
+
 &nbsp;
 
-##### - **内置全局变量**
+##### - **内置全局变量**（Predefined/built-in global variables）
 
 &nbsp;
 
 我们前面已经接触到了一些谢语言中常用的内置全局变量，例如$push，$pop，$peek等，这里再列出所有的全局变量作为参考。
 
-- **\$tmp** 表示内置全局变量tmp，例如 add #i1 #i2，将把整数1加2的结果存入\$tmp中，我们也可以像普通变量一样使用\$tmp。注意：tmp中存储的值我们在后面常简称做tmp值或者直接称作\$tmp
-- **\$push** 表示压栈，例如 add $push #i1 #i2，将把整数1加2的结果压栈
-- **\$pop** 表示弹栈，例如 add $push $pop #i3，将把弹栈值加上整数3，然后结果压栈
-- **\$peek** 表示看栈（不弹栈） ，用法类似$pop
-- **\$pln** 表示输出，例如：md5 $pln abc，将把字符串abc的MD5编码输出到命令行（类似于println函数的方式，结尾会输出一个回车符）
-- **\$drop** 表示丢弃，例如：removeFile $drop "c:\temp\tmp.txt"，将删除相应文件后，将执行结果丢弃
-- **\$seq** 表示一个全局的整数，每次使用都会加1，一般用于获取自增长、不重复的序号
-- **\$undefined** 表示未定义的变量值
-- **\$debug** 表示获取当前的调试信息
-- **\$argsG** 一般是命令行参数，字符串列表类型
-- **\$inputG** 一般是外部传入虚拟机的参数，可以是任意类型
-- **\$paraMapG** 一般在HTTP请求响应模块中，表示请求参数（包括URL参数即GET/QUERY参数和POST参数）
-- **\$requestG** 一般在HTTP请求响应模块中，表示请求对象
-- **\$responseG** 一般在HTTP请求响应模块中，表示响应对象
-- **\$backQuoteG** 表示反引号字符
-- **\$newLineG** 表示回车换行字符
-- **\$scriptPathG** 表示当前执行的脚本所在路径
-- **\$guiG** GUI编程中的全局引用对象
+We have seen some built-in global variables commonly used in Xielang, such as \$push, \$pop, \$peek, etc. Here we will list all the predefined global variables for reference.
 
+- **\$tmp** 
+  表示内置全局变量tmp，例如 add #i1 #i2，将把整数1加2的结果存入\$tmp中，我们也可以像普通变量一样使用\$tmp。注意：tmp中存储的值我们在后面常简称做tmp值或者直接称作\$tmp。另外，使用\$tmp变量的原则是尽量快，因为任何指令或者表达式的计算都可能用到\$tmp，并令其发生改变。
+  Indicates that the built-in global variable tmp, such as 'add #i1 #i2', will store the result of integer 1+2 in \$tmp. We can also use \$tmp as a common variable. Note: The value stored in \$tmp is often referred to as tmp value or \$tmp directly. In addition, the principle of using the \$tmp variable is to be as fast as possible, because any instruction or expression calculation may use \$tmp and make it change.
+
+- **\$push** 
+  表示压栈，例如 "add $push #i1 #i2"，将把整数1加2的结果压栈
+  Indicates stack pushing. For example, "add \$push #i1 #i2" will push the result of integer 1 plus 2
+
+- **\$pop** 
+  表示弹栈，例如 "add $push $pop #i3"，将把弹栈值加上整数3，然后结果压栈
+  Indicates the stack popping. For example, "add $push $pop #i3" will add the pop stack value to the integer 3, and then the result will be pushed.
+  
+- **\$peek** 
+  表示看栈（不弹栈） ，用法类似$pop，但不弹出栈顶值（即保留在栈顶），而只是获取其值供使用
+  It means to look at the stack (without popping the stack). Its usage is similar to \$pop, but it does not pop up the value at the top of the stack (that is, keep it at the top of the stack), but just gets its value for use
+  
+- **\$pln** 
+  表示输出，例如：md5 $pln abc，将把字符串abc的MD5编码输出到命令行（类似于println函数的方式，结尾会输出一个回车符）
+  Indicates the output, for example: "md5 $pln abc". The MD5 encoding of the string abc will be output to the command line (similar to the println function, with a carriage return at the end)
+
+- **\$drop** 
+  表示丢弃，通常在不关心指令执行结果时使用，例如：removeFile \$drop "c:\temp\tmp.txt"，将删除相应文件后，将执行结果丢弃
+  Indicates discarding, which is usually used when the instruction execution result is not concerned, for example: removeFile \$drop "c:\\temp\\tmp.txt". After the corresponding file is deleted, the execution result will be discarded
+  
+- **\$seq** 
+  表示一个全局的整数，每次使用都会加1，一般用于获取自增长、不重复的序号
+  Represents a global integer, which will be increased by 1 every time it is used. It is generally used to obtain self-growing and non-repeating serial numbers
+  
+- **\$undefinedG** 
+  表示未定义的变量值，或指令应返回结果而没有返回结果的时候
+  Indicates an undefined variable value, or when the instruction should return a result without returning a result
+  
+- **\$debug** 
+  表示获取当前的调试信息
+  Indicates to get the current debugging information
+  
+- **\$argsG** 
+  一般是指命令行参数，字符串列表类型
+  It generally refers to the command line parameter, string list type
+  
+- **\$inputG** 
+  一般是外部传入虚拟机的参数，可以是任意类型
+  Generally, it is the parameter passed into the virtual machine from the outside, which can be any type
+  
+- **\$outG** 
+  一般用这个变量保存虚拟机结束执行时像外部传出的参数（即返回值），可以是任意类型
+  Generally, this variable is used to save the parameters (return value) that are sent out from the outside when the virtual machine ends execution, which can be of any type
+  
+- **\$paraMapG** 
+  一般在HTTP请求响应模块中，表示请求参数（包括URL参数即GET/QUERY参数和POST参数）
+  Generally, in the HTTP request response module, it represents the request parameters (including URL parameters, namely GET/QUERY parameters and POST parameters)
+  
+- **\$requestG** 
+  一般在HTTP请求响应模块中，表示请求对象
+  Generally, in the HTTP request response module, it represents the request object
+
+- **\$responseG** 
+  一般在HTTP请求响应模块中，表示响应对象
+  Generally, in the HTTP request response module, it represents the response object
+  
+- **\$backQuoteG** 
+  表示反引号字符
+  Represents a backquote character
+  
+- **\$newLineG** 
+  表示换行字符（即\\n）
+  Indicates line feed character(i.e. \\n)
+  
+- **\$scriptPathG** 
+  表示当前执行的脚本所在路径
+  Indicates the path of the currently executed script
+  
+- **\$guiG** 
+  GUI编程中的全局引用对象
+  Global reference objects in GUI programming
+  
 注意，要避免自定义变量与这些变量名称冲突。
+Note that you should avoid conflicts between custom variables and their names.
 
 &nbsp;
 
-##### - **复杂表达式分解**
+##### - **复杂表达式分解**（Complex expression decomposition）
 
 &nbsp;
 
-谢语言中，由于采用接近汇编语言的快捷语法，因此在一般计算上或许要稍微复杂一些，一般的建议多步运算表达式采用分解后逐个进行的方式。例如，一个3+(9*1.5)/1.7的算式，需要用下面的代码（expression.xie）实现：
+谢语言中，由于采用接近汇编语言的快捷语法，因此在一般的计算上或许要稍微复杂一些。通常情况下，建议对多步运算表达式采用分解后逐个进行的方式。例如，一个3+(9*1.5)/1.7的算式，建议用下面的代码（expression.xie）实现：
+
+In Xielang, due to its fast syntax close to assembly language, it may be slightly more complicated in general calculation. Generally, it is recommended to decompose the multi-step operation expression one by one. For example, a 3+(9 * 1.5)/1.7 formula is suggested to be implemented with the following code (expression.xie):
 
   ```go
   // 计算3+(9*1.5)/1.7
+  // Calculate 3+(9 * 1.5)/1.7
 
   // 将浮点数9压栈
+  // push floating point number 9 onto the stack
   push #f9
 
   // 将浮点数1.5压栈
+  // then push floating point number 1.5 onto the stack
   push #f1.5
 
   // 将栈顶两元素弹出相乘后结果存入预设全局变量tmp
-  mul
+  // store the result of multiplying the two elements at the top of the stack into the preset global variable tmp
+  mul $pop $pop
 
   // 将tmp中的值和浮点数1.7相除后再次存入tmp
+  // divide the value in tmp and floating point number 1.7 and store it in tmp again
   div $tmp #f1.7
 
   // 将浮点数3和tmp中值相加后存入$tmp
+  // add the floating point number 3 and the value of tmp and save it into $tmp
   add #f3 $tmp
 
-  // 输出结果
+  // 输出结果查看
+  // view output results
   pl "3+(9*1.5)/1.7=%v" $tmp
 
   ```
 
 运行结果如下：
 
+The operation results are as follows:
+
   ```
     3+(9*1.5)/1.7=10.941176470588236
   ```
 
-可以看出，分解表达式的方法代码量比一般的高级语言多一些，但带来的好处是速度更快，因为省去了各种解析表达式的开销。
+可以看出，分解表达式的方法代码量比一般的高级语言多一些，但带来的好处是速度更快，因为省去了各种解析表达式的开销。后面可以看到，谢语言实际上也支持复杂的表达式运算，但显然自行分解的表达式运算效率更高。
+
+It can be seen that the method code for decomposing expressions is a little more than that of general high-level languages, but the advantage is that it is faster because it saves the cost of various parsing expressions. As you can see later, Xielang actually supports complex expression operations, but it is obviously more efficient to decompose expressions by itself.
    
 &nbsp;
 
@@ -3557,7 +3683,7 @@ pln $pop
 
 &nbsp;
 
-##### - 动态网页服务器
+##### - **动态网页服务器**
 
 &nbsp;
 
@@ -3565,7 +3691,7 @@ pln $pop
 
 &nbsp;
 
-##### - 博客系统
+##### - **博客系统**
 
 &nbsp;
 
@@ -4195,7 +4321,7 @@ exit
 
 &nbsp;
 
-##### - 嵌套运行谢语言代码
+##### - **嵌套运行谢语言代码**
 
 &nbsp;
 
@@ -5163,9 +5289,11 @@ exit
 
 &nbsp;
 
-#### 编译运行谢语言代码
+#### 编译运行谢语言代码（Compile and run Xielang code）
 
 谢语言支持简单的编译运行，但仅相当于将主程序和代码打包成一个可执行文件，方便分发并起到简单加密代码的作用。例如要编译一个名为hello.xie的文件，用下面的命令：
+
+Xielang supports simple compilation and operation, but it is only equivalent to packaging the main program and code into an executable file to facilitate distribution and play the role of simple encryption code. For example, to compile a file named hello.xie, use the following command:
 
 ```shell
 xie -compile hello.xie -output=hello.exe
@@ -5173,58 +5301,77 @@ xie -compile hello.xie -output=hello.exe
 
 执行后将在当前目录下生成hello.exe的可执行文件（Linux类似），如果不指定output参数，则默认生成可执行文件名为output.exe。
 
+After execution, the executable file of hello.exe will be generated in the current directory (similar to Linux). If the output parameter is not specified, the default executable file name is output.exe.
+
 如果谢语言主程序是加了-ldflags="-H windowsgui"的编译参数编译出来的，则通过其编译后的可执行程序，也将没有命令行窗口，结合GUI编程，完全可以制作出标准的图形界面程序。
+
+If the main program of Xielang is compiled with the compilation parameter of -ldflags="-H windowsgui", the compiled executable program will also have no command line window. In combination with GUI programming, standard graphical interface programs can be produced.
 
 &nbsp;
 
-#### 内置命令/指令/函数参考
+#### 内置指令/命令/函数参考（Built-in instruction/command/function reference）
 
 目前暂时请参看代码中的InstrNameSet数据结构的代码注释，后面文档会慢慢补齐。
 
+For the moment, please refer to the code comments of the InstrNameSet data structure in the code, and the following documents will be supplemented slowly.
+
 &nbsp;
 
-#### 内置对象参考
+#### 内置对象参考（Built-in object reference）
 
 目前暂时请参看代码中的各个Xie...对象（如XieString）的代码内文档说明。
 
-&nbsp;
-
-#### 杂项说明
+For now, please refer to each Xie... object in the in-code document description of object (such as XieString).
 
 &nbsp;
 
-&nbsp;
-
-##### - **指令的参数**
-
-谢语言中的指令，可以没有任何参数（0个参数），即不需要输出也不需要输入参数，例如pass。也有可能只有一个结果参数，例如getNowStr，此时可以省略结果参数以表示将结果压栈。当然，也有可能既有结果参数，也有其他一个或多个输入参数。当输入参数是可变个数的时候，结果参数是不可省略的。输入参数固定的情况下，一般结果参数也可以省略来表示压栈。一般情况下，为了避免混淆，对于有结果参数的指令，建议总是写上结果参数。
+#### 杂项说明（Miscellaneous description）
 
 &nbsp;
 
-##### - **行末注释**
+&nbsp;
+
+##### - **指令的参数**（Parameter of instruction）
+
+谢语言中的指令，可以没有任何参数（0个参数），即不需要输出也不需要输入参数，例如pass。也有可能只有一个结果参数，例如getNowStr，此时可以省略结果参数以表示将结果存入全局变量\$tmp。当然，也有可能既有结果参数，也有其他一个或多个输入参数。当输入参数是可变个数的时候，结果参数是不可省略的。输入参数固定的情况下，一般结果参数也可以省略来表示压栈。一般情况下，为了避免混淆，对于有结果参数的指令，建议总是写上结果参数。
+
+* 注：少数指令可以带有多个结果参数，例如getIter。
+
+*Note: A few instructions can have multiple result parameters, such as getIter.
+
+Instructions in Xielang can have no parameters (0 parameters), that is, no output or input parameters are required, such as pass. It is also possible that there is only one result parameter, such as getNowStr. At this time, the result parameter can be omitted to indicate that the result will be saved to the global variable \$tmp. Of course, it is also possible to have both result parameters and one or more other input parameters. When the input parameters are variable, the result parameters cannot be omitted. When the input parameter is fixed, the general result parameter can also be omitted to indicate the stack pressing. In general, in order to avoid confusion, it is recommended to always write the result parameters for instructions with result parameters.
+
+&nbsp;
+
+##### - **行末注释**（Comment at the end of the line）
 
 谢语言中的注释是不支持行内注释的，只能单独写在一行中。但在参数个数固定的指令中，如果显式写出了结果参数，此时可以利用该指令将忽略后面的其他参数的特性，来写上该行的注释。
 
+Xielanguage do not support inline comments and comments can only be written in a single line. However, in an instruction with a fixed number of parameters, if the result parameter is explicitly written, you can use the feature that the instruction will ignore other parameters later to write a comment on the line.
+
 &nbsp;
 
-##### - **自动执行**
+##### - **自动执行**（Auto-run scripts）
 
 谢语言中主程序运行时，如果不指定要执行的脚本文件，同时当前目录下含有名字类似auto*.xie（例如auto.xie、auto01.xie等）的脚本文件时，将按文件名顺序依次执行这些脚本文件。这在分发程序时会比较有用，使用者可以直接鼠标双击谢语言主程序即可执行开发者编写的脚本，只要这些脚本与谢语言主程序在相同目录下并符合上述命名规则。
 
+When the main program of Xielang(i.e. xie.exe in Windows, or xie in Linux) is running, if the script file to be executed is not specified, and the current directory contains script files with names similar to auto*.xie (such as auto.xie, auto01.xie, etc.), these script files will be executed in order of file names. This will be useful when distributing programs. Users can directly double-click the main program of Xielang to execute scripts written by developers, as long as these scripts are in the same directory as the main program of Xielang and conform to the above naming rules.
 
 &nbsp;
 
-##### - **从剪贴板执行代码**
+##### - **从剪贴板执行代码**（Run Xielang code from clipboard）
 
 谢语言主程序执行时，如果加上-clip参数，将从剪贴板读取代码然后执行。
 
+When the main program of Xielang is executed, if the "-clip" parameter is added, the code will be read from the clipboard and then executed.
 
 &nbsp;
 
-##### - **fastCall指令调用的快速函数代码中使用+1等虚拟标号**
+##### - **fastCall指令调用的快速函数代码中使用+1等虚拟标号**（The "+1" virtual label used in the fast function code called by the fastCall instruction）
 
 谢语言中fastCall指令调用的快速函数代码中，应避免使用+1、+3等虚拟标号，尽量使用:next1这种标准标号，但可以使用:+1，:+3这样形式的虚拟标号。
 
+In the fast function code called by the fastCall instruction in Xielang, virtual labels such as +1 and +3 should be avoided, and the standard labels such as :next1 should be used as much as possible, but virtual labels such as :+1, :+3 can be used.
 
 &nbsp;
 

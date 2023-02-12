@@ -58,6 +58,10 @@ systemCmd $rs "xie" "-gopath" "local.xie"
 
 test $rs "1.6 2.8 undefined undefined\n2.5 10 abc true\nfunction result: done\n2.5 2.8 undefined true\n" $seq "local.xie"
 
+systemCmd $rs "xie" "-gopath" "convert.xie"
+
+test $rs "a(int)=15\na(float64)=15\nresult=(float64)18.6\n" $seq "convert.xie"
+
 systemCmd $rs "xie" "-gopath" "fib.xie"
 
 test $rs "2584\n" $seq "fib.xie"
