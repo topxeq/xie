@@ -1,3 +1,7 @@
+谢语言是一门免费、开源、跨平台、跨语言、语法接近汇编语言与SHELL脚本、全栈、快速的解释性计算机编程语言。
+
+Xielang is a free, open-source, cross-platform, cross-language, ASM/SHELL-like, full-stack, fast scripting language.
+
 - [介绍（Introduction）](#介绍introduction)
 - [语言特点（Features）](#语言特点features)
 - [语言设计构思（Language design conception）](#语言设计构思language-design-conception)
