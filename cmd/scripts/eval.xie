@@ -1,32 +1,52 @@
+// 本例演示表达式的使用
+// This example demonstrates the use of expressions
+
 // 给变量a赋值为整数12
+// Assign the value of variable a to integer 12
 assign $a #i12
 
-// 计算表达式 a+(a+12+26) 的值，结果存入tmp
-// 注意，表达式元素之间必须以空格分隔开
-// 一般的表达式都存在空格，因此需要用反引号或双引号括起来
-eval "$a + ( $a + #i12 + #i26 )"
+// 计算表达式 a+(a+12/2) 的值，结果存入tmp
+// 表达式是一个字符串类型的数值或变量
+// 注意，一般的表达式有可能存在空格，因此需要用反引号或双引号括起来
+// Calculate the value of expression a+(a+12/2) and store the result in tmp
+// Expression is a numeric value or variable of string type
+// Note that common expressions may have spaces, so you need to use back quotes or double quotes
+eval "$a + ( $a + #i12 / #i2 )"
 
 // 输出tmp值查看
+// Output tmp value to view
 pln $tmp
 
 // 将变量b赋值为整数-9
+// Assign variable b to integer - 9
 assign $b #i-9
 
-// 计算顺序括号优先，无括号时严格按照从左到右（注意不是乘除比加减优先等）
-// 表达式中的值与运算符之间必须有空格分隔
+// 计算顺序括号优先，无括号时按照一般的运算符顺序进行计算
 // 结果值放入变量r
-// 本例要计算的表达式的数学表达是 a+((a-12.0)*abs(b))，其中abs表示取绝对值
-// 注意由于计算顺序问题，数学表达中需要把a-12.0加上括号以保证计算顺序一致
-// 如果括号里的内容以一个问号“?”开始，那么后面可以是一条指令
-// 该指令必须通过$tmp变量返回一个结果值继续参加表达式的运算，这样可以使得表达式中实现基本运算符之外的运算功能，例如转换数值类型等。
-eval $r `$a + ( $a - (?convert #f12.0 int) * (? abs $b) )`
+// 本例要计算的表达式的数学表达是 a+((a-8.0)*abs(b))，其中abs表示取绝对值
+// 注意由于计算顺序问题，数学表达中需要把a-8.0加上括号以保证计算顺序一致
+// 表达式里可以包含指令，此时应该使用花括号将其括起来
+// 该指令必须通过$tmp变量返回一个结果值继续参加表达式的运算，这样可以使得表达式中实现基本运算符之外的运算功能，例如转换数值类型等
+// 花括号不可以嵌套使用
+//The calculation order takes precedence over parentheses. If there are no parentheses, the calculation is performed according to the general operator order
+//The result value is put into the variable r
+//The mathematical expression of the expression to be calculated in this example is a+((a-8.0) * abs (b)), where abs represents the absolute value
+//Note that due to the calculation order problem, it is necessary to add brackets to a-8.0 in the mathematical expression to ensure the consistent calculation order
+//Expressions can contain instructions, which should be enclosed by curly braces
+//The instruction must return a result value through the $tmp variable to continue to participate in the operation of the expression, which can enable the expression to implement the operation functions other than the basic operator, such as converting the numeric type, etc
+//Curly brackets cannot be nested
+eval $r `$a + ($a - {convert #f8.0 int}) * {abs $b}`
 
 // 输出变量r的值查看
+// View the value of output variable r
 pln $r
 
 // 判断表达式 !((a-b)<10) 的计算结果值是否为布尔值true，是则跳转到标号next1处
 // ifEval指令后第一个参数必须是一个字符串类型的数值或变量，表示要计算的表达式
 // 第二个参数时满足条件后要跳转到的标号
+// Judge expression! Whether the calculated result value of ((a-b)<10) is a boolean value true, and if yes, it will jump to the label next1
+// The first parameter after the ifEval instruction must be a numeric value or variable of string type, representing the expression to be evaluated
+// The second parameter is the label to jump to when the condition is met
 ifEval `! (($a - $b) < #i10)` :next1
 
 pln 条件不满足

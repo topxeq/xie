@@ -1,5 +1,10 @@
+// 本例演示指令中用表达式作为参数
+// This example demonstrates using expressions as parameters in instructions
+
 assign $a "abc"
 
 // 表达式做参数
-// 注意“?”后面再加双引号或反引号括起表达式
-pl "[%v] test params: %v" ?"(?nowStr)" $a
+// 注意“@”后面再加双引号或反引号括起表达式
+// Expression as parameter
+// Note that the expression is enclosed by double quotation marks or back quotation marks after "@"
+pl "[%v] test params: %v" @"{nowStr}" $a

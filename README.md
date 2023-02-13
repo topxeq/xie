@@ -23,15 +23,16 @@ Xielang is a free, open-source, cross-platform, cross-language, ASM/SHELL-like, 
   - [- **与堆栈有关的特殊变量**（Special variables related to stack）](#--与堆栈有关的特殊变量special-variables-related-to-stack)
   - [- **常见运算**（Common operations）](#--常见运算common-operations)
   - [- **数值类型转换**（Data type conversion）](#--数值类型转换data-type-conversion)
+  - [- **字符串的连接操作**（String connection operation）](#--字符串的连接操作string-connection-operation)
   - [- **指令的结果参数**（Result parameter of instruction）](#--指令的结果参数result-parameter-of-instruction)
   - [- **pl指令**（ the "pl" instr）](#--pl指令-the-pl-instr)
   - [- **内置全局变量**（Predefined/built-in global variables）](#--内置全局变量predefinedbuilt-in-global-variables)
+  - [- **标号**（Labels）](#--标号labels)
+  - [- **代码缩进**（Code Indent）](#--代码缩进code-indent)
   - [- **复杂表达式分解**（Complex expression decomposition）](#--复杂表达式分解complex-expression-decomposition)
-  - [- **复杂表达式运算**](#--复杂表达式运算)
+  - [- **复杂表达式运算**（Complex expression operation）](#--复杂表达式运算complex-expression-operation)
   - [- **复杂表达式做参数**](#--复杂表达式做参数)
-  - [- **快速表达式**](#--快速表达式)
-  - [- **标号**](#--标号)
-  - [- **代码缩进**](#--代码缩进)
+  - [- **表达式的另一个例子**（Another example of an expression）](#--表达式的另一个例子another-example-of-an-expression)
   - [- **goto语句**](#--goto语句)
   - [- **一般循环结构**](#--一般循环结构)
   - [- **条件分支**](#--条件分支)
@@ -634,8 +635,11 @@ for such a command line, to see the example code described.
 
 &nbsp;
 
-  由于谢语言使用空格作为命令与参数之间的分隔符，因此带有空格的字符串必须做特殊处理，使用双引号或反引号括起来（不含空格的字符串可以不括起来直接使用），反引号还可以括起多行字符串（含有换行符“\n”的字符串），双引号中可以带有\n、\t等转义字符，反引号中则不进行转义。另外，由于使用了反引号，谢语言代码中不应出现其他用途的反引号，如果遇上确需使用的地方，需要用全局变量backQuoteG或者转义字符“\u0096”来代替。
-  Because Xielang uses spaces as the separator between commands and parameters, strings with spaces must be specially treated, including double quotation marks or back quotation marks (strings without spaces can be used directly without being enclosed), back quotation marks can also enclose multiline character strings (strings with newline character "\n"), double quotation marks can contain \n, \t and other escape characters, and back quotation marks can not be escaped. In addition, due to the use of backquotes, backquotes for other purposes should not appear in Xielang code. If there is a need to use them, the global variable backQuoteG or the escape character "\u0096" should be used instead.
+  由于谢语言使用空格作为命令与参数之间的分隔符，因此带有空格的字符串必须做特殊处理，使用双引号、单引号或反引号括起来（不含空格的字符串可以不括起来直接使用），双引号中可以带有\\n、\\t、\\"（表示双引号本身）等转义字符，单引号和反引号括起的字符串都不进行转义，反引号还可以括起多行字符串（含有换行符“\\n”的字符串）。另外，由于使用了反引号，谢语言代码中不应出现其他用途的反引号，如果遇上确需使用的地方，需要用全局变量\$backQuoteG或者转义字符“\u0096”来代替。
+
+  Because Xielang uses spaces as the separator between commands and parameters, strings with spaces must be treated specially, using double quotation marks, single quotation marks or back quotation marks (strings without spaces can be used directly without being enclosed), and double quotation marks can contain \\n, \\t, \\"(indicating the double quotation mark itself) and other escape characters. The string enclosed by the single quotation mark and the back quotation mark cannot be escaped. The back quotation mark can also enclose multiple lines of string (containing the newline character"\\n"). In addition, because the back quotation mark is used, the back quotation mark for other purposes should not appear in Xielang code. If it is really necessary to use it, it needs to be replaced by the global variable \$backQuoteG or the escape character "\\u0096".
+
+
 
 &nbsp;
 
@@ -1021,6 +1025,71 @@ The explanation in the code is very detailed, and the running results are as fol
 
 &nbsp;
 
+##### - **字符串的连接操作**（String connection operation）
+
+&nbsp;
+
+谢语言中可以使用adds指令将多个字符串进行连接/拼接（有时候也叫字符串相加）。当然，adds指令不仅仅用于字符串的相加，也可以用于其他数据类型的相加，与add指令不同的是，adds指令可以将多个数值相加，并且可以用于不同类型的数值相加。adds指令会从左到右，将第一个数值与第二个数值相加，其结果再与第三个数值相加，依此类推直至加完所有数值。如果数值类型不同，adds指令将尽量把每次加法操作的第二个数值转换成第一个数值的类型，如果实在无法完成的加法，将返回error对象。
+
+In Xielang, you can use the add instruction to connect/splice multiple strings (sometimes called string addition). Of course, the adds instruction is not only used for the addition of strings, but also for the addition of other data types. Unlike the add instruction, the adds instruction can add multiple values and can be used for the addition of different types of values. The add command will add the first value to the second value from left to right, and the result will be added to the third value, and so on until all the values are added. If the number types are different, the add instruction will try to convert the second number of each addition operation to the type of the first number. If the addition cannot be completed, the error object will be returned.
+
+因此，对于相连接多个字符串的时候，或者想将包含字符串和数字等数值拼接成一个大字符串时，可以考虑使用adds指令。
+
+Therefore, when connecting multiple strings, or when you want to splice values including strings and numbers into a large string, you can consider using the add command.
+
+下面看一下例子（adds.xie）：
+
+Let's take a look at the following example (adds.xie):
+
+```go
+// 本例演示adds指令的用法
+// adds指令可以将多个数值相加，并且可以用于不同类型的数值相加
+// adds指令会从左到右，将第一个数值与第二个数值相加，其结果再与第三个数值相加，依此类推直至加完所有数值
+// 如果数值类型不同，adds指令将尽量把每次加法操作的第二个数值转换成第一个数值的类型
+// 如果实在无法完成的加法，将返回error对象
+// The add instruction can add multiple values and can be used to add different types of values
+// The add command will add the first value to the second value from left to right, and the result will be added to the third value, and so on until all the values are added
+// If the number types are different, the add instruction will try to convert the second number of each addition operation to the type of the first number
+// If the addition cannot be completed, the error object will be returned
+
+// 将多个字符串相加
+// 注意其中含有一个浮点数3.8，将转换为字符串
+// 另外，双引号、单引号，反引号都可以用于括起字符串，它们的区别是：
+// 双引号括起的字符串可以包含转义字符，如\n、\"（表示双引号本身）等
+// 单引号括起的字符串不进行转义
+// 反引号支持多行字符串，括起的字符串也不进行转义
+// Add multiple strings
+// Note that it contains a floating point number 3.8, which will be converted to a string
+// In addition, double quotation marks, single quotation marks and back quotation marks can be used to enclose strings. Their differences are:
+// The string enclosed by double quotation marks can contain escape characters, such as  n,  "(indicating the double quotation marks themselves), etc
+// Strings enclosed in single quotation marks are not escaped
+// Backquotes support multi-line strings, and enclosed strings are not escaped
+adds $result "abc" "\"123\"" #f3.8 '"递四方ds' `give it to 
+    them
+`
+
+plo $result
+
+// 进行依次整数相加，因为第一个数值$a是整数类型
+// 因此后面的所有参数都将转换成整数再进行计算
+// Perform sequential integer addition, because the first value $a is of integer type
+// Therefore, all subsequent parameters will be converted to integers and then calculated
+assign $a int 15
+
+adds $result2 $a 30 #f2.3 #btrue
+
+plo $result2
+```
+
+代码的执行结果是：
+
+```shell
+(string)"abc\"123\"3.8\"递四方dsgive it to \n    them\n"
+(int)48
+```
+
+&nbsp;
+
 ##### - **指令的结果参数**（Result parameter of instruction）
 
 &nbsp;
@@ -1156,6 +1225,38 @@ Note that you should avoid conflicts between custom variables and their names.
 
 &nbsp;
 
+##### - **标号**（Labels）
+
+&nbsp;
+
+谢语言中，可以在任意代码行的前一行添加标号，主要用于各种循环和条件分支等跳转场景。设置标号必须单独占一行，并以冒号“:”字符开头。
+
+In Xielang, you can add a label to the previous line of any code line, which is mainly used for jump scenarios such as loops and conditional branches. The setting label must occupy a separate line and begin with a colon ":" character.
+
+  ```go
+    :lable1
+    pln 123
+  ```
+   
+&nbsp;
+
+##### - **代码缩进**（Code Indent）
+
+&nbsp;
+
+谢语言中，每行代码的头尾空白将被忽略，因此可以适当采用代码的逐级缩进来增加代码的可读性。
+
+In Xielang, the blank space at the beginning and end of each line of code will be ignored, so the progressive indentation of the code can be appropriately used to increase the readability of the code.
+
+
+  ```go
+    :lable1
+        pln 123
+  ```
+
+   
+&nbsp;
+
 ##### - **复杂表达式分解**（Complex expression decomposition）
 
 &nbsp;
@@ -1208,42 +1309,64 @@ It can be seen that the method code for decomposing expressions is a little more
    
 &nbsp;
 
-##### - **复杂表达式运算**
+##### - **复杂表达式运算**（Complex expression operation）
 
 &nbsp;
 
 谢语言中，也可以进行复杂的表达式计算，这要用到eval指令，参看下面的代码（eval.xie）：
 
+In Xielang, complex expression calculation can also be performed, which requires the eval instruction. See the following code (eval. xie):
+
 ```go
+// 本例演示表达式的使用
+// This example demonstrates the use of expressions
+
 // 给变量a赋值为整数12
+// Assign the value of variable a to integer 12
 assign $a #i12
 
-// 计算表达式 a+(a+12+26) 的值，结果存入tmp
-// 注意，表达式元素之间必须以空格分隔开
-// 一般的表达式都存在空格，因此需要用反引号或双引号括起来
-eval "$a + ( $a + #i12 + #i26 )"
+// 计算表达式 a+(a+12/2) 的值，结果存入tmp
+// 表达式是一个字符串类型的数值或变量
+// 注意，一般的表达式有可能存在空格，因此需要用反引号或双引号括起来
+// Calculate the value of expression a+(a+12/2) and store the result in tmp
+// Expression is a numeric value or variable of string type
+// Note that common expressions may have spaces, so you need to use back quotes or double quotes
+eval "$a + ( $a + #i12 / #i2 )"
 
 // 输出tmp值查看
+// Output tmp value to view
 pln $tmp
 
 // 将变量b赋值为整数-9
+// Assign variable b to integer - 9
 assign $b #i-9
 
-// 计算顺序括号优先，无括号时严格按照从左到右（注意不是乘除比加减优先等）
-// 表达式中的值与运算符之间必须有空格分隔
+// 计算顺序括号优先，无括号时按照一般的运算符顺序进行计算
 // 结果值放入变量r
-// 本例要计算的表达式的数学表达是 a+((a-12.0)*abs(b))，其中abs表示取绝对值
-// 注意由于计算顺序问题，数学表达中需要把a-12.0加上括号以保证计算顺序一致
-// 如果括号里的内容以一个问号“?”开始，那么后面可以是一条指令
-// 该指令必须通过$tmp变量返回一个结果值继续参加表达式的运算，这样可以使得表达式中实现基本运算符之外的运算功能，例如转换数值类型等。
-eval $r `$a + ( $a - (?convert $tmp #f12.0 int) * (? abs $b) )`
+// 本例要计算的表达式的数学表达是 a+((a-8.0)*abs(b))，其中abs表示取绝对值
+// 注意由于计算顺序问题，数学表达中需要把a-8.0加上括号以保证计算顺序一致
+// 表达式里可以包含指令，此时应该使用花括号将其括起来
+// 该指令必须通过$tmp变量返回一个结果值继续参加表达式的运算，这样可以使得表达式中实现基本运算符之外的运算功能，例如转换数值类型等
+// 花括号不可以嵌套使用
+//The calculation order takes precedence over parentheses. If there are no parentheses, the calculation is performed according to the general operator order
+//The result value is put into the variable r
+//The mathematical expression of the expression to be calculated in this example is a+((a-8.0) * abs (b)), where abs represents the absolute value
+//Note that due to the calculation order problem, it is necessary to add brackets to a-8.0 in the mathematical expression to ensure the consistent calculation order
+//Expressions can contain instructions, which should be enclosed by curly braces
+//The instruction must return a result value through the $tmp variable to continue to participate in the operation of the expression, which can enable the expression to implement the operation functions other than the basic operator, such as converting the numeric type, etc
+//Curly brackets cannot be nested
+eval $r `$a + ($a - {convert #f8.0 int}) * {abs $b}`
 
 // 输出变量r的值查看
+// View the value of output variable r
 pln $r
 
 // 判断表达式 !((a-b)<10) 的计算结果值是否为布尔值true，是则跳转到标号next1处
 // ifEval指令后第一个参数必须是一个字符串类型的数值或变量，表示要计算的表达式
 // 第二个参数时满足条件后要跳转到的标号
+// Judge expression! Whether the calculated result value of ((a-b)<10) is a boolean value true, and if yes, it will jump to the label next1
+// The first parameter after the ifEval instruction must be a numeric value or variable of string type, representing the expression to be evaluated
+// The second parameter is the label to jump to when the condition is met
 ifEval `! (($a - $b) < #i10)` :next1
 
 pln 条件不满足
@@ -1251,22 +1374,31 @@ exit
 
 :next1
 pln 条件满足
-
 ```
 
 需要特别注意的是，谢语言中的表达式中，运算符是没有优先级之分的，因此一个表达式中是严格按照从左到右的顺序执行运算的，唯一的例外是括号，用圆括号可以改变运算的优先级，括号里的部分将被优先计算。另外，表达式中的值与运算符之间必须有空格分隔。也因为一般的表达式都存在空格，因此需要用反引号或双引号括起来。
 
+Special attention should be paid to the fact that in the expressions in Xie language, operators have no priority. Therefore, an expression performs operations in strict order from left to right. The only exception is parentheses. Parentheses can change the priority of operations, and the parts in parentheses will be calculated first. In addition, the value and operator in the expression must be separated by a space. Because there are spaces in general expressions, you need to enclose them with back quotes or double quotes.
+
 另外，如果括号里的内容以一个问号“?”开始，那么后面可以是一条指令，该指令必须通过$tmp变量返回一个结果值以便继续参加表达式的运算，这样可以使得表达式中实现基本运算符之外的运算功能，例如转换数值类型等。
+
+In addition, if the content in the parentheses starts with a question mark "?", then it can be followed by an instruction that must return a result value through the $tmp variable to continue to participate in the operation of the expression, which can enable the expression to implement the operation functions other than the basic operator, such as converting the numeric type.
 
 ifEval指令是专门配合表达式计算使用的条件跳转指令，它后面必须跟一个字符串类型的表达式，其计算结果必须是一个布尔类型的值，ifEval指令将根据其结果，确定是否要跳转到指定的行号。ifEval指令，简化了一般的if和ifNot质量较为复杂的条件处理语法结构。
 
+The ifEval instruction is a conditional jump instruction specially used for expression calculation. It must be followed by an expression of string type, and its calculation result must be a Boolean value. The ifEval instruction will determine whether to jump to the specified line number according to its result. The ifEval instruction simplifies the general if and ifNot quality conditional processing syntax structure.
+
 由于谢语言中表达式计算相对效率较低，因此对于需要反复高速计算或处理的场景，建议还是使用分解的方式更高效。
+
+Due to the relatively low efficiency of expression calculation in Xielang, it is recommended to use decomposition method for scenes that require repeated high-speed calculation or processing.
 
 运行后的效果：
 
+Effect after operation:
+
 ```shell
-62
-12
+30
+48
 条件满足
 ```
 
@@ -1279,55 +1411,76 @@ ifEval指令是专门配合表达式计算使用的条件跳转指令，它后�
 谢语言中，表达式可以运用在指令的参数中，此时需要以英文问号“?”字符开头，例如（exprInParam.xie）：
 
 ```go
+// 本例演示指令中用表达式作为参数
+// This example demonstrates using expressions as parameters in instructions
+
 assign $a "abc"
 
 // 表达式做参数
-// 注意“?”后面再加双引号或反引号括起表达式
-pl "[%v] test params: %v" ?"(?nowStr)" $a
+// 注意“@”后面再加双引号或反引号括起表达式
+// Expression as parameter
+// Note that the expression is enclosed by double quotation marks or back quotation marks after "@"
+pl "[%v] test params: %v" @"{nowStr}" $a
 ```
 
 将输出：
+
+Will output:
 
 ```shell
 [2022-05-17 14:30:59] test params: abc
 ```
 
-其中，pl指令的第二个参数即是以问号开头的表达式，而这个表达式用(?...)的方式又运行了获取当前时间字符串的指令nowStr。注意，表达式内的指令，一定要保证将结果值存入全局变量$tmp（不可省略结果参数的指令，要确保结果参数是\$tmp）。
+其中，pl指令的第二个参数即是以@号开头的表达式，而这个表达式用花括号括起指令的方式又运行了获取当前时间字符串的指令nowStr。注意，表达式内的指令，一定要保证将结果值存入全局变量、$tmp（不可省略结果参数的指令，要确保结果参数是\$tmp）。
 
+Among them, the second parameter of the pl instruction is the expression beginning with the @ sign, and this expression runs the instruction nowStr to obtain the current time string by enclosing the instruction with curly braces. Note that the instruction in the expression must ensure that the result value is stored in the global variable, \$tmp (for the instruction that cannot omit the result parameter, ensure that the result parameter is \$tmp).
 
 &nbsp;
 
-##### - **快速表达式**
+##### - **表达式的另一个例子**（Another example of an expression）
 
-谢语言中还支持一种快速表达式，见下例（quickEval.xie）：
+下例是另一个表达式的例子，使用quickEval指令，与eval指令是等价的（quickEval.xie）：
+
+The following example is another example of an expression, using the quickEval instruction, which is equivalent to the eval instruction (quickEval.xie):
 
 ```go
 // 本例展示快速表达式
 // 注意快速表达式中需要用花括号来支持内嵌指令或函数
+// This example shows a fast expression
+// Note that curly braces are needed in fast expressions to support embedded instructions or functions
 
 // 将变量a赋值为浮点数15.2
+// Assign variable a to floating point 15.2
 = $a #f15.2
 
 // 计算 -5.1*2.8+(23+(a-6.9))/3.3
 // quickEval指令用于计算一个用字符串表示的快速表达式的值
+// Calculation - 5.1 * 2.8+(23+(a-6.9))/3.3
+// The quickEval instruction is used to calculate the value of a fast expression expressed as a string
 quickEval `-#f5.1*#f2.8+(#f23+ ($a -#f6.9)) /#f3.3 `
 
 pln $tmp
 
 // 计算 3+(16-2)/3%2 并输出结果
+// Calculate 3+(16-2)/3% 2 and output the result
 quickEval $pln `#i3 + (#i16 -#i2) / #i3 % #i2`
 
 = $s1 "abc 12\n3 \u0022大家好\u0022"
 
 // 计算字符串的相加（即连接）结果
+// Calculate the result of adding (connecting) strings
 quickEval $pln `" -- " + $s1 + "--"`
 
 // 将变量b赋值为整数18
+// Assign variable b to integer 18
 assign $b #i18
 
 // if指令后也可以接快速表达式表示判断条件
 // 快速表达式做参数时，以@符号开始，一般后面用反引号括起来，因为常有空格
 // if语句后快速表达式也可以不带@符号，直接是一个字符串，会自动判断
+// The if instruction can also be followed by a fast expression to express the judgment condition
+// When a fast expression is used as a parameter, it starts with the @ sign and is usually followed by a back quotation mark, because there are often spaces
+// The quick expression after the if statement can also be a string without the @ sign, which will be automatically determined
 if @`$b > #i12` +1 +3
     pl "$a > #i12"
     goto :next1
@@ -1337,10 +1490,13 @@ if @`$b > #i12` +1 +3
 :next1
 
 // 给变量s1赋值为字符串abcde
+// Assign the value of variable s1 to the string abcde
 = $s1 `abcde`
 
 // 快速表达式中如果需要进行内嵌指令运算，需要用花括号括起来
 // 另外内嵌指令的结果必须存入临时变量$tmp中
+// If the embedded instruction operation is required in the fast expression, it needs to be enclosed in curly brackets
+// In addition, the result of the embedded instruction must be stored in the temporary variable $tmp
 quickEval $rs `#i15*#i3+{toInt $tmp 19}* {len $tmp $s1}`
 
 pl "first result: %v" $rs
@@ -1348,38 +1504,15 @@ pl "first result: %v" $rs
 plv @`#i15/#i3+{toInt $tmp 19}* {len $tmp $s1}-#i3`
 
 // 内嵌指令中不能再使用花括号，其他值中可以使用花括号
+// Curly brackets can no longer be used in embedded instructions, and can be used in other values
 plv @`{toStr $tmp #i123456} + " {ab 123 c}"`
+
 ```
 
 条件判断指令if中，可以直接带字符串类型的快速表达式，方便代码书写。
 
-&nbsp;
+In the conditional judgment instruction if, you can directly take a string type of fast expression, which is convenient for code writing.
 
-##### - **标号**
-
-&nbsp;
-
-谢语言中，可以在任意代码行的前一行添加标号，主要用于各种循环和条件分支等跳转场景。设置标号必须单独占一行，并以冒号“:”字符开头。
-
-  ```go
-    :lable1
-    pln 123
-  ```
-   
-&nbsp;
-
-##### - **代码缩进**
-
-&nbsp;
-
-谢语言中，每行代码的头尾空白将被忽略，因此可以适当采用代码的逐级缩进来增加代码的可读性。
-
-  ```go
-    :lable1
-        pln 123
-  ```
-
-   
 &nbsp;
 
 ##### - **goto语句**

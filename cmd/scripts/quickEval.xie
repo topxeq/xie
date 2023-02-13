@@ -1,29 +1,40 @@
 // 本例展示快速表达式
 // 注意快速表达式中需要用花括号来支持内嵌指令或函数
+// This example shows a fast expression
+// Note that curly braces are needed in fast expressions to support embedded instructions or functions
 
 // 将变量a赋值为浮点数15.2
+// Assign variable a to floating point 15.2
 = $a #f15.2
 
 // 计算 -5.1*2.8+(23+(a-6.9))/3.3
 // quickEval指令用于计算一个用字符串表示的快速表达式的值
+// Calculation - 5.1 * 2.8+(23+(a-6.9))/3.3
+// The quickEval instruction is used to calculate the value of a fast expression expressed as a string
 quickEval `-#f5.1*#f2.8+(#f23+ ($a -#f6.9)) /#f3.3 `
 
 pln $tmp
 
 // 计算 3+(16-2)/3%2 并输出结果
+// Calculate 3+(16-2)/3% 2 and output the result
 quickEval $pln `#i3 + (#i16 -#i2) / #i3 % #i2`
 
 = $s1 "abc 12\n3 \u0022大家好\u0022"
 
 // 计算字符串的相加（即连接）结果
+// Calculate the result of adding (connecting) strings
 quickEval $pln `" -- " + $s1 + "--"`
 
 // 将变量b赋值为整数18
+// Assign variable b to integer 18
 assign $b #i18
 
 // if指令后也可以接快速表达式表示判断条件
 // 快速表达式做参数时，以@符号开始，一般后面用反引号括起来，因为常有空格
 // if语句后快速表达式也可以不带@符号，直接是一个字符串，会自动判断
+// The if instruction can also be followed by a fast expression to express the judgment condition
+// When a fast expression is used as a parameter, it starts with the @ sign and is usually followed by a back quotation mark, because there are often spaces
+// The quick expression after the if statement can also be a string without the @ sign, which will be automatically determined
 if @`$b > #i12` +1 +3
     pl "$a > #i12"
     goto :next1
@@ -33,10 +44,13 @@ if @`$b > #i12` +1 +3
 :next1
 
 // 给变量s1赋值为字符串abcde
+// Assign the value of variable s1 to the string abcde
 = $s1 `abcde`
 
 // 快速表达式中如果需要进行内嵌指令运算，需要用花括号括起来
 // 另外内嵌指令的结果必须存入临时变量$tmp中
+// If the embedded instruction operation is required in the fast expression, it needs to be enclosed in curly brackets
+// In addition, the result of the embedded instruction must be stored in the temporary variable $tmp
 quickEval $rs `#i15*#i3+{toInt $tmp 19}* {len $tmp $s1}`
 
 pl "first result: %v" $rs
@@ -44,4 +58,5 @@ pl "first result: %v" $rs
 plv @`#i15/#i3+{toInt $tmp 19}* {len $tmp $s1}-#i3`
 
 // 内嵌指令中不能再使用花括号，其他值中可以使用花括号
+// Curly brackets can no longer be used in embedded instructions, and can be used in other values
 plv @`{toStr $tmp #i123456} + " {ab 123 c}"`

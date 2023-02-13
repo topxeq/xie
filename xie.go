@@ -47,7 +47,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var VersionG string = "1.0.8"
+var VersionG string = "1.0.9"
 
 func Test() {
 	tk.Pl("test")
@@ -240,6 +240,8 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"mod": 905, // 两个数值做取模计算，无参数时，将两个弹栈值相加（注意弹栈值先弹出的为第二个数值），结果压栈；参数为1个时是结果参数，两个数值从堆栈获取；参数为2个时，表示两个数值，结果压栈；参数为3个时，第一个参数是结果参数，后两个为待计算数值
 	"%":   905,
+
+	"adds": 921, // 将多个参数进行相加
 
 	"!": 930, // 取反操作符，对于布尔值取反，即true -> false，false -> true。对于其他数值，如果是未定义的变量（即Undefined），返回true，否则返回false
 
@@ -1199,9 +1201,20 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 
 				if strings.HasPrefix(s1DT, "`") && strings.HasSuffix(s1DT, "`") {
 					s1DT = s1DT[1 : len(s1DT)-1]
+				} else if strings.HasPrefix(s1DT, "'") && strings.HasSuffix(s1DT, "'") {
+					s1DT = s1DT[1 : len(s1DT)-1]
+				} else if strings.HasPrefix(s1DT, `"`) && strings.HasSuffix(s1DT, `"`) {
+					tmps, errT := strconv.Unquote(s1DT)
+
+					if errT != nil {
+						return VarRef{-3, s1DT}
+					}
+
+					s1DT = tmps
+
 				}
 
-				return VarRef{-3, tk.ToStr(s1DT)}
+				return VarRef{-3, s1DT}
 				// } else if typeT == '~' { // string, but replace ~~~ to `(back quote)
 				// 	s1DT := s1T[2:]
 
@@ -1217,6 +1230,17 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 
 				if strings.HasPrefix(s1DT, "`") && strings.HasSuffix(s1DT, "`") {
 					s1DT = s1DT[1 : len(s1DT)-1]
+				} else if strings.HasPrefix(s1DT, "'") && strings.HasSuffix(s1DT, "'") {
+					s1DT = s1DT[1 : len(s1DT)-1]
+				} else if strings.HasPrefix(s1DT, `"`) && strings.HasSuffix(s1DT, `"`) {
+					tmps, errT := strconv.Unquote(s1DT)
+
+					if errT != nil {
+						return VarRef{-3, s1DT}
+					}
+
+					s1DT = tmps
+
 				}
 
 				return VarRef{-3, fmt.Errorf("%v", s1DT)}
@@ -1225,6 +1249,17 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 
 				if strings.HasPrefix(s1DT, "`") && strings.HasSuffix(s1DT, "`") {
 					s1DT = s1DT[1 : len(s1DT)-1]
+				} else if strings.HasPrefix(s1DT, "'") && strings.HasSuffix(s1DT, "'") {
+					s1DT = s1DT[1 : len(s1DT)-1]
+				} else if strings.HasPrefix(s1DT, `"`) && strings.HasSuffix(s1DT, `"`) {
+					tmps, errT := strconv.Unquote(s1DT)
+
+					if errT != nil {
+						return VarRef{-3, s1DT}
+					}
+
+					s1DT = tmps
+
 				}
 
 				tmps := strings.TrimSpace(s1DT)
@@ -1247,6 +1282,17 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 
 				if strings.HasPrefix(s1DT, "`") && strings.HasSuffix(s1DT, "`") {
 					s1DT = s1DT[1 : len(s1DT)-1]
+				} else if strings.HasPrefix(s1DT, "'") && strings.HasSuffix(s1DT, "'") {
+					s1DT = s1DT[1 : len(s1DT)-1]
+				} else if strings.HasPrefix(s1DT, `"`) && strings.HasSuffix(s1DT, `"`) {
+					tmps, errT := strconv.Unquote(s1DT)
+
+					if errT != nil {
+						return VarRef{-3, s1DT}
+					}
+
+					s1DT = tmps
+
 				}
 
 				// tk.Plv(s1T[2:])
@@ -1267,6 +1313,17 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 
 				if strings.HasPrefix(s1DT, "`") && strings.HasSuffix(s1DT, "`") {
 					s1DT = s1DT[1 : len(s1DT)-1]
+				} else if strings.HasPrefix(s1DT, "'") && strings.HasSuffix(s1DT, "'") {
+					s1DT = s1DT[1 : len(s1DT)-1]
+				} else if strings.HasPrefix(s1DT, `"`) && strings.HasSuffix(s1DT, `"`) {
+					tmps, errT := strconv.Unquote(s1DT)
+
+					if errT != nil {
+						return VarRef{-3, s1DT}
+					}
+
+					s1DT = tmps
+
 				}
 
 				// tk.Plv(s1T[2:])
@@ -1287,6 +1344,17 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 
 				if strings.HasPrefix(s1DT, "`") && strings.HasSuffix(s1DT, "`") {
 					s1DT = s1DT[1 : len(s1DT)-1]
+				} else if strings.HasPrefix(s1DT, "'") && strings.HasSuffix(s1DT, "'") {
+					s1DT = s1DT[1 : len(s1DT)-1]
+				} else if strings.HasPrefix(s1DT, `"`) && strings.HasSuffix(s1DT, `"`) {
+					tmps, errT := strconv.Unquote(s1DT)
+
+					if errT != nil {
+						return VarRef{-3, s1DT}
+					}
+
+					s1DT = tmps
+
 				}
 
 				// tk.Plv(s1T[2:])
@@ -1307,6 +1375,17 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 
 				if strings.HasPrefix(s1DT, "`") && strings.HasSuffix(s1DT, "`") {
 					s1DT = s1DT[1 : len(s1DT)-1]
+				} else if strings.HasPrefix(s1DT, "'") && strings.HasSuffix(s1DT, "'") {
+					s1DT = s1DT[1 : len(s1DT)-1]
+				} else if strings.HasPrefix(s1DT, `"`) && strings.HasSuffix(s1DT, `"`) {
+					tmps, errT := strconv.Unquote(s1DT)
+
+					if errT != nil {
+						return VarRef{-3, s1DT}
+					}
+
+					s1DT = tmps
+
 				}
 
 				// tk.Plv(s1T[2:])
@@ -1327,6 +1406,17 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 
 				if strings.HasPrefix(s1DT, "`") && strings.HasSuffix(s1DT, "`") {
 					s1DT = s1DT[1 : len(s1DT)-1]
+				} else if strings.HasPrefix(s1DT, "'") && strings.HasSuffix(s1DT, "'") {
+					s1DT = s1DT[1 : len(s1DT)-1]
+				} else if strings.HasPrefix(s1DT, `"`) && strings.HasSuffix(s1DT, `"`) {
+					tmps, errT := strconv.Unquote(s1DT)
+
+					if errT != nil {
+						return VarRef{-3, s1DT}
+					}
+
+					s1DT = tmps
+
 				}
 
 				// tk.Plv(s1T[2:])
@@ -1349,8 +1439,15 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 					s1DT = s1DT[1 : len(s1DT)-1]
 				} else if strings.HasPrefix(s1DT, "'") && strings.HasSuffix(s1DT, "'") {
 					s1DT = s1DT[1 : len(s1DT)-1]
-				} else if strings.HasPrefix(s1DT, "\"") && strings.HasSuffix(s1DT, "\"") {
-					s1DT = s1DT[1 : len(s1DT)-1]
+				} else if strings.HasPrefix(s1DT, `"`) && strings.HasSuffix(s1DT, `"`) {
+					tmps, errT := strconv.Unquote(s1DT)
+
+					if errT != nil {
+						return VarRef{-3, s1DT}
+					}
+
+					s1DT = tmps
+
 				}
 
 				// tk.Plv(s1T[2:])
@@ -7185,6 +7282,19 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		p.SetVar(r, pr, v3)
 
 		return ""
+	case 921: // adds
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		pr := instrT.Params[0]
+		v1p := 1
+
+		vs := p.ParamsToList(r, instrT, v1p)
+
+		p.SetVar(r, pr, tk.GetAddsResult(vs...))
+
+		return ""
 
 	case 930: // !
 		if instrT.ParamLen < 1 {
@@ -7405,7 +7515,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		return ""
 
-	case 999: // quickEval
+	case 999: // eval/quickEval
 		if instrT.ParamLen < 1 {
 			return p.Errf(r, "not enough paramters")
 		}

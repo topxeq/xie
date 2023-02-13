@@ -1,0 +1,37 @@
+// 本例演示adds指令的用法
+// adds指令可以将多个数值相加，并且可以用于不同类型的数值相加
+// adds指令会从左到右，将第一个数值与第二个数值相加，其结果再与第三个数值相加，依此类推直至加完所有数值
+// 如果数值类型不同，adds指令将尽量把每次加法操作的第二个数值转换成第一个数值的类型
+// 如果实在无法完成的加法，将返回error对象
+// The add instruction can add multiple values and can be used to add different types of values
+// The add command will add the first value to the second value from left to right, and the result will be added to the third value, and so on until all the values are added
+// If the number types are different, the add instruction will try to convert the second number of each addition operation to the type of the first number
+// If the addition cannot be completed, the error object will be returned
+
+// 将多个字符串相加
+// 注意其中含有一个浮点数3.8，将转换为字符串
+// 另外，双引号、单引号，反引号都可以用于括起字符串，它们的区别是：
+// 双引号括起的字符串可以包含转义字符，如\n、\"（表示双引号本身）等
+// 单引号括起的字符串不进行转义
+// 反引号支持多行字符串，括起的字符串也不进行转义
+// Add multiple strings
+// Note that it contains a floating point number 3.8, which will be converted to a string
+// In addition, double quotation marks, single quotation marks and back quotation marks can be used to enclose strings. Their differences are:
+// The string enclosed by double quotation marks can contain escape characters, such as  n,  "(indicating the double quotation marks themselves), etc
+// Strings enclosed in single quotation marks are not escaped
+// Backquotes support multi-line strings, and enclosed strings are not escaped
+adds $result "abc" "\"123\"" #f3.8 '"递四方ds' `give it to 
+    them
+`
+
+plo $result
+
+// 进行依次整数相加，因为第一个数值$a是整数类型
+// 因此后面的所有参数都将转换成整数再进行计算
+// Perform sequential integer addition, because the first value $a is of integer type
+// Therefore, all subsequent parameters will be converted to integers and then calculated
+assign $a int 15
+
+adds $result2 $a 30 #f2.3 #btrue
+
+plo $result2
