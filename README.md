@@ -33,7 +33,7 @@ Xielang is a free, open-source, cross-platform, cross-language, ASM/SHELL-like, 
   - [- **复杂表达式运算**（Complex expression operation）](#--复杂表达式运算complex-expression-operation)
   - [- **复杂表达式做参数**](#--复杂表达式做参数)
   - [- **表达式的另一个例子**（Another example of an expression）](#--表达式的另一个例子another-example-of-an-expression)
-  - [- **goto语句**](#--goto语句)
+  - [- **goto语句**（The goto instr）](#--goto语句the-goto-instr)
   - [- **一般循环结构**](#--一般循环结构)
   - [- **条件分支**](#--条件分支)
   - [- **else分支**](#--else分支)
@@ -1515,46 +1515,60 @@ In the conditional judgment instruction if, you can directly take a string type 
 
 &nbsp;
 
-##### - **goto语句**
+##### - **goto语句**（The goto instr）
 
 &nbsp;
 
 goto语句在一般的高级语言中并不推荐使用，但对于具备一定经验的开发者来说，反而有可能是提高效率的手段。谢语言中提供了goto/转到指令（为保持和汇编语言的一定关联，也可写作jmp），可以用于实现代码执行中无条件跳转到某个标号处的功能。例如（goto.xie）：
 
+The goto statement is not recommended in general high-level languages, but it may be a means to improve efficiency for developers with certain experience. Xielang provides goto/go instruction (in order to maintain a certain association with assembly language, it can also be written as jmp), which can be used to realize the function of unconditional jump to a label in code execution. For example (goto.xie):
+
   ```go
-    pln start...
+  pln start...
 
-    push #f1.8
+  push #f1.8
 
-    goto :label1
+  goto :label1
 
-    pop $c
+  :label2
+  pop $c
 
-    pln `c =` $c
+  pln `c =` $c
 
-    :label1
-        pln "label1 =" $peek
+  exit
+
+  :label1
+      pln "label1 =" $peek
+
+      goto :label2
+
 
   ```
 
-由于无条件跳转的关系，这段代码中的goto语句与标号:lable1之间的代码将不被执行，最后输出结果是：
+由于无条件跳转的关系，这段代码执行时将先执行标号:lable1处的代码，然后再跳转到标号:label2处的代码，最后输出结果是：
+
+Due to the unconditional jump, the code at label: lable1 will be executed first, and then jump to the code at label: label2. The final output result is:
 
   ```
-    start...
-    label1 = 1.8
+  start...
+  label1 = 1.8
+  c = 1.8
   ```
 
-另外，goto语句中的，可以使用“+1”、“-3”这种伪标号（也可以写作:+1，:+3，这样的形式更推荐使用），表示跳转到当前指令的后一条指令或前三条指令（注意：注释和标号等不是有效指令的行将被忽略而不被计算在内）：
+另外，goto语句中的，可以使用“:+1”、“:-3”这种伪标号，表示跳转到当前指令的后一条指令或前三条指令（注意：注释和标号等不是有效指令的行将被忽略而不被计算在内）：
+
+In addition, in the goto statement, pseudolabels such as ":+1" and ":-3" can be used to indicate jumping to the next instruction or the 3rd previous instructions of the current instruction (note: lines such as comments and labels that are not valid instructions will be ignored and not counted):
 
 ```go
   pln abc
-  goto +2
+  goto :+3
 
   // 下面两条指令将被跳过
+  // the next two line of code will be skipped
   pln 123
   pass 
 
-  pln "这句将被执行"
+  pln "这句将被执行（this line of code will be run）"
 ```
 
 &nbsp;

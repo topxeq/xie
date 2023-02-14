@@ -1,0 +1,7 @@
+compile $code1 `
+pln main defer 3 in compiled code piece
+pln "..."
+`
+
+runCall $rs $code1
+

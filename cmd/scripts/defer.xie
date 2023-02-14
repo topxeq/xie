@@ -1,12 +1,35 @@
 // 延迟执行指令1
+// defer指令可以后接一个字符串表示的指令
 // defer instruction 1
-defer pl "main defer: %v" test1
+// The defer instruction can be followed by an instruction represented by a string
+defer `pl "main defer: %v" test1`
 
 // 延迟执行指令2
 // defer指令遵循“后进先出”的规则，即后指定的defer指令将先被执行
+// defer指令后也可以直接跟一条指令而不是字符串
 // defer instruction 2
 // the deferred instructions will be running by order(first in last out) when the function returns or the program exits, or error occurrs
+// The defer instruction can also be directly followed by an instruction instead of a string
 defer pl "main defer: %v" test2
+
+// deferStack $pln
+// exit
+
+// defer指令也可以后接一个编译好的代码
+// The defer instruction can also be followed by a compiled code
+compile $code1 `
+pln main defer 3 in compiled code piece
+pln "..."
+`
+
+defer $code1
+
+// 百分号引导的参数表示将代码编译
+// The parameter guided by the percentage sign means to compile the code
+defer %`
+pln main defer 4 in compiled code piece
+pln "___"
+`
 
 pln 1
 
@@ -19,13 +42,13 @@ pln func1 returns $rs
 exit
 
 :func1
-    defer pl "sub defer: %v" test1
+    defer `pl "sub defer: %v" test1`
 
     pln sub1
 
     // 故意做一个会出现错误的指令，这里是除零操作
     // trigger an error on purpose
-    quickEval $r1 `#i10 / #i0`
+    eval $r1 `#i10 / #i0`
 
     // 检查出错则中断程序，此时应执行本函数内的defer和主函数内的defer
     // check if error occurred, and since it is, the deferred instructions defined in this function and up to root function of the VM will be run
@@ -35,5 +58,5 @@ exit
     // code below will never be reached
     pln "10/0=" $r1
 
-    ret
+    ret $r1
 

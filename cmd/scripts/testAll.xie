@@ -110,7 +110,9 @@ test $rs "error occurred while running to line 10: runtime error, detail: (Line 
 
 systemCmd $rs "xie" "-gopath" "defer.xie"
 
-testByStartsWith $rs "1\nsub1\nsub defer: test1\nmain defer: test2\nmain defer: test1\n(Line 32:     checkErrX $r1) [" $seq "defer.xie"
+regReplace $rs $rs `\[\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d\]` ""
+
+test $rs "1\nsub1\nsub defer: test1\nmain defer 4 in compiled code piece\n___\nmain defer 3 in compiled code piece\n...\nmain defer: test2\nmain defer: test1\n(Line 55:     checkErrX $r1) (xie) runtime error: (Line 55:     checkErrX $r1) failed to cal the expression: failed: runtime error: integer divide by zero(10, 0)\n" $seq "defer.xie"
 
 systemCmd $rs "xie" "-gopath" "range.xie"
 

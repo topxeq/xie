@@ -47,7 +47,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var VersionG string = "1.0.9"
+var VersionG string = "1.1.0"
 
 func Test() {
 	tk.Pl("test")
@@ -77,6 +77,8 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"defer": 109, // delay running an instruction, the instruction will be running by order(first in last out) when the function returns or the program exits, or error occurrs
 
+	"deferStack": 110, // get defer stack info
+
 	"isUndef": 111, // 判断变量是否未被声明（定义），第一个结果参数可省略，第二个参数是要判断的变量
 	"isDef":   112, // 判断变量是否已被声明（定义），第一个结果参数可省略，第二个参数是要判断的变量
 	"isNil":   113, // 判断变量是否是nil，第一个结果参数可省略，第二个参数是要判断的变量
@@ -100,6 +102,8 @@ var InstrNameSet map[string]int = map[string]int{
 	"quickRun": 155, // quick run a piece of code, in a new running context
 
 	"runCode": 156, // 运行一段谢语言代码，在新的虚拟机中执行，除结果参数（不可省略）外，第一个参数是字符串类型的代码（必选，后面参数都是可选），第二个参数为任意类型的传入虚拟机的参数（虚拟机内通过inputG全局变量来获取该参数），后面的参数可以是一个字符串数组类型的变量或者多个字符串类型的变量，虚拟机内通过argsG（字符串数组）来对其进行访问。
+
+	"runPiece": 157, // run a piece of code, in current running context
 
 	"extractRun":      158, // extract a piece of instrs in a running-context to a new running-context
 	"extractCompiled": 159, // extract a piece of instrs in a running-context to a compiled object
@@ -1498,6 +1502,42 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 			s1T = strings.TrimSpace(s1T[1:])
 
 			return VarRef{-17, tk.ToInt(s1T, 0)}
+		} else if strings.HasPrefix(s1T, "%") { // compiled
+			if len(s1T) < 2 {
+				return VarRef{-3, s1T}
+			}
+
+			s1T = strings.TrimSpace(s1T[1:])
+
+			if strings.HasPrefix(s1T, "`") && strings.HasSuffix(s1T, "`") {
+				s1T = s1T[1 : len(s1T)-1]
+
+				nc := Compile(s1T)
+
+				// if tk.IsError(nc) {
+				// 	return VarRef{-3, nc}
+				// }
+
+				return VarRef{-3, nc} // compiled
+			} else if strings.HasPrefix(s1T, "'") && strings.HasSuffix(s1T, "'") {
+				s1T = s1T[1 : len(s1T)-1]
+
+				nc := Compile(s1T)
+
+				return VarRef{-3, nc} // compiled
+			} else if strings.HasPrefix(s1T, `"`) && strings.HasSuffix(s1T, `"`) {
+				tmps, errT := strconv.Unquote(s1T)
+
+				if errT != nil {
+					return VarRef{-3, errT}
+				}
+
+				nc := Compile(tmps)
+
+				return VarRef{-3, nc} // compiled
+			}
+
+			return VarRef{-3, Compile(s1T)}
 		}
 	}
 
@@ -1592,46 +1632,59 @@ func Compile(codeA string) interface{} {
 			return fmt.Errorf("编译错误(行 %v/%v %v): 未知指令", i, p.CodeSourceMap[i]+1, tk.LimitString(p.Source[p.CodeSourceMap[i]], 50))
 		}
 
-		if codeT == 109 { // defer
-			if lenT < 2 {
-				instrT := Instr{Code: codeT, Cmd: instrNameT, ParamLen: 1, Params: []VarRef{VarRef{Ref: -3, Value: v}}, Line: lineT} //&([]VarRef{})}
-				p.InstrList = append(p.InstrList, instrT)
+		// if codeT == 109 { // defer
+		// 	if lenT < 2 {
+		// 		instrT := Instr{Code: codeT, Cmd: instrNameT, ParamLen: 1, Params: []VarRef{VarRef{Ref: -3, Value: v}}, Line: lineT} //&([]VarRef{})}
+		// 		p.InstrList = append(p.InstrList, instrT)
 
-				return fmt.Errorf("编译错误(行 %v/%v %v): 空的defer指令", i, p.CodeSourceMap[i]+1, tk.LimitString(p.Source[p.CodeSourceMap[i]], 50))
-			}
+		// 		return fmt.Errorf("编译错误(行 %v/%v %v): 空的defer指令", i, p.CodeSourceMap[i]+1, tk.LimitString(p.Source[p.CodeSourceMap[i]], 50))
+		// 	}
 
-			deferCmdT := strings.TrimSpace(listT[1])
-			deferCodeT, ok := InstrNameSet[deferCmdT]
+		// 	deferCmdT := strings.TrimSpace(listT[1])
 
-			if !ok {
-				instrT := Instr{Code: deferCodeT, Cmd: deferCmdT, ParamLen: 1, Params: []VarRef{VarRef{Ref: -3, Value: v}}, Line: lineT} //&([]VarRef{})}
-				p.InstrList = append(p.InstrList, instrT)
+		// 	if strings.HasPrefix(deferCmdT, "$") {
+		// 		// 157 runPiece
+		// 		instrT := Instr{Code: 157, Cmd: "runPiece", Params: []VarRef{VarRef{Ref: -5, Value: nil}, ParseVar(deferCmdT, i)}, ParamLen: 2, Line: lineT} //&([]VarRef{})}
 
-				return fmt.Errorf("编译错误(行 %v/%v %v): 未知的defer指令", i, p.CodeSourceMap[i]+1, tk.LimitString(p.Source[p.CodeSourceMap[i]], 50))
+		// 		p.InstrList = append(p.InstrList, instrT)
 
-			}
+		// 		continue
 
-			instrDeferT := Instr{Code: deferCodeT, Cmd: deferCmdT, Params: make([]VarRef, 0, lenT-2), ParamLen: lenT - 2, Line: tk.RemoveFirstSubString(strings.TrimSpace(lineT), deferCmdT)} //&([]VarRef{})}
+		// 	} else {
+		// 		deferCodeT, ok := InstrNameSet[deferCmdT]
 
-			list3T := []VarRef{}
+		// 		if !ok {
+		// 			instrT := Instr{Code: deferCodeT, Cmd: deferCmdT, ParamLen: 1, Params: []VarRef{VarRef{Ref: -3, Value: v}}, Line: lineT} //&([]VarRef{})}
+		// 			p.InstrList = append(p.InstrList, instrT)
 
-			for j, jv := range listT {
-				if j < 2 {
-					continue
-				}
+		// 			return fmt.Errorf("编译错误(行 %v/%v %v): 未知的defer指令", i, p.CodeSourceMap[i]+1, tk.LimitString(p.Source[p.CodeSourceMap[i]], 50))
 
-				list3T = append(list3T, ParseVar(jv, i))
-			}
+		// 		}
 
-			instrDeferT.Params = append(instrDeferT.Params, list3T...)
-			instrDeferT.ParamLen = lenT - 2
+		// 		instrDeferT := Instr{Code: deferCodeT, Cmd: deferCmdT, Params: make([]VarRef, 0, lenT-2), ParamLen: lenT - 2, Line: tk.RemoveFirstSubString(strings.TrimSpace(lineT), deferCmdT)} //&([]VarRef{})}
 
-			instrT := Instr{Code: codeT, Cmd: instrNameT, Params: []VarRef{VarRef{Ref: -3, Value: instrDeferT}}, ParamLen: 1, Line: lineT} //&([]VarRef{})}
+		// 		list3T := []VarRef{}
 
-			p.InstrList = append(p.InstrList, instrT)
+		// 		for j, jv := range listT {
+		// 			if j < 2 {
+		// 				continue
+		// 			}
 
-			continue
-		}
+		// 			list3T = append(list3T, ParseVar(jv, i))
+		// 		}
+
+		// 		instrDeferT.Params = append(instrDeferT.Params, list3T...)
+		// 		instrDeferT.ParamLen = lenT - 2
+
+		// 		instrT := Instr{Code: codeT, Cmd: instrNameT, Params: []VarRef{VarRef{Ref: -3, Value: instrDeferT}}, ParamLen: 1, Line: lineT} //&([]VarRef{})}
+
+		// 		p.InstrList = append(p.InstrList, instrT)
+
+		// 		continue
+
+		// 	}
+
+		// }
 
 		instrT := Instr{Code: codeT, Cmd: instrNameT, Params: make([]VarRef, 0, lenT-1), Line: lineT} //&([]VarRef{})}
 
@@ -1977,6 +2030,24 @@ func (p *FuncContext) RunDefer(vmA *XieVM, rcA *RunningContext) error {
 			break
 		}
 
+		nc, ok := instrT.(*CompiledCode)
+
+		if ok {
+			if GlobalsG.VerboseLevel > 1 {
+				tk.Pl("defer run: %#v", nc)
+			}
+
+			// tk.Plo("code piece", p.DeferStack.Size(), nc)
+
+			rs := QuickRunPiece(vmA, rcA, nc)
+
+			if tk.IsError(rs) {
+				return fmt.Errorf("[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), tk.GetErrStrX(rs))
+			}
+
+			continue
+		}
+
 		nv, ok := instrT.(*Instr)
 
 		if !ok {
@@ -2066,6 +2137,42 @@ func (p *RunningContext) RunDeferUpToRoot(vmA *XieVM) error {
 
 }
 
+func GetDeferStack(vmA *XieVM, rcA *RunningContext) *tk.SimpleStack {
+	stackT := tk.NewSimpleStack(0, tk.Undefined)
+
+	lenT := rcA.FuncStack.Size()
+
+	for i := lenT - 1; i >= 0; i-- {
+		contextT := rcA.FuncStack.PeekLayer(i).(*FuncContext)
+
+		len1T := contextT.DeferStack.Size()
+		for j := len1T - 1; j >= 0; j-- {
+			deferT := contextT.DeferStack.PeekLayer(j)
+
+			if tk.IsUndefined(deferT) {
+				break
+			}
+
+			stackT.Push(deferT)
+
+		}
+	}
+
+	len2T := vmA.RootFunc.DeferStack.Size()
+	for j := len2T - 1; j >= 0; j-- {
+		deferT := vmA.RootFunc.DeferStack.PeekLayer(j)
+
+		if tk.IsUndefined(deferT) {
+			break
+		}
+
+		stackT.Push(deferT)
+
+	}
+
+	return stackT.Reverse()
+}
+
 func RunDefer(vmA *XieVM, runA *RunningContext) error {
 	lenT := runA.FuncStack.Size()
 
@@ -2084,108 +2191,6 @@ func RunDefer(vmA *XieVM, runA *RunningContext) error {
 	return nil
 
 }
-
-// func (p *RunningContext) RunDefer(vmA *XieVM) error {
-// 	// if p.Parent == nil {
-// 	// 	return fmt.Errorf("no parent VM: %v", p.Parent)
-// 	// }
-
-// 	lenT := p.FuncStack.Size()
-
-// 	if lenT < 1 {
-// 		return nil
-// 	}
-
-// 	contextT := p.FuncStack.Peek().(*FuncContext)
-
-// 	rs := contextT.RunDefer(vmA, p)
-
-// 	if tk.IsError(rs) {
-// 		return rs
-// 	}
-
-// 	return nil
-
-// 	// for {
-// 	// 	instrT := p.GetCurrentFuncContext().DeferStack.Pop()
-
-// 	// 	// tk.Pl("\nDeferStack.Pop: %#v\n", instrT)
-
-// 	// 	if instrT == nil || tk.IsUndefined(instrT) {
-// 	// 		break
-// 	// 	}
-
-// 	// 	nv, ok := instrT.(*Instr)
-
-// 	// 	if !ok {
-// 	// 		return fmt.Errorf("invalid instruction: %#v", instrT)
-// 	// 	}
-
-// 	// 	if GlobalsG.VerboseLevel > 1 {
-// 	// 		tk.Pl("defer run: %v", nv)
-// 	// 	}
-
-// 	// 	rs := RunInstr(vmA, p, nv)
-
-// 	// 	if tk.IsErrX(rs) {
-// 	// 		return fmt.Errorf("[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), tk.GetErrStrX(rs))
-// 	// 	}
-// 	// }
-
-// 	// return nil
-// }
-
-// func (p *RunningContext) RunDeferUpToRoot() interface{} {
-// 	if p.Parent == nil {
-// 		return fmt.Errorf("no parent VM: %v", p.Parent)
-// 	}
-
-// 	currentContextIndexT := p.FuncStack.Size()
-
-// 	var currentFuncT *FuncContext
-
-// 	for {
-// 		// tk.Pl("currentContextT: %#v", currentContextT)
-
-// 		if currentContextIndexT > 0 {
-// 			currentFuncT = p.FuncStack.PeekLayer(currentContextIndexT).(*FuncContext)
-// 		} else {
-// 			currentFuncT = p.Parent.(*XieVM).RootFunc
-// 		}
-
-// 		instrT := currentFuncT.DeferStack.Pop()
-
-// 		// tk.Pl("\nDeferStack.Pop: %#v\n", instrT)
-
-// 		if instrT == nil || tk.IsUndefined(instrT) {
-// 			if currentContextIndexT < 1 {
-// 				break
-// 			}
-
-// 			currentContextIndexT--
-
-// 			continue
-// 		}
-
-// 		nv, ok := instrT.(*Instr)
-
-// 		if !ok {
-// 			return fmt.Errorf("invalid instruction: %#v", instrT)
-// 		}
-
-// 		if GlobalsG.VerboseLevel > 1 {
-// 			tk.Pl("defer run: %v", nv)
-// 		}
-
-// 		rs := RunInstr(p.Parent.(*XieVM), p, nv)
-
-// 		if tk.IsErrX(rs) {
-// 			return fmt.Errorf("[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), tk.GetErrStrX(rs))
-// 		}
-// 	}
-
-// 	return nil
-// }
 
 func NewRunningContext(inputA ...interface{}) interface{} {
 	var inputT interface{} = nil
@@ -3096,7 +3101,6 @@ type LoopStruct struct {
 }
 
 func EvalCondition(condA interface{}, vmA *XieVM, runA *RunningContext) interface{} {
-	// tk.Plo("condA: ", condA)
 	var resultT, ok bool
 	switch nv := condA.(type) {
 	case bool:
@@ -3578,7 +3582,7 @@ func NewObject(p *XieVM, r *RunningContext, typeA string, argsA ...interface{}) 
 		}
 
 		deleT = func(argsA ...interface{}) interface{} {
-			rs := RunCodePiece(p, nil, cp1, argsA)
+			rs := RunCodePiece(p, nil, cp1, argsA, true)
 
 			return rs
 		}
@@ -3869,7 +3873,7 @@ func NewVar(p *XieVM, r *RunningContext, typeA string, argsA ...interface{}) int
 		}
 
 		deleT = func(argsA ...interface{}) interface{} {
-			rs := RunCodePiece(p, nil, cp1, argsA)
+			rs := RunCodePiece(p, nil, cp1, argsA, true)
 
 			return rs
 		}
@@ -4038,6 +4042,67 @@ func GoCall(codeA interface{}, inputA ...interface{}) error {
 // 	return tk.Undefined
 // }
 
+func QuickRunPiece(vmA *XieVM, runA *RunningContext, codeA interface{}) (rst interface{}) {
+	if runA == nil {
+		runA = NewRunningContext().(*RunningContext)
+	}
+
+	nc, ok := codeA.(*CompiledCode)
+
+	if !ok {
+		nip, ok := codeA.(*Instr)
+
+		if ok {
+			nc = &CompiledCode{InstrList: []Instr{*nip}}
+		} else {
+			ni, ok := codeA.(Instr)
+
+			if ok {
+				nc = &CompiledCode{InstrList: []Instr{ni}}
+			} else {
+				nnc := Compile(tk.ToStr(codeA))
+
+				if tk.IsError(nnc) {
+					return fmt.Errorf("failed to compile code: %v", nnc)
+				}
+
+				nc = nnc.(*CompiledCode)
+			}
+		}
+	}
+
+	lenT := len(nc.InstrList)
+
+	tmpPointerT := 0
+
+	for (tmpPointerT >= 0) && (tmpPointerT < lenT) {
+		rs := RunInstr(vmA, runA, &nc.InstrList[tmpPointerT])
+
+		nv, ok := rs.(int)
+
+		if ok {
+			tmpPointerT = nv
+			continue
+		}
+
+		if tk.IsError(rs) {
+			return rs
+		}
+
+		nsv, ok := rs.(string)
+
+		if ok {
+			if nsv == "exit" {
+				return tk.Undefined
+			}
+		}
+
+		tmpPointerT++
+	}
+
+	return tk.Undefined
+}
+
 // 避免使用任何跳转到当前代码外的指令
 // return value is not required normally, but errors
 // normally return tk.Undefined
@@ -4072,6 +4137,7 @@ func (p *XieVM) QuickRunCode(codeA interface{}) interface{} {
 
 		if ok {
 			if nsv == "exit" {
+				nrr.RunDeferUpToRoot(p)
 				return tk.Undefined
 			}
 		}
@@ -4679,6 +4745,9 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		v1 := p.GetVarValue(r, instrT.Params[0])
 
+		// tk.Plo(v1)
+		// return ""
+
 		nvi, ok := v1.(Instr)
 
 		if ok {
@@ -4686,18 +4755,48 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 			return ""
 		}
 
-		nvs := tk.ToStr(v1)
+		nvc, ok := v1.(*CompiledCode)
 
-		codeT, ok := InstrNameSet[nvs]
-
-		if !ok {
-			return p.Errf(r, "unknown instruction: %v", v1)
+		if ok {
+			p.GetCurrentFuncContext(r).DeferStack.Push(nvc)
+			return ""
 		}
 
-		instrT := Instr{Code: codeT, Cmd: nvs, Params: instrT.Params[1:], ParamLen: instrT.ParamLen - 1, Line: tk.RemoveFirstSubString(strings.TrimSpace(instrT.Line), nvs)} //&([]VarRef{})}
+		var nvs string
 
-		p.GetCurrentFuncContext(r).DeferStack.Push(instrT)
+		if instrT.ParamLen > 1 {
+			nvs = strings.TrimSpace(instrT.Line)
+		} else {
+			nvs = tk.ToStr(v1)
+		}
 
+		nc := Compile(nvs)
+
+		if tk.IsError(nc) {
+			return p.Errf(r, "failed to compile defer code: %v", nc)
+		}
+
+		p.GetCurrentFuncContext(r).DeferStack.Push(nc)
+
+		// codeT, ok := InstrNameSet[nvs]
+
+		// if !ok {
+		// 	return p.Errf(r, "unknown instruction: %v", v1)
+		// }
+
+		// instrT := Instr{Code: codeT, Cmd: nvs, Params: instrT.Params[1:], ParamLen: instrT.ParamLen - 1, Line: tk.RemoveFirstSubString(strings.TrimSpace(instrT.Line), nvs)} //&([]VarRef{})}
+
+		// p.GetCurrentFuncContext(r).DeferStack.Push(instrT)
+
+		return ""
+	case 110: // deferStack
+		var pr interface{} = -5
+
+		if instrT.ParamLen > 0 {
+			pr = instrT.Params[0]
+		}
+
+		p.SetVar(r, pr, tk.ToJSONX(GetDeferStack(p, r), "-indent", "-sort"))
 		return ""
 	case 111: // isUndef
 		if instrT.ParamLen < 1 {
@@ -5037,6 +5136,27 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		p.SetVar(r, pr, rs)
 
 		return ""
+	case 157: // runPiece
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		codeT := p.GetVarValue(r, instrT.Params[v1p])
+
+		rs := QuickRunPiece(p, r, codeT)
+
+		p.SetVar(r, pr, rs)
+
+		return ""
+
 	case 158: // extractRun
 		if instrT.ParamLen < 2 {
 			return p.Errf(r, "not enough parameters(参数不够)")
@@ -7629,7 +7749,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		if r1, ok := codeT.(*RunningContext); ok {
 			vs := p.ParamsToList(r, instrT, v1p+1)
-			rs := RunCodePiece(NewVMQuick(), r1, "", vs)
+			rs := RunCodePiece(NewVMQuick(), r1, "", vs, true)
 
 			p.SetVar(r, pr, rs)
 			return ""
@@ -7649,7 +7769,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 			}
 
 			vs := p.ParamsToList(r, instrT, v1p+2)
-			rs := RunCodePiece(NewVMQuick(), newRunT, "", vs)
+			rs := RunCodePiece(NewVMQuick(), newRunT, "", vs, true)
 
 			p.SetVar(r, pr, rs)
 			return ""
@@ -7678,7 +7798,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		if r1, ok := codeT.(*RunningContext); ok {
 			vs := p.ParamsToList(r, instrT, v1p+1)
-			rs := RunCodePiece(p, r1, "", vs)
+			rs := RunCodePiece(p, r1, "", vs, true)
 
 			p.SetVar(r, pr, rs)
 			return ""
@@ -7699,7 +7819,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 			}
 
 			vs := p.ParamsToList(r, instrT, v1p+2)
-			rs := RunCodePiece(p, newRunT, "", vs)
+			rs := RunCodePiece(p, newRunT, "", vs, true)
 
 			p.SetVar(r, pr, rs)
 			return ""
@@ -7720,7 +7840,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		}
 
 		if cp1, ok := codeT.(*CompiledCode); ok {
-			rs := RunCodePiece(p, rT, cp1, vs)
+			rs := RunCodePiece(p, rT, cp1, vs, true)
 
 			p.SetVar(r, pr, rs)
 			return ""
@@ -7742,7 +7862,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		if r1, ok := codeT.(*RunningContext); ok {
 			vs := p.ParamsToList(r, instrT, v1p+1)
-			go RunCodePiece(p, r1, "", vs)
+			go RunCodePiece(p, r1, "", vs, true)
 
 			// p.SetVar(r, pr, rs)
 			return ""
@@ -7763,7 +7883,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 			}
 
 			vs := p.ParamsToList(r, instrT, v1p+2)
-			go RunCodePiece(p, newRunT, "", vs)
+			go RunCodePiece(p, newRunT, "", vs, true)
 
 			// p.SetVar(r, pr, rs)
 			return ""
@@ -7784,7 +7904,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		}
 
 		if cp1, ok := codeT.(*CompiledCode); ok {
-			go RunCodePiece(p, rT, cp1, vs)
+			go RunCodePiece(p, rT, cp1, vs, true)
 
 			// p.SetVar(r, pr, rs)
 			return ""
@@ -12038,20 +12158,28 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		return ""
 
 	case 10945: // checkErrX
-		if instrT.ParamLen < 1 {
-			if tk.IsErrX(p.GetCurrentFuncContext(r).Tmp) {
-				// p.RunDeferUpToRoot()
-				return p.Errf(r, tk.GetErrStrX(p.GetCurrentFuncContext(r).Tmp))
-			}
+		// if instrT.ParamLen < 1 {
+		// 	if tk.IsErrX(p.GetCurrentFuncContext(r).Tmp) {
+		// 		// p.RunDeferUpToRoot()
+		// 		return p.Errf(r, tk.GetErrStrX(p.GetCurrentFuncContext(r).Tmp))
+		// 	}
 
-			return ""
+		// 	return ""
+		// }
+
+		var v1 interface{}
+
+		if instrT.ParamLen > 0 {
+			v1 = p.GetVarValue(r, instrT.Params[0])
+		} else {
+			v1 = p.GetCurrentFuncContext(r).Tmp
 		}
 
-		v1 := p.GetVarValue(r, instrT.Params[0])
+		// v1 := p.GetVarValue(r, instrT.Params[0])
 
 		if tk.IsErrX(v1) {
-			// p.RunDeferUpToRoot()
-			return p.Errf(r, tk.GetErrStrX(v1))
+			// p.RunDeferUpToRoot(r)
+			return p.Errf(r, "%v", tk.GetErrStrX(v1))
 		}
 
 		return ""
@@ -12225,7 +12353,6 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		// }
 
 		fnT := func(res http.ResponseWriter, req *http.Request) {
-			// tk.Pl("h1")
 			if res != nil {
 				res.Header().Set("Access-Control-Allow-Origin", "*")
 				res.Header().Set("Access-Control-Allow-Headers", "*")
@@ -16802,7 +16929,6 @@ func (p *XieVM) Run(posA ...int) interface{} {
 					break
 				}
 			} else if rs == "exit" {
-
 				break
 				// } else if rs == "cont" {
 				// 	return p.Errf(r, "无效指令: %v", rs)
@@ -16846,7 +16972,7 @@ func (p *XieVM) Run(posA ...int) interface{} {
 
 }
 
-func RunCodePiece(p *XieVM, r interface{}, codeA interface{}, inputA interface{}) (rst interface{}) {
+func RunCodePiece(p *XieVM, r interface{}, codeA interface{}, inputA interface{}, runDeferA bool) (rst interface{}) {
 	defer func() {
 		if r1 := recover(); r1 != nil {
 			rst = fmt.Errorf("runtime exception: %v\n%v", r1, string(debug.Stack()))
@@ -16886,7 +17012,9 @@ func RunCodePiece(p *XieVM, r interface{}, codeA interface{}, inputA interface{}
 	for {
 		// tk.Pl("-- [%v] %v", p.CodePointerM, tk.LimitString(p.SourceM[p.CodeSourceMapM[p.CodePointerM]], 50))
 		resultT := RunInstr(p, rp, &rp.InstrList[rp.CodePointer])
-		// tk.Pl("RunInstr: %v: %#v", rp.InstrList[rp.CodePointer], resultT)
+		if GlobalsG.VerboseLevel > 1 {
+			tk.Pl("--- RunInstr: %#v: %#v", rp.InstrList[rp.CodePointer], resultT)
+		}
 
 		c1T, ok := resultT.(int)
 
@@ -16897,8 +17025,11 @@ func RunCodePiece(p *XieVM, r interface{}, codeA interface{}, inputA interface{}
 				if GlobalsG.VerboseLevel > 0 {
 					tk.Pln(p.Errf(rp, "[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), resultT))
 				}
+				tk.Pln("error: ", resultT)
 
-				rp.RunDeferUpToRoot(p)
+				if runDeferA {
+					rp.RunDeferUpToRoot(p)
+				}
 				return p.Errf(rp, "[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), resultT)
 				// tk.Pl("[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), p.CodeSourceMapM[p.CodePointerM]+1, tk.GetErrStr(rs))
 				// break
@@ -16907,7 +17038,9 @@ func RunCodePiece(p *XieVM, r interface{}, codeA interface{}, inputA interface{}
 			rs, ok := resultT.(string)
 
 			if !ok {
-				rp.RunDeferUpToRoot(p)
+				if runDeferA {
+					rp.RunDeferUpToRoot(p)
+				}
 				return p.Errf(rp, "return result error: (%T)%v", resultT, resultT)
 			}
 
@@ -16935,13 +17068,17 @@ func RunCodePiece(p *XieVM, r interface{}, codeA interface{}, inputA interface{}
 				tmpI := tk.StrToInt(rs)
 
 				if tmpI < 0 {
-					rp.RunDeferUpToRoot(p)
+					if runDeferA {
+						rp.RunDeferUpToRoot(p)
+					}
 
 					return p.Errf(rp, "invalid instr: %v", rs)
 				}
 
 				if tmpI >= len(rp.CodeList) {
-					rp.RunDeferUpToRoot(p)
+					if runDeferA {
+						rp.RunDeferUpToRoot(p)
+					}
 					return p.Errf(rp, "instr index out of range: %v(%v)/%v", tmpI, rs, len(rp.CodeList))
 				}
 
@@ -16952,10 +17089,12 @@ func RunCodePiece(p *XieVM, r interface{}, codeA interface{}, inputA interface{}
 
 	}
 
-	rsi := rp.RunDeferUpToRoot(p)
+	if runDeferA {
+		rsi := rp.RunDeferUpToRoot(p)
 
-	if tk.IsError(rsi) {
-		return tk.ErrStrf("[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), rsi)
+		if tk.IsError(rsi) {
+			return tk.ErrStrf("[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), rsi)
+		}
 	}
 
 	// tk.Pl(tk.ToJSONX(p, "-indent", "-sort"))
