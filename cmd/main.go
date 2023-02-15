@@ -1188,6 +1188,10 @@ func main() {
 		scriptT = tk.DownloadWebPageX(pathT)
 		scriptPathG = pathT
 
+		if tk.IsErrX(scriptT) {
+			tk.Pl("failed to get script: %v", tk.GetErrStrX(scriptT))
+			tk.Exit()
+		}
 	} else if ifExamT {
 		// if !tk.EndsWith(filePathT, ".xie") {
 		// 	filePathT += ".xie"
@@ -1196,6 +1200,11 @@ func main() {
 		pathT := "http://xie.topget.org/xc/t/c/xielang/example/" + tk.UrlEncode2(filePathT)
 		scriptT = tk.DownloadWebPageX(pathT)
 		scriptPathG = pathT
+
+		if tk.IsErrX(scriptT) {
+			tk.Pl("failed to get script: %v", tk.GetErrStrX(scriptT))
+			tk.Exit()
+		}
 
 	} else if ifGoPathT {
 		// if !tk.EndsWith(filePathT, ".xie") {
@@ -1207,6 +1216,10 @@ func main() {
 		scriptT = tk.LoadStringFromFile(filePathT)
 		scriptPathG = filePathT
 
+		if tk.IsErrX(scriptT) {
+			tk.Pl("failed to load script: %v", tk.GetErrStrX(scriptT))
+			tk.Exit()
+		}
 	} else if ifPipeT {
 		// fmt.Println("pipe")
 		bufT := bufio.NewReader(os.Stdin)
@@ -1252,6 +1265,10 @@ func main() {
 			scriptPathG = scriptT
 		}
 
+		if tk.IsErrX(scriptT) {
+			tk.Pl("failed to get script: %v", tk.GetErrStrX(scriptT))
+			tk.Exit()
+		}
 	} else if ifRemoteT {
 		// if !tk.EndsWith(filePathT, ".xie") {
 		// 	filePathT += ".xie"
@@ -1262,7 +1279,7 @@ func main() {
 		scriptT = tk.DownloadPageUTF8(filePathT, nil, "", 30)
 
 		if tk.IsErrStrX(scriptT) {
-			tk.Pl("读取代码内容失败：%v", tk.GetErrStrX(scriptT))
+			tk.Pl("failed to load script: %v", tk.GetErrStrX(scriptT))
 
 			return
 
@@ -1296,6 +1313,11 @@ func main() {
 		scriptPathG = filepath.Join(cfgStrT, filePathT)
 
 		scriptT = tk.LoadStringFromFile(scriptPathG)
+
+		if tk.IsErrX(scriptT) {
+			tk.Pl("failed to load script: %v", tk.GetErrStrX(scriptT))
+			tk.Exit()
+		}
 	} else if strings.HasPrefix(filePathT, "http") {
 		rsT := tk.DownloadWebPageX(filePathT)
 		scriptPathG = filePathT
@@ -1305,12 +1327,22 @@ func main() {
 		} else {
 			scriptT = rsT
 		}
+
+		if tk.IsErrX(scriptT) {
+			tk.Pl("failed to load script: %v", tk.GetErrStrX(scriptT))
+			tk.Exit()
+		}
 	} else if filePathT == "" {
 		scriptT = ""
 		scriptPathG = ""
 	} else {
 		scriptT = tk.LoadStringFromFile(filePathT)
 		scriptPathG = filePathT
+
+		if tk.IsErrX(scriptT) {
+			tk.Pl("failed to load script: %v", tk.GetErrStrX(scriptT))
+			tk.Exit()
+		}
 	}
 
 	if ifViewT {

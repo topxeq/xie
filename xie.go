@@ -47,7 +47,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var VersionG string = "1.1.0"
+var VersionG string = "1.1.1"
 
 func Test() {
 	tk.Pl("test")
@@ -904,7 +904,7 @@ var InstrNameSet map[string]int = map[string]int{
 // }
 
 type VarRef struct {
-	Ref   int // -99 - invalid, -17 - reg, -16 - label, -15 - ref, -12 - unref, -11 - seq, -10 - quickEval, -9 - eval, -8 - pop, -7 - peek, -6 - push, -5 - tmp, -4 - pln, -3 - value only, -2 - drop, -1 - debug, 3 normal vars
+	Ref   int // -99 - invalid, -22 - map item, -21 - array/slice item, -17 - reg, -16 - label, -15 - ref, -12 - unref, -11 - seq, -10 - quickEval, -9 - eval, -8 - pop, -7 - peek, -6 - push, -5 - tmp, -4 - pln, -3 - value only, -2 - drop, -1 - debug, 3 normal vars
 	Value interface{}
 }
 
@@ -1090,6 +1090,7 @@ func ParseLine(commandA string) ([]string, string, error) {
 }
 
 func ParseVar(strA string, optsA ...interface{}) VarRef {
+	// tk.Pl("parseVar: %#v", strA)
 	s1T := strings.TrimSpace(strA)
 
 	if strings.HasPrefix(s1T, "`") && strings.HasSuffix(s1T, "`") {
@@ -1538,6 +1539,74 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 			}
 
 			return VarRef{-3, Compile(s1T)}
+		} else if strings.HasPrefix(s1T, "[") && strings.HasSuffix(s1T, "]") { // array/slice item
+			if len(s1T) < 3 {
+				return VarRef{-3, s1T}
+			}
+
+			s1aT := strings.TrimSpace(s1T[1 : len(s1T)-1])
+
+			listT := strings.SplitN(s1aT, ",", 2)
+
+			if len(listT) < 2 {
+				listT = strings.SplitN(s1aT, "|", 2)
+
+				if len(listT) < 2 {
+					return VarRef{-3, s1T}
+				}
+			}
+
+			vT := ParseVar(listT[0])
+
+			itemKeyT := listT[1]
+
+			if strings.HasPrefix(itemKeyT, "`") && strings.HasSuffix(itemKeyT, "`") {
+				itemKeyT = itemKeyT[1 : len(itemKeyT)-1]
+			} else if strings.HasPrefix(itemKeyT, "'") && strings.HasSuffix(itemKeyT, "'") {
+				itemKeyT = itemKeyT[1 : len(itemKeyT)-1]
+			} else if strings.HasPrefix(itemKeyT, `"`) && strings.HasSuffix(itemKeyT, `"`) {
+				tmps, errT := strconv.Unquote(itemKeyT)
+
+				if errT != nil {
+					itemKeyT = tmps
+				}
+			}
+
+			return VarRef{-21, []interface{}{vT, ParseVar(itemKeyT)}}
+		} else if strings.HasPrefix(s1T, "{") && strings.HasSuffix(s1T, "}") { // map item
+			if len(s1T) < 3 {
+				return VarRef{-3, s1T}
+			}
+
+			s1aT := strings.TrimSpace(s1T[1 : len(s1T)-1])
+
+			listT := strings.SplitN(s1aT, ",", 2)
+
+			if len(listT) < 2 {
+				listT = strings.SplitN(s1aT, "|", 2)
+
+				if len(listT) < 2 {
+					return VarRef{-3, s1T}
+				}
+			}
+
+			vT := ParseVar(listT[0])
+
+			itemKeyT := listT[1]
+
+			if strings.HasPrefix(itemKeyT, "`") && strings.HasSuffix(itemKeyT, "`") {
+				itemKeyT = itemKeyT[1 : len(itemKeyT)-1]
+			} else if strings.HasPrefix(itemKeyT, "'") && strings.HasSuffix(itemKeyT, "'") {
+				itemKeyT = itemKeyT[1 : len(itemKeyT)-1]
+			} else if strings.HasPrefix(itemKeyT, `"`) && strings.HasSuffix(itemKeyT, `"`) {
+				tmps, errT := strconv.Unquote(itemKeyT)
+
+				if errT != nil {
+					itemKeyT = tmps
+				}
+			}
+
+			return VarRef{-22, []interface{}{vT, ParseVar(itemKeyT)}}
 		}
 	}
 
@@ -2452,6 +2521,16 @@ func (p *XieVM) GetVarValue(runA *RunningContext, vA VarRef) interface{} {
 		return p.Regs[tk.ToInt(vA.Value, 0)]
 	}
 
+	if idxT == -21 { // array/slice item
+		nv := vA.Value.([]interface{})
+		return tk.GetArrayItem(p.GetVarValue(runA, nv[0].(VarRef)), tk.ToInt(p.GetVarValue(runA, nv[1].(VarRef)), 0))
+	}
+
+	if idxT == -22 { // map item
+		nv := vA.Value.([]interface{})
+		return tk.GetMapItem(p.GetVarValue(runA, nv[0].(VarRef)), p.GetVarValue(runA, nv[1].(VarRef)))
+	}
+
 	if idxT == -12 { // unref
 		rs, errT := tk.GetRefValue(p.GetVarValue(runA, vA.Value.(VarRef)))
 
@@ -2543,6 +2622,16 @@ func (p *XieVM) GetVarValueGlobal(runA *RunningContext, vA VarRef) interface{} {
 	if idxT == -17 { // regs
 		return p.Regs[tk.ToInt(vA.Value, 0)]
 		return nil
+	}
+
+	if idxT == -21 { // array/slice item
+		nv := vA.Value.([]interface{})
+		return tk.GetArrayItem(p.GetVarValue(runA, nv[0].(VarRef)), tk.ToInt(p.GetVarValue(runA, nv[1].(VarRef)), 0))
+	}
+
+	if idxT == -22 { // map item
+		nv := vA.Value.([]interface{})
+		return tk.GetMapItem(p.GetVarValue(runA, nv[0].(VarRef)), p.GetVarValue(runA, nv[1].(VarRef)))
 	}
 
 	if idxT == -12 { // unref
@@ -7708,10 +7797,9 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 			}
 
 			if instrT.ParamLen > 0 {
+				// tk.Pl("outL <-: %#v", p.GetVarValue(r, instrT.Params[0]))
 				r.GetCurrentFuncContext().Vars["outL"] = p.GetVarValue(r, instrT.Params[0])
 			}
-
-			pr := nv.ReturnRef
 
 			rs2, rok := r.GetCurrentFuncContext().Vars["outL"]
 
@@ -7720,6 +7808,8 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 			if errT != nil {
 				return p.Errf(r, "failed to return from function call while popFunc: %v", errT)
 			}
+
+			pr := nv.ReturnRef
 
 			if rok {
 				p.SetVar(r, pr, rs2)
@@ -9341,7 +9431,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		case map[string]map[string]interface{}:
 			rv, ok = nv[v2]
 		default:
-			tk.Plo("here1", v1, v2o)
+			// tk.Plo("here1", v1, v2o)
 			valueT := reflect.ValueOf(v1)
 
 			kindT := valueT.Kind()
