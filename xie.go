@@ -47,7 +47,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var VersionG string = "1.1.1"
+var VersionG string = "1.1.2"
 
 func Test() {
 	tk.Pl("test")
@@ -99,11 +99,11 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"compile": 153, // compile a piece of code
 
-	"quickRun": 155, // quick run a piece of code, in a new running context
+	"quickRun": 155, // quick run a piece of code, in a new running context(but same VM, so the global values are accessible), use exit to exit the running context, no return value needed(only erturn error object or "undefined")
 
-	"runCode": 156, // 运行一段谢语言代码，在新的虚拟机中执行，除结果参数（不可省略）外，第一个参数是字符串类型的代码（必选，后面参数都是可选），第二个参数为任意类型的传入虚拟机的参数（虚拟机内通过inputG全局变量来获取该参数），后面的参数可以是一个字符串数组类型的变量或者多个字符串类型的变量，虚拟机内通过argsG（字符串数组）来对其进行访问。
+	"runCode": 156, // 运行一段谢语言代码，在新的虚拟机中执行，除结果参数（不可省略）外，第一个参数是字符串类型的代码或编译后代码（必选，后面参数都是可选），第二个参数为任意类型的传入虚拟机的参数（虚拟机内通过inputG全局变量来获取该参数），后面的参数可以是一个字符串数组类型的变量或者多个字符串类型的变量（也可以是一个字符串表示命令行），虚拟机内通过argsG（字符串数组）来对其进行访问。返回值是虚拟机正常运行返回值，即$outG或exit加参数的返回值。
 
-	"runPiece": 157, // run a piece of code, in current running context
+	"runPiece": 157, // run a piece of code, in current running context，运行一段谢语言代码，在当前的虚拟机和运行上下文中执行，结果参数可省略，第一个参数是字符串类型的代码或编译后代码。不需要返回值，仅当发生运行错误时返回error对象，否则返回undefined，
 
 	"extractRun":      158, // extract a piece of instrs in a running-context to a new running-context
 	"extractCompiled": 159, // extract a piece of instrs in a running-context to a compiled object
@@ -281,13 +281,13 @@ var InstrNameSet map[string]int = map[string]int{
 	"ret": 1020, // return from a normal function or a fast call function, while for normal function call, can with a paramter for set $outL
 
 	"sealCall": 1050, // new a VM to run a function, output/input through inputG & outG
-	// 封装函数
+	// 封装函数，结果参数不可省略，第一个参数可以是代码或编译后、运行上下文，或者起始标号（此时第二个参数应为结束标号），后面参数都将传入行运函数中的$inputG中，出参通过$outG传出
 
-	"runCall": 1055, // 调用称为“行运函数”的代码块
+	"runCall": 1055, // 调用称为“行运函数”的代码块，在同一虚拟机、新建的运行上下文中调用函数，结果参数不可省略，第一个参数可以是代码或编译后、运行上下文，或者起始标号（此时第二个参数应为结束标号），后面参数都将传入行运函数中的$inputL中。行运函数会进行函数压栈（以便新的运行上下文中可以deferUpToRoot），入参通过$inputL访问，出参通过$outL传出
 
 	"goRunCall": 1056, // runCall in thread
 
-	"threadCall": 1060, // 并发调用函数，第一个参数是传入参数（压栈值）的个数（可省略），第二个参数是字符串类型的源代码，如果后续还有参数，将合并为数组传入调用函数（新虚拟机）的inputG变量中，并发函数体内需要通过outG返回值
+	"threadCall": 1060, // 并发调用函数，在新虚拟机中运行，函数体内无需返回outG、outL等参数，结果参数不可省略（但仅在调用函数启动线程时如遇错误返回error对象，后续因为是并发调用，返回值无意义），第一个参数如果是个运行上下文对象，后续参数都是传入参数（通过$inputG访问）；第一个参数如果是一个标号或整数，则还需要第二个标号或整数，分别表示并发函数的开始指令标号与结束指令标号；第一个参数也可以是字符串类型的源代码或编译后代码
 	"goCall":     1060,
 
 	"go": 1063, // 快速并发调用一个标号处的代码，该段代码应该使用exit命令来表示退出该线程
@@ -904,7 +904,7 @@ var InstrNameSet map[string]int = map[string]int{
 // }
 
 type VarRef struct {
-	Ref   int // -99 - invalid, -22 - map item, -21 - array/slice item, -17 - reg, -16 - label, -15 - ref, -12 - unref, -11 - seq, -10 - quickEval, -9 - eval, -8 - pop, -7 - peek, -6 - push, -5 - tmp, -4 - pln, -3 - value only, -2 - drop, -1 - debug, 3 normal vars
+	Ref   int // -99 - invalid, -23 - slice of array/slice, -22 - map item, -21 - array/slice item, -17 - reg, -16 - label, -15 - ref, -12 - unref, -11 - seq, -10 - quickEval, -9 - eval, -8 - pop, -7 - peek, -6 - push, -5 - tmp, -4 - pln, -3 - value only, -2 - drop, -1 - debug, 3 normal vars
 	Value interface{}
 }
 
@@ -1546,9 +1546,46 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 
 			s1aT := strings.TrimSpace(s1T[1 : len(s1T)-1])
 
-			listT := strings.SplitN(s1aT, ",", 2)
+			listT := strings.Split(s1aT, ",")
 
-			if len(listT) < 2 {
+			len2T := len(listT)
+
+			if len2T >= 3 { // slice of array/slice/string
+				vT := ParseVar(listT[0])
+
+				itemKeyT := listT[1]
+
+				if strings.HasPrefix(itemKeyT, "`") && strings.HasSuffix(itemKeyT, "`") {
+					itemKeyT = itemKeyT[1 : len(itemKeyT)-1]
+				} else if strings.HasPrefix(itemKeyT, "'") && strings.HasSuffix(itemKeyT, "'") {
+					itemKeyT = itemKeyT[1 : len(itemKeyT)-1]
+				} else if strings.HasPrefix(itemKeyT, `"`) && strings.HasSuffix(itemKeyT, `"`) {
+					tmps, errT := strconv.Unquote(itemKeyT)
+
+					if errT != nil {
+						itemKeyT = tmps
+					}
+				}
+
+				itemKeyEndT := listT[2]
+
+				if strings.HasPrefix(itemKeyEndT, "`") && strings.HasSuffix(itemKeyEndT, "`") {
+					itemKeyEndT = itemKeyEndT[1 : len(itemKeyEndT)-1]
+				} else if strings.HasPrefix(itemKeyEndT, "'") && strings.HasSuffix(itemKeyEndT, "'") {
+					itemKeyEndT = itemKeyEndT[1 : len(itemKeyEndT)-1]
+				} else if strings.HasPrefix(itemKeyEndT, `"`) && strings.HasSuffix(itemKeyEndT, `"`) {
+					tmps, errT := strconv.Unquote(itemKeyEndT)
+
+					if errT != nil {
+						itemKeyEndT = tmps
+					}
+				}
+
+				return VarRef{-23, []interface{}{vT, ParseVar(itemKeyT), ParseVar(itemKeyEndT)}}
+
+			}
+
+			if len2T < 2 {
 				listT = strings.SplitN(s1aT, "|", 2)
 
 				if len(listT) < 2 {
@@ -2531,6 +2568,11 @@ func (p *XieVM) GetVarValue(runA *RunningContext, vA VarRef) interface{} {
 		return tk.GetMapItem(p.GetVarValue(runA, nv[0].(VarRef)), p.GetVarValue(runA, nv[1].(VarRef)))
 	}
 
+	if idxT == -23 { // slice of array/slice
+		nv := vA.Value.([]interface{})
+		return tk.GetArraySlice(p.GetVarValue(runA, nv[0].(VarRef)), tk.ToInt(p.GetVarValue(runA, nv[1].(VarRef)), 0), tk.ToInt(p.GetVarValue(runA, nv[2].(VarRef)), 0))
+	}
+
 	if idxT == -12 { // unref
 		rs, errT := tk.GetRefValue(p.GetVarValue(runA, vA.Value.(VarRef)))
 
@@ -2632,6 +2674,11 @@ func (p *XieVM) GetVarValueGlobal(runA *RunningContext, vA VarRef) interface{} {
 	if idxT == -22 { // map item
 		nv := vA.Value.([]interface{})
 		return tk.GetMapItem(p.GetVarValue(runA, nv[0].(VarRef)), p.GetVarValue(runA, nv[1].(VarRef)))
+	}
+
+	if idxT == -23 { // slice of array/slice
+		nv := vA.Value.([]interface{})
+		return tk.GetArraySlice(p.GetVarValue(runA, nv[0].(VarRef)), tk.ToInt(p.GetVarValue(runA, nv[1].(VarRef)), 0), tk.ToInt(p.GetVarValue(runA, nv[2].(VarRef)), 0))
 	}
 
 	if idxT == -12 { // unref
@@ -5174,14 +5221,17 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		v1p := 1
 
+		// 可以是字符串类型的代码或编译后的代码（*CompiledCode）
 		codeT := p.GetVarValue(r, instrT.Params[v1p])
 
+		// 获取RunCode的inputA参数
 		inputT := p.GetVarValue(r, GetVarRefInParams(instrT.Params, v1p+1))
 
 		if tk.IsUndefined(inputT) {
 			inputT = nil
 		}
 
+		// 获取RunCode的objA参数
 		objT := p.GetVarValue(r, GetVarRefInParams(instrT.Params, v1p+2))
 
 		obj1, ok := objT.(map[string]interface{})
@@ -5190,6 +5240,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 			obj1 = nil
 		}
 
+		// 获取RunCode的optsA参数（传入虚拟机中的argsG参数）
 		// vs := p.ParamsToStrs(r, instrT, v1p+3)
 		args1 := p.GetVarValue(r, GetVarRefInParams(instrT.Params, v1p+3))
 
@@ -11163,10 +11214,12 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		pr := instrT.Params[0]
 		v1p := 1
 
-		v1 := tk.ToTime(p.GetVarValue(r, instrT.Params[v1p]))
+		v1o := p.GetVarValue(r, instrT.Params[v1p])
+
+		v1 := tk.ToTime(v1o)
 
 		if tk.IsError(v1) {
-			return p.Errf(r, "时间转换失败：%v", v1)
+			return p.Errf(r, "failed to convert time(时间转换失败): %v(%#v)", v1, v1o)
 		}
 
 		var v2 string = ""
@@ -17062,6 +17115,7 @@ func (p *XieVM) Run(posA ...int) interface{} {
 
 }
 
+// 运行一段代码，可以是代码或编译后，r是运行上下文，为nil会新建一个，会进行函数压栈（以便新的运行上下文中可以deferUpToRoot），入参通过inputA传入后从$inputL访问，出参通过$outL传出
 func RunCodePiece(p *XieVM, r interface{}, codeA interface{}, inputA interface{}, runDeferA bool) (rst interface{}) {
 	defer func() {
 		if r1 := recover(); r1 != nil {
@@ -17115,7 +17169,7 @@ func RunCodePiece(p *XieVM, r interface{}, codeA interface{}, inputA interface{}
 				if GlobalsG.VerboseLevel > 0 {
 					tk.Pln(p.Errf(rp, "[%v](xie) runtime error: %v", tk.GetNowTimeStringFormal(), resultT))
 				}
-				tk.Pln("error: ", resultT)
+				// tk.Pln("error: ", resultT)
 
 				if runDeferA {
 					rp.RunDeferUpToRoot(p)
