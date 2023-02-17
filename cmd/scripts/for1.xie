@@ -3,8 +3,10 @@
 push "welcome"
 
 // 设定标号loop1
+// set label loop1
 :loop1
     // 输出栈顶值
+    // pop the stack top value and output it
     pln $peek
 
     // 休眠2.5秒

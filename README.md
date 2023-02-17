@@ -34,7 +34,7 @@ Xielang is a free, open-source, cross-platform, cross-language, ASM/SHELL-like, 
   - [- **复杂表达式做参数**](#--复杂表达式做参数)
   - [- **表达式的另一个例子**（Another example of an expression）](#--表达式的另一个例子another-example-of-an-expression)
   - [- **goto语句**（The goto instr）](#--goto语句the-goto-instr)
-  - [- **一般循环结构**](#--一般循环结构)
+  - [- **一般循环结构**（Loop cycle structure）](#--一般循环结构loop-cycle-structure)
   - [- **条件分支**](#--条件分支)
   - [- **else分支**](#--else分支)
   - [- **非标号/伪标号跳转**](#--非标号伪标号跳转)
@@ -1573,29 +1573,38 @@ In addition, in the goto statement, pseudolabels such as ":+1" and ":-3" can be 
 
 &nbsp;
 
-##### - **一般循环结构**
+##### - **一般循环结构**（Loop cycle structure）
 
 &nbsp;
 
 循环结构是一般计算机语言中必然会有的基本语法结构。谢语言中，一般使用各种跳转语句来实现循环结构。goto语句是其中的一种方法，最常见的是实现无限循环。
 
+Loop structure is the basic grammatical structure that is inevitable in general computer language. In Xie language, various jump statements are generally used to realize the loop structure. The goto statement is one of the methods. The most common method is to implement infinite loops.
+
   ```go
-    // 将字符串压栈
-    push "欢迎"
+  // 将字符串压栈
+  // infinite loop
+  push "welcome"
 
-    // 设定标号loop1
-    :loop1
-        // 输出栈顶值
-        pln $peek
+  // 设定标号loop1
+  // set label loop1
+  :loop1
+      // 输出栈顶值
+      // pop the stack top value and output it
+      pln $peek
 
-        // 休眠2.5秒
-        sleep #f2.5
+      // 休眠2.5秒
+      // sleep for 2.5 seconds
+      sleep #f2.5
 
-    // 跳转到标号loop1处继续往下执行
-    goto :loop1    
+  // 跳转到标号loop1处继续往下执行
+  // jump to the position at label :loop1
+  goto :loop1
   ```
 
 sleep指令的作用是休眠指定的秒数。本例（for1.xie）运行的结果是将每隔2.5秒输出一下“欢迎”两个字，直到按Ctrl-C等方法来终止程序的运行。
+
+The sleep instruction sleeps for the specified number of seconds. The result of this example (for1.xie) is that the word "Welcome" will be output every 2.5 seconds until the program is terminated by pressing Ctrl-C and other methods.
    
 &nbsp;
 
