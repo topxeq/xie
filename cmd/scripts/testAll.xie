@@ -26,6 +26,14 @@ systemCmd $rs "xie" "-gopath" "if.xie"
 
 test $rs "if branch\nlabel3 else\n" $seq "if.xie"
 
+systemCmd $rs "xie" "-gopath" "else.xie"
+
+test $rs "label1\nelse2\n" $seq "else.xie"
+
+systemCmd $rs "xie" "-gopath" "quickIf.xie"
+
+test $rs "<5\na = abc\n" $seq "quickIf.xie"
+
 systemCmd $rs "xie" "-gopath" "for.xie"
 
 test $rs "0 : 10\n1 : 11\n2 : 12\n3 : 13\n4 : 14\nend\n" $seq "for.xie"

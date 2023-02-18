@@ -35,9 +35,9 @@ Xielang is a free, open-source, cross-platform, cross-language, ASM/SHELL-like, 
   - [- **表达式的另一个例子**（Another example of an expression）](#--表达式的另一个例子another-example-of-an-expression)
   - [- **goto语句**（The goto instr）](#--goto语句the-goto-instr)
   - [- **一般循环结构**（Loop cycle structure）](#--一般循环结构loop-cycle-structure)
-  - [- **条件分支**](#--条件分支)
-  - [- **else分支**](#--else分支)
-  - [- **非标号/伪标号跳转**](#--非标号伪标号跳转)
+  - [- **条件分支**（Conditional branch）](#--条件分支conditional-branch)
+  - [- **else分支**（Else branch）](#--else分支else-branch)
+  - [- **虚拟标号/伪标号跳转**（Virtual label/pseudolabel jump）](#--虚拟标号伪标号跳转virtual-labelpseudolabel-jump)
   - [- **for循环**](#--for循环)
   - [- **利用for指令进行for循环**](#--利用for指令进行for循环)
   - [- **用range指令进行简单数据的遍历**](#--用range指令进行简单数据的遍历)
@@ -1608,64 +1608,89 @@ The sleep instruction sleeps for the specified number of seconds. The result of 
    
 &nbsp;
 
-##### - **条件分支**
+##### - **条件分支**（Conditional branch）
 
 &nbsp;
 
 谢语言中的条件分支支持一般是由比较判断指令和条件跳转指令结合来实现的。直接看下面的例子（if.xie）：
 
+The conditional branch support in Xielang is generally realized by the combination of comparison and judgment instructions and conditional jump instructions. Look directly at the following example (if.xie):
+
   ```go
-// 给变量i赋值整数11
-assign $i #i11
+  // 给变量i赋值整数11
+  // assign integer value 11 to variable $i
+  assign $i #i11
 
-// 比较变量i是否大于整数10
-// 结果放入变量a中
-> $a $i #i10
+  // 比较变量i是否大于整数10
+  // 结果放入变量a中
+  // compare if $i > 10(integer)
+  // then put the result to $a
+  > $a $i #i10
 
-// 判断$a是否为布尔值true
-// 如果是则跳转到标号label2
-if $a :label2
-    // 否则执行下面的语句
-    pln "else branch"
+  // 判断$a是否为布尔值true
+  // 如果是则跳转到标号label2
+  // check if $a == true(bool value)
+  // if true jump to :label2(label)
+  if $a :label2
+      // 否则执行下面的语句
+      // if not met, continue to run the following
+      pln "else branch"
 
-//终止程序执行
-exit
+  //终止程序执行
+  // terminate the program
+  exit
 
-// 标号label2
-:label2
-    // 输出“if branch”
-    pln "if branch"
+  // 标号label2
+  // label named label2
+  :label2
+      // 输出“if branch”
+      // output "if branch" for reference
+      pln "if branch"
 
-    // 将变量b赋值为整数8
-    assign $b #i8
+      // 将局部变量b赋值为整数8
+      // assign a local variable $b(since there are no variabes with this name in global context) to integer value 8
+      assign $b #i8
 
-    // 比较变量b是否小于或等于变量i
-    // 由于省略了结果变量，结果将被放入$tmp中
-    <= $b $i
+      // 比较变量b是否小于或等于变量i
+      // 由于省略了结果变量，结果将被放入$tmp中
+      // check if $b <= $i
+      // the result variable is omitted, so the result will be put into global variable $tmp
+      <= $b $i
 
-    // 是（tmp值是true）则跳转到标号label3
-    ifNot $tmp :label3
-        // 否则输出
-        pln "label3 else"
-    // 终止代码执行
-    exit
+      // 判断否（tmp值是false）则跳转到标号label3
+      // ifNot指令是判断条件为false则跳转
+      // check if $tmp is not true
+      // if true($tmp is false), jump to label3
+      ifNot $tmp :label3
+          // 否则输出
+          // else branch
+          pln "label3 else"
 
-    // 标号label3
-    :label3
-        // 输出“label3 if”
-        pln "label3 if"
+      // 终止代码执行
+      // terminate
+      exit
 
+      // 标号label3
+      :label3
+          // 输出“label3 if”
+          pln "label3 if"
   ```
 
 其中，出现了两个比较指令：“>”和“<=”，这些比较指令所带参数都和二元运算指令类似，可以从堆栈中取两个值做比较，也可以对后面所带的两个参数进行比较，当然还可以带一个参数（放在第一个）表示将结果赋值给某个变量，否则会将结果存入\$tmp。比较指令返回的结果都是布尔值true或者false。
+
+Among them, there are two comparison instructions: ">" and "<=". The parameters of these comparison instructions are similar to the binary operation instructions. You can take two values from the stack for comparison, and you can also compare the following two parameters. Of course, you can also take a parameter (put in the first) to assign the result to a variable, otherwise the result will be stored in \$tmp. The results returned by the comparison instruction are boolean values of true or false.
 
 &nbsp;
 
 而条件跳转指令if和ifNot可以带1或2个参数，最后一个参数都是符合条件要跳转到的标号，如果还有第一个参数则表明要判断的变量或数值（必须是布尔值），没有的话则从堆栈取数进行判断：if指令是true则跳转，ifNot是false则跳转。
 
+The conditional jump instructions if and ifNot can take 1 or 2 parameters. The last parameter is the label to jump to if the condition is met. If there is the first parameter, it indicates the variable or value to be judged (must be a boolean value). If there is no parameter, it will be judged from the stack fetch: if the instruction is true, it will jump, if not, it will jump.
+
 &nbsp;
 
 这段代码的运行结果是：
+
+The result of running this code is:
 
   ```
     if branch
@@ -1674,15 +1699,21 @@ exit
 
 注意观察条件分支的流转是否符合预期。
 
+Observe whether the flow of conditional branches meets expectations.
+
 比较指令主要包括：==（等于）、!=（不等于）、>、<、>=、<=等。
+
+The comparison instructions mainly include: ==(equal to), !=(not equal to), >, <, >=, <=, etc.
 
 &nbsp;
 
-##### - **else分支**
+##### - **else分支**（Else branch）
 
 &nbsp;
 
 if、ifNot等条件分支指令其实还支持第三个参数，即else分支。该参数也是一个标号，表示条件不满足时要走的分支。直接看下面的例子（else.xie）：
+
+Conditional branch instructions such as if and ifNot actually support the third parameter, namely else branch. This parameter is also a label, indicating the branch to take when the condition is not met. Look directly at the following example (else.xie):
 
 ```go
 > #i3 #i2
@@ -1711,10 +1742,11 @@ if $pop :label2 :else2
    pln else2
 
 
-
 ```
 
 运行输出结果为：
+
+The program output result is:
 
 ```shell
 label1
@@ -1723,44 +1755,60 @@ else2
 
 注意其中是否走了else分支。
 
-也注意，使用else的情况下，结果参数不可省略。
+Note whether else branch is taken.
+
 
 &nbsp;
 
-##### - **非标号/伪标号跳转**
+##### - **虚拟标号/伪标号跳转**（Virtual label/pseudolabel jump）
 
 在无条件跳转指令goto和条件跳转指令if、ifNot、ifEval等语句中，不一定非要用标号表示跳转目的地，也可以使用类似“+1”，“+3”这种伪标号（更推荐写作:+1，:+3这样的形式，因为在fastCall调用的快速函数代码中，+1这种形式有可能失效，而:+1不会失效，另外:+1这种形式可以用在更广泛的地方，基本上所有用到标号的地方都可以使用），表示跳转到当前指令的后一条指令或前三条指令等。注意，注释和标号等不是有效指令的行将被忽略而不被计算在内。我们来看下面的例子（quickIf.xie）：
+
+In the unconditional jump instruction goto and conditional jump instruction if, ifNot, ifEval and other statements, it is not necessary to use a label to indicate the jump destination, but it can also use a similar "+1", "+3" is a pseudolabel (it is more recommended to write as :+1, :+3, because in the fast function code called by FastCall, +1 may be invalid, but :+1 will not be invalid. In addition, :+1 can be used in a wider range of places, and can be used in almost all places where the label is used), indicating that the next instruction or the first three instructions of the current instruction can be skipped. Note that lines that are not valid instructions such as comments and labels will be ignored and not counted. Let's look at the following example (quickIf.xie):
 
 ```go
 // 本例演示了在if和goto等指令中使用“+1”、“+3”等“伪标号”进行跳转的方法
 // +1是指跳转到当前指令的下一条指令，+3指跳转到当前指令后面的第3条指令，以此类推
+// 伪标号前与普通标号一样，仍需以冒号“:”开始
 // 可以用“-1”代替当前指令的上一条指令，“-5”表示当前指令上面的第5条指令等
 // 注意，这里的指令都是指有效指令，注释、标号等将被忽略（即不被算入）
+// This example shows how to use "+1", "+3" and other "virtual-labels" or "pseudo-labels" in if and goto instructions to jump
+// +1 refers to the next instruction that jumps to the current instruction,+3 refers to the third instruction after the current instruction, and so on
+// The pseudolabel is the same as the ordinary label, and still needs to start with a colon ":"
+// You can use "-1" instead of the last instruction of the current instruction, and "-5" means the fifth instruction above the current instruction, etc
+// Note that the instructions here refer to valid instructions, and comments, labels, etc. will be ignored (that is, not counted)
 
 // 将变量a赋值为字符串abc
+// Assign variable a to string abc
 assign $a "abc"
 
 // 获取该字符串的长度，结果放入变量lenT中
+// Get the length of the string and put the result into the variable lenT
 len $lenT $a
 
 // 判断lenT是否小于5，结果放入变量rsb中
+// Judge whether lenT is less than 5, and put the result into the variable rsb
 < $rsb $lenT #i5
 
 // 如果rsb值为布尔值true，则跳转到下一条指令执行
 // 否则跳转到下面第三条指令执行
-if $rsb +1 +3
+// If the rsb value is a boolean value of true, skip to the next instruction execution
+// Otherwise, skip to the third instruction below
+if $rsb :+1 :+3
     pln "<5"
 
     // 无条件跳转到下面第二条指令
-    goto +2
+    // Unconditionally jump to the second instruction below
+    goto :+2
 
     pln ">5"
 
 pln a = $a
-
 ```
 
-可以看出，直接使用伪标号跳转写法更简洁。不过也有不便之处，例如else分支如果用标号可能更方便，因为if分支如果要增减语句的话，else分支用数字就需要经常变化，容易遗漏出错。因此，可以结合标号与伪标号来使用跳转。
+可以看出，直接使用伪标号跳转写法更简洁。不过也有不便之处，例如else分支如果用标号可能更方便，因为if分支如果要增减语句的话，else分支用数字就需要经常变化，容易遗漏出错。因此，可以结合普通标号与伪标号来使用跳转。
+
+It can be seen that the jump writing method using pseudolabels directly is more concise. However, there are also inconveniences. For example, if the else branch is labeled, it may be more convenient, because if the if branch is to add or subtract statements, the numbers used for the else branch need to change frequently, which is easy to miss errors. Therefore, jump can be used in combination with common label and pseudolabel.
 
 &nbsp;
 
