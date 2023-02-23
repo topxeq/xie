@@ -12,7 +12,7 @@ require (
 	github.com/ncruces/zenity v0.10.5
 	github.com/sciter-sdk/go-sciter v0.5.0
 	github.com/topxeq/dlgs v0.0.0-20220223083937-4d3036aff547
-	github.com/topxeq/tk v1.0.0
+	github.com/topxeq/tk v1.0.1-0.20230223005628-39520bf46ab9
 	github.com/topxeq/xie v0.0.0
 )
 
@@ -76,7 +76,7 @@ require (
 	github.com/topxeq/mahonia v0.0.0-20190828060648-12b0599ddd1a // indirect
 	github.com/topxeq/regexpx v0.0.0-20200814082553-4bffc7d07029 // indirect
 	github.com/topxeq/socks v0.0.0-20200812112322-24acb126b5f3 // indirect
-	github.com/topxeq/sqltk v0.0.0-20221225082143-d6266faebd41 // indirect
+	github.com/topxeq/sqltk v0.0.0-20230223005953-f9932d23950c // indirect
 	github.com/topxeq/uuid v0.0.0-20210318003930-0d149e412ca1 // indirect
 	github.com/topxeq/xmlx v0.2.0 // indirect
 	github.com/ulikunitz/xz v0.5.10 // indirect
@@ -87,12 +87,12 @@ require (
 	github.com/yeka/zip v0.0.0-20180914125537-d046722c6feb // indirect
 	github.com/yuin/goldmark v1.4.13 // indirect
 	github.com/yuin/goldmark-highlighting v0.0.0-20220208100518-594be1970594 // indirect
-	golang.org/x/crypto v0.5.0 // indirect
+	golang.org/x/crypto v0.6.0 // indirect
 	golang.org/x/image v0.2.0 // indirect
-	golang.org/x/net v0.5.0 // indirect
-	golang.org/x/sys v0.4.0 // indirect
-	golang.org/x/term v0.4.0 // indirect
-	golang.org/x/text v0.6.0 // indirect
+	golang.org/x/net v0.7.0 // indirect
+	golang.org/x/sys v0.5.0 // indirect
+	golang.org/x/term v0.5.0 // indirect
+	golang.org/x/text v0.7.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 )
 

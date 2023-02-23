@@ -47,7 +47,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var VersionG string = "1.1.2"
+var VersionG string = "1.1.3"
 
 func Test() {
 	tk.Pl("test")
@@ -3372,6 +3372,12 @@ func NewObject(p *XieVM, r *RunningContext, typeA string, argsA ...interface{}) 
 	var rs interface{}
 
 	switch typeA {
+	case "tk":
+		if makeT {
+			rs = tk.TK{Version: tk.VersionG}
+		} else {
+			rs = tk.NewTK()
+		}
 	case "postData", "url.Values":
 		if makeT {
 			rs = url.Values{}
