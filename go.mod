@@ -14,8 +14,8 @@ require (
 	github.com/topxeq/awsapi v0.0.0-20191115074250-1192cb0fdb97
 	github.com/topxeq/goph v0.0.0-20230116054750-120b087d86fb
 	github.com/topxeq/regexpx v0.0.0-20200814082553-4bffc7d07029
-	github.com/topxeq/sqltk v0.0.0-20221225082143-d6266faebd41
-	github.com/topxeq/tk v1.0.0
+	github.com/topxeq/sqltk v0.0.0-20230223005953-f9932d23950c
+	github.com/topxeq/tk v1.0.1-0.20230223005628-39520bf46ab9
 	github.com/xuri/excelize/v2 v2.7.0
 )
 
@@ -73,11 +73,11 @@ require (
 	github.com/yeka/zip v0.0.0-20180914125537-d046722c6feb // indirect
 	github.com/yuin/goldmark v1.4.13 // indirect
 	github.com/yuin/goldmark-highlighting v0.0.0-20220208100518-594be1970594 // indirect
-	golang.org/x/crypto v0.5.0 // indirect
-	golang.org/x/net v0.5.0 // indirect
-	golang.org/x/sys v0.4.0 // indirect
-	golang.org/x/term v0.4.0 // indirect
-	golang.org/x/text v0.6.0 // indirect
+	golang.org/x/crypto v0.6.0 // indirect
+	golang.org/x/net v0.7.0 // indirect
+	golang.org/x/sys v0.5.0 // indirect
+	golang.org/x/term v0.5.0 // indirect
+	golang.org/x/text v0.7.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 )
 

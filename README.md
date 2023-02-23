@@ -38,7 +38,7 @@ Xielang is a free, open-source, cross-platform, cross-language, ASM/SHELL-like, 
   - [- **条件分支**（Conditional branch）](#--条件分支conditional-branch)
   - [- **else分支**（Else branch）](#--else分支else-branch)
   - [- **虚拟标号/伪标号跳转**（Virtual label/pseudolabel jump）](#--虚拟标号伪标号跳转virtual-labelpseudolabel-jump)
-  - [- **for循环**](#--for循环)
+  - [- **for循环**（The for loop）](#--for循环the-for-loop)
   - [- **利用for指令进行for循环**](#--利用for指令进行for循环)
   - [- **用range指令进行简单数据的遍历**](#--用range指令进行简单数据的遍历)
   - [- **函数调用**](#--函数调用)
@@ -1812,45 +1812,59 @@ It can be seen that the jump writing method using pseudolabels directly is more 
 
 &nbsp;
 
-##### - **for循环**
+##### - **for循环**（The for loop）
 
 &nbsp;
 
 有了条件分支结构，就可以实现标准的for循环，这是一个可以具有终止条件的循环语法结构。
 
+With the conditional branch structure, you can implement the standard for loop, which is a loop syntax structure that can have termination conditions.
+
   ```go
 // 实现类似 for i = 0; i < 5; i ++ 的标准三段for循环结构
+// the following code has the same effect as the for-3 loop like: for i = 0; i < 5; i ++ {...}
 
 // 将变量i赋值为整数0
+// assign integer value 0 to variable i
 assign $i #i0
 
 // 标号loop1
+// label loop1
 :loop1
 
     // 将i的值加上整数10
     // 结果存入tmp
+    // add 10 to $i
+    // the result will be put into $tmp
     add $i #i10
 
     // 输出变量i中数值，和tmp值
+    // output the result and value in $i
     pln $i ":"  $tmp
 
     // 将变量i的值加1
+    // same as ++
     inc $i
 
     // 判断变量i中的数值是否小于整数5
+    // if $i < 5, set $tmp to true
     < $i #i5
 
     // 是则跳转到标号loop1（继续循环）
+    // if the value in $tmp is true, jump to label loop1
     if $tmp :loop1
 
 // 否则执行下面的语句
 // 也就是跳出了loop1的循环结构
 // 输出字符串“end”
+// else the code will coninue to run to the following line
 pln end
 
   ```
 
-上面的例子代码（for.xie）实现了一个经典的三段for循环结构。其中用到了inc指令，作用是将变量值加1，如果不带参数则会弹栈值加1，结果都将压栈。inc指令实现了一般语言中 i++ 的效果。本段代码执行的结果是：
+上面的例子代码（for.xie）实现了一个经典的三段for循环结构。其中用到了inc指令，作用是将变量值加1，如果不带参数则会将\$tmp中的值加1，结果都将存入\$tmp。inc指令实现了一般语言中 i++ 的效果。本段代码执行的结果是：
+
+The above example code (for.xie) implements a classic three-segment for loop structure. The inc instruction is used to add 1 to the variable value. If there is no parameter, the value in \$tmp will be added by 1, and the results will be stored in \$tmp. The inc instruction implements the effect of "i++" in other languages. The result of this code execution is:
 
   ```
     0 : 10

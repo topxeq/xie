@@ -2,17 +2,21 @@
 // the following code has the same effect as the for-3 loop like: for i = 0; i < 5; i ++ {...}
 
 // 将变量i赋值为整数0
+// assign integer value 0 to variable i
 assign $i #i0
 
 // 标号loop1
+// label loop1
 :loop1
 
     // 将i的值加上整数10
     // 结果存入tmp
+    // add 10 to $i
     // the result will be put into $tmp
     add $i #i10
 
     // 输出变量i中数值，和tmp值
+    // output the result and value in $i
     pln $i ":"  $tmp
 
     // 将变量i的值加1
@@ -24,6 +28,7 @@ assign $i #i0
     < $i #i5
 
     // 是则跳转到标号loop1（继续循环）
+    // if the value in $tmp is true, jump to label loop1
     if $tmp :loop1
 
 // 否则执行下面的语句
