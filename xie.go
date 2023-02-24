@@ -2,6 +2,7 @@ package xie
 
 import (
 	"bytes"
+	"compress/flate"
 	"database/sql"
 	"encoding/base64"
 	"encoding/hex"
@@ -15867,12 +15868,13 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		}
 
 		z := &archiver.Zip{
-			// CompressionLevel:       3,
+			CompressionLevel:  flate.DefaultCompression,
 			OverwriteExisting: tk.IfSwitchExistsWhole(args1T, "-overwrite"),
 			MkdirAll:          tk.IfSwitchExistsWhole(args1T, "-makeDirs"),
 			// SelectiveCompression:   true,
 			// ImplicitTopLevelFolder: false,
 			// ContinueOnError:        false,
+			FileMethod: archiver.Deflate,
 		}
 
 		errT := z.Archive(fileNamesT, v1)
