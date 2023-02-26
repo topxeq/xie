@@ -48,7 +48,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var VersionG string = "1.1.3"
+var VersionG string = "1.1.5"
 
 func Test() {
 	tk.Pl("test")
@@ -476,6 +476,9 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"plos": 10412, // 输出多个变量或数值的类型和值
 
+	"pr":  10415, // the same as print in other languages
+	"prf": 10416, // the same as printf in other languages
+
 	"pl": 10420,
 
 	"plNow": 10422, // 相当于pl，之前多输出一个时间
@@ -724,6 +727,9 @@ var InstrNameSet map[string]int = map[string]int{
 
 	// network relate 网络相关
 	"getRandomPort": 27001, // 获取一个可用的socket端口（注意：获取后应尽快使用，否则仍有可能被占用）
+
+	"listen": 27101, // net.Listen
+	"accept": 27105, // net.Listener.Accept()
 
 	// database related 数据库相关
 	"dbConnect": 32101, // 连接数据库，用法示例：dbConnect $db "sqlite3" `c:\tmpx\test.db`，或dbConnect $db "godror" `user/pass@129.0.9.11:1521/testdb`，结果参数外第一个参数为数据库驱动类型，目前支持sqlite3、mysql、mssql、godror（即oracle）等，第二个参数为连接字串
@@ -1939,6 +1945,8 @@ func (p *RunningContext) Extract(startA, endA int) interface{} {
 		newRunT.CodeSourceMap[i] = p.CodeSourceMap[startA+i] - startSourceA
 	}
 
+	newRunT.CodePointer = 0
+
 	return newRunT
 }
 
@@ -2304,6 +2312,12 @@ func NewRunningContext(inputA ...interface{}) interface{} {
 
 	if len(inputA) > 0 {
 		inputT = inputA[0]
+	}
+
+	nvr, ok := inputT.(*RunningContext)
+
+	if ok {
+		return nvr
 	}
 
 	rc := &RunningContext{}
@@ -4094,23 +4108,33 @@ func callGoFunc(funcA interface{}, thisA interface{}, argsA ...interface{}) inte
 }
 
 func GoCall(codeA interface{}, inputA ...interface{}) error {
-	vmObjT := NewVM()
+	vmObjT := NewVM(codeA)
 
 	if tk.IsError(vmObjT) {
 		return vmObjT.(error)
 	}
 
-	vmT := vmObjT.(XieVM)
+	vmT := vmObjT.(*XieVM)
 
 	if len(inputA) > 0 {
 		vmT.SetVar(nil, "inputG", inputA)
 	}
 
-	lrs := vmT.Load(nil, codeA)
+	// var lrs error
 
-	if tk.IsError(lrs) {
-		return lrs
-	}
+	// nvr, ok := codeA.(*RunningContext)
+
+	// if ok {
+	// 	lrs = vmT.Load(nvr, nil)
+	// } else {
+	// 	lrs = vmT.Load(nil, codeA)
+	// }
+
+	// tk.Plv("lrs:", lrs)
+
+	// if tk.IsError(lrs) {
+	// 	return lrs
+	// }
 
 	go vmT.Run()
 
@@ -8091,8 +8115,10 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 			newRunT := r.Extract(c1, c2)
 
 			if tk.IsError(newRunT) {
-				return p.Errf(r, "failed to runCall: %v", newRunT)
+				return p.Errf(r, "failed to goCall: %v", newRunT)
 			}
+
+			// tk.Pln("newRunT:", newRunT)
 
 			vs := p.ParamsToList(r, instrT, v1p+2)
 
@@ -11492,6 +11518,35 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		tk.Plos(vs...)
 
 		return ""
+	case 10415: // pr
+		list1T := []interface{}{}
+
+		for _, v := range instrT.Params {
+			list1T = append(list1T, p.GetVarValue(r, v))
+		}
+
+		tk.Pr(list1T...)
+
+		return ""
+
+	case 10416: // prf
+		list1T := []interface{}{}
+
+		formatT := ""
+
+		for i, v := range instrT.Params {
+			if i == 0 {
+				formatT = tk.ToStr(v.Value)
+				continue
+			}
+
+			list1T = append(list1T, p.GetVarValue(r, v))
+		}
+
+		tk.Prf(formatT, list1T...)
+
+		return ""
+
 	case 10420: // pl
 		list1T := []interface{}{}
 
@@ -14636,6 +14691,53 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		p.SetVar(r, pr, portT)
 
+		return ""
+	case 27101: // listen
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 2 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		rsT := tk.Listen(tk.ToStr(p.GetVarValue(r, instrT.Params[v1p])), tk.ToStr(p.GetVarValue(r, instrT.Params[v1p+1])))
+
+		p.SetVar(r, pr, rsT)
+		return ""
+
+	case 27105: // accept
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		v1c, ok := v1.(net.Listener)
+
+		if !ok {
+			p.SetVar(r, pr, fmt.Errorf("failed to accept, invalid type: %T(%v)", v1, v1))
+			return ""
+		}
+
+		rsT, errT := v1c.Accept()
+
+		if errT != nil {
+			p.SetVar(r, pr, errT)
+			return ""
+		}
+
+		p.SetVar(r, pr, rsT)
 		return ""
 
 	case 32101: // dbConnect

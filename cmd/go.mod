@@ -12,7 +12,7 @@ require (
 	github.com/ncruces/zenity v0.10.5
 	github.com/sciter-sdk/go-sciter v0.5.0
 	github.com/topxeq/dlgs v0.0.0-20220223083937-4d3036aff547
-	github.com/topxeq/tk v1.0.1-0.20230223005628-39520bf46ab9
+	github.com/topxeq/tk v1.0.1
 	github.com/topxeq/xie v0.0.0
 )
 
@@ -96,4 +96,4 @@ require (
 	google.golang.org/protobuf v1.28.1 // indirect
 )
 
-replace github.com/topxeq/tk v1.0.0 => ../../tk
+replace github.com/topxeq/tk v1.0.1 => ../../tk

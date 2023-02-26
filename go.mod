@@ -15,7 +15,7 @@ require (
 	github.com/topxeq/goph v0.0.0-20230116054750-120b087d86fb
 	github.com/topxeq/regexpx v0.0.0-20200814082553-4bffc7d07029
 	github.com/topxeq/sqltk v0.0.0-20230223005953-f9932d23950c
-	github.com/topxeq/tk v1.0.1-0.20230223005628-39520bf46ab9
+	github.com/topxeq/tk v1.0.1
 	github.com/xuri/excelize/v2 v2.7.0
 )
 
@@ -81,4 +81,4 @@ require (
 	google.golang.org/protobuf v1.28.1 // indirect
 )
 
-replace github.com/topxeq/tk v1.0.0 => ../tk
+replace github.com/topxeq/tk v1.0.1 => ../tk

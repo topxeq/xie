@@ -1,0 +1,27 @@
+listen $listenerT "tcp" ":8234"
+
+ifErrX $listenerT :+1 :+2
+    fatalf "failed to listen: %v" $listenerT
+
+:loop1
+accept $connectionT $listenerT
+
+ifErrX $connectionT :+1 :+2
+    fatalf "failed to accept: %v" $connectionT
+
+pln connect: $connectionT
+
+goCall $rs :func1 :func1End $connectionT
+
+pln rs: $rs
+
+goto :loop1
+
+:func1
+    pln here
+    [] $connectionL $inputG 0
+
+    plo $connectionL
+
+:func1End
+    exit 0
