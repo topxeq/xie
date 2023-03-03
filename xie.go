@@ -1,6 +1,7 @@
 package xie
 
 import (
+	"bufio"
 	"bytes"
 	"compress/flate"
 	"database/sql"
@@ -487,7 +488,8 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"plvsr": 10433, // 输出多个变量或数值的值的内部表达形式，之间以换行间隔
 
-	"plErr": 10440, // 输出一个error（表示错误的数据类型）信息
+	"plErr":  10440, // 输出一个error（表示错误的数据类型）信息
+	"plErrX": 10441, // 输出一个error（表示错误的数据类型）或TXERROR字符串信息
 
 	"plErrStr": 10450, // 输出一个TXERROR字符串（表示错误的字符串，以TXERROR:开头，后面一般是错误原因描述）信息
 
@@ -622,6 +624,8 @@ var InstrNameSet map[string]int = map[string]int{
 	"closeFile": 21507, // 关闭文件
 
 	"close": 21509, // 关闭文件等具有Close方法的对象
+
+	"readByte": 21521, // 从io.Reader或bufio.Reader读取一个字节
 
 	"cmpBinFile": 21601, // 逐个字节比较二进制文件，用法： cmpBinFile $result $file1 $file2 -identical -verbose，如果带有-identical参数，则只比较文件异同（遇上第一个不同的字节就返回布尔值false，全相同则返回布尔值true），不带-identical参数时，将返回一个比较结果对象
 
@@ -3527,6 +3531,21 @@ func NewObject(p *XieVM, r *RunningContext, typeA string, argsA ...interface{}) 
 			rs = errT
 		} else {
 			rs = fileT
+		}
+
+	case "bufio.Reader": // 打开支持io.Reader接口的对象为缓冲io对象
+		if len(argsT) < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		vs1 := argsT[0]
+
+		nv, ok := vs1.(io.Reader)
+
+		if !ok {
+			rs = fmt.Errorf("invalid type %T(%v)", vs1, vs1)
+		} else {
+			rs = bufio.NewReader(nv)
 		}
 
 	case "time":
@@ -11654,6 +11673,19 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		return ""
 
+	case 10441: // plErrX
+		if instrT.ParamLen < 1 {
+			tk.PlErrX(p.GetCurrentFuncContext(r).Tmp.(error))
+			return ""
+			// return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		s1 := p.GetVarValue(r, instrT.Params[0]).(error)
+
+		tk.PlErrX(s1)
+
+		return ""
+
 	case 10450: // plErrStr
 		if instrT.ParamLen < 1 {
 			tk.PlErrString(tk.ToStr(p.GetCurrentFuncContext(r).Tmp))
@@ -13560,7 +13592,73 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 			return ""
 		default:
+			tk.Pl("close %T(%v)", v1, v1)
 			rvr := tk.ReflectCallMethod(v1, "Close", p.ParamsToList(r, instrT, v1p+1)...)
+
+			p.SetVar(r, pr, rvr)
+
+			return ""
+		}
+
+		p.SetVar(r, pr, nil)
+
+		return p.Errf(r, "不支持的类型(type not supported)：%T(%v)", v1, v1)
+
+	case 21521: // readByte
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		switch nv := v1.(type) {
+		case *bufio.Reader:
+			byteT, errT := nv.ReadByte()
+
+			if errT != nil {
+				p.SetVar(r, pr, errT)
+			} else {
+				p.SetVar(r, pr, byteT)
+			}
+
+			return ""
+		case io.ByteReader:
+			byteT, errT := nv.ReadByte()
+
+			if errT != nil {
+				p.SetVar(r, pr, errT)
+			} else {
+				p.SetVar(r, pr, byteT)
+			}
+
+			return ""
+		case io.Reader:
+			bufT := make([]byte, 1)
+			cntT, errT := nv.Read(bufT)
+
+			if errT != nil {
+				if cntT > 0 {
+					p.SetVar(r, pr, bufT[0])
+				} else {
+					p.SetVar(r, pr, errT)
+				}
+
+			} else {
+				p.SetVar(r, pr, bufT[0])
+			}
+
+			return ""
+		default:
+			tk.Pl("readByte %T(%v)", v1, v1)
+			rvr := tk.ReflectCallMethod(v1, "ReadByte", p.ParamsToList(r, instrT, v1p+1)...)
 
 			p.SetVar(r, pr, rvr)
 

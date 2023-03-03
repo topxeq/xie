@@ -1,3 +1,5 @@
+pln "start to listen on 0.0.0.0:8234 ..."
+
 listen $listenerT "tcp" ":8234"
 
 ifErrX $listenerT :+1 :+2
@@ -22,6 +24,28 @@ goto :loop1
     [] $connectionL $inputG 0
 
     plo $connectionL
+
+    new $readerT "bufio.Reader" $connectionL
+
+    ifErrX $readerT :+1 :next1
+        plErrX $readerT
+        close $connectionL
+        exit 0 
+
+    :next1
+    readByte $bBufT $readerT
+
+    ifErrX $bBufT :+1 :next2
+        pl "failed to read byte: %v" $bBufT
+        close $connectionL
+        exit 0 
+
+    :next2
+    prf " %x" $bBufT
+
+    goto :next1
+
+    close $connectionL
 
 :func1End
     exit 0
