@@ -507,6 +507,7 @@ var InstrNameSet map[string]int = map[string]int{
 	"unhex":      10823, // 16进制解码，结果是一个字节列表
 	"hexToBytes": 10823,
 	"toHex":      10824, // 任意数值16进制编码
+	"hexToByte":  10825, // 16进制编码转字节
 
 	"toBool":  10831,
 	"toByte":  10835,
@@ -626,6 +627,10 @@ var InstrNameSet map[string]int = map[string]int{
 	"close": 21509, // 关闭文件等具有Close方法的对象
 
 	"readByte": 21521, // 从io.Reader或bufio.Reader读取一个字节
+
+	"writeBytes": 21533, // 从io.Writer或bufio.Writer写入多个字节
+
+	"flush": 21541, // bufio.Writer等具有缓存的对象清除缓存
 
 	"cmpBinFile": 21601, // 逐个字节比较二进制文件，用法： cmpBinFile $result $file1 $file2 -identical -verbose，如果带有-identical参数，则只比较文件异同（遇上第一个不同的字节就返回布尔值false，全相同则返回布尔值true），不带-identical参数时，将返回一个比较结果对象
 
@@ -1202,6 +1207,8 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 				return VarRef{-3, tk.ToBool(s1T[2:])}
 			} else if typeT == 'y' { // byte
 				return VarRef{-3, tk.ToByte(s1T[2:])}
+			} else if typeT == 'x' { // byte in hex from
+				return VarRef{-3, byte(tk.HexToInt(s1T[2:]))}
 			} else if typeT == 'B' { // single rune (same as in Golang, like 'a'), only first character in string is used
 				runesT := []rune(s1T[2:])
 
@@ -8044,8 +8051,8 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 			return p.Errf(r, "not enough parameters(参数不够)")
 		}
 
-		// pr := instrT.Params[0]
-		v1p := 0
+		pr := instrT.Params[0]
+		v1p := 1
 
 		var rT interface{} = nil
 
@@ -8056,6 +8063,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 			go RunCodePiece(p, r1, "", vs, true)
 
 			// p.SetVar(r, pr, rs)
+			p.SetVar(r, pr, nil)
 			return ""
 
 		}
@@ -8070,13 +8078,14 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 			newRunT := r.Extract(c1, c2)
 
 			if tk.IsError(newRunT) {
-				return p.Errf(r, "failed to runCall: %v", newRunT)
+				p.SetVar(r, pr, p.Errf(r, "failed to goRunCall: %v", newRunT))
+				return ""
 			}
 
 			vs := p.ParamsToList(r, instrT, v1p+2)
 			go RunCodePiece(p, newRunT, "", vs, true)
 
-			// p.SetVar(r, pr, rs)
+			p.SetVar(r, pr, nil)
 			return ""
 
 		}
@@ -8087,8 +8096,8 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 			compiledT := Compile(s1)
 
 			if tk.IsError(compiledT) {
-				// p.SetVar(r, pr, compiledT)
-				return p.Errf(r, "failed to compile code: %v", compiledT)
+				p.SetVar(r, pr, p.Errf(r, "failed to compile code: %v", compiledT))
+				return ""
 			}
 
 			codeT = compiledT
@@ -8097,13 +8106,13 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		if cp1, ok := codeT.(*CompiledCode); ok {
 			go RunCodePiece(p, rT, cp1, vs, true)
 
-			// p.SetVar(r, pr, rs)
+			p.SetVar(r, pr, nil)
 			return ""
 		}
 
-		return p.Errf(r, "failed to runCall code: %v", codeT)
-		// p.SetVar(r, pr, fmt.Errorf("failed to compile code: %v", codeT))
-		// return ""
+		// return p.Errf(r, "failed to goRunCall code: %v", codeT)
+		p.SetVar(r, pr, p.Errf(r, "failed to goRunCall code: %v", codeT))
+		return ""
 	case 1060: // threadCall/goCall
 		if instrT.ParamLen < 1 {
 			return p.Errf(r, "not enough parameters(参数不够)")
@@ -12043,6 +12052,34 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		return ""
 
+	case 10825: // hexToByte
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+
+		if len(v1) < 2 {
+			v1 = "0" + v1
+		}
+
+		rs1 := tk.HexToBytes(v1)
+		if rs1 == nil {
+			return fmt.Errorf("failed to convert hex: %v", v1)
+		}
+
+		p.SetVar(r, pr, rs1[0])
+
+		return ""
+
 	case 10831: // toBool
 		if instrT.ParamLen < 1 {
 			return p.Errf(r, "not enough parameters(参数不够)")
@@ -13659,6 +13696,117 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		default:
 			tk.Pl("readByte %T(%v)", v1, v1)
 			rvr := tk.ReflectCallMethod(v1, "ReadByte", p.ParamsToList(r, instrT, v1p+1)...)
+
+			p.SetVar(r, pr, rvr)
+
+			return ""
+		}
+
+		p.SetVar(r, pr, nil)
+
+		return p.Errf(r, "不支持的类型(type not supported)：%T(%v)", v1, v1)
+
+	case 21533: // writeBytes
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		// var pr interface{} = -5
+		// v1p := 0
+
+		// if instrT.ParamLen > 1 {
+		pr := instrT.Params[0]
+		v1p := 1
+		// }
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+		w1, ok := v1.(io.Writer)
+
+		if !ok {
+			return p.Errf(r, "type not supported(不支持的类型): %T(%v)", v1, v1)
+		}
+
+		w2, ok := v1.(*bufio.Writer)
+
+		if !ok {
+			w2 = nil
+		}
+
+		vs := p.ParamsToList(r, instrT, v1p+1)
+
+		var cntAllT int = 0
+
+		for _, jjv := range vs {
+			switch nv := jjv.(type) {
+			case byte:
+				cnt1, err1 := w1.Write([]byte{nv})
+
+				if err1 != nil {
+					p.SetVar(r, pr, err1)
+					return nil
+				}
+
+				cntAllT += cnt1
+			case string:
+				cnt1, err1 := w1.Write(tk.HexToBytes(nv))
+
+				if err1 != nil {
+					p.SetVar(r, pr, err1)
+					return nil
+				}
+
+				cntAllT += cnt1
+			case []byte:
+				cnt1, err1 := w1.Write(nv)
+
+				if err1 != nil {
+					p.SetVar(r, pr, err1)
+					return nil
+				}
+
+				cntAllT += cnt1
+			default:
+				p.SetVar(r, pr, p.Errf(r, "type not supported(不支持的类型): %T(%v)", v1, v1))
+				// tk.Pl("write %T(%v)", v1, v1)
+				// rvr := tk.ReflectCallMethod(v1, "Write", p.ParamsToList(r, instrT, v1p+1)...)
+
+				// p.SetVar(r, pr, rvr)
+
+				return ""
+			}
+		}
+
+		if w2 != nil {
+			w2.Flush()
+		}
+
+		p.SetVar(r, pr, cntAllT)
+
+		return ""
+
+	case 21541: // flush
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		switch nv := v1.(type) {
+		case *bufio.Writer:
+			p.SetVar(r, pr, nv.Flush())
+
+			return ""
+		default:
+			tk.Pl("flush %T(%v)", v1, v1)
+			rvr := tk.ReflectCallMethod(v1, "Flush", p.ParamsToList(r, instrT, v1p+1)...)
 
 			p.SetVar(r, pr, rvr)
 
