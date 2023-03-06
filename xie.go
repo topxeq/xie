@@ -3397,14 +3397,16 @@ func NewObject(p *XieVM, r *RunningContext, typeA string, argsA ...interface{}) 
 
 	var rs interface{}
 
-	switch typeA {
+	typeT := strings.ToLower(typeA)
+
+	switch typeT {
 	case "tk":
 		if makeT {
 			rs = tk.TK{Version: tk.VersionG}
 		} else {
 			rs = tk.NewTK()
 		}
-	case "postData", "url.Values":
+	case "postdata", "url.values":
 		if makeT {
 			rs = url.Values{}
 		} else {
@@ -3464,7 +3466,7 @@ func NewObject(p *XieVM, r *RunningContext, typeA string, argsA ...interface{}) 
 		} else {
 			rs = new(string)
 		}
-	case "byteList": // 后面可接多个字节，其中可以有字节数组或字符串（会逐一加入字节列表中），-make参数不会加入
+	case "bytelist": // 后面可接多个字节，其中可以有字节数组或字符串（会逐一加入字节列表中），-make参数不会加入
 		blT := make([]byte, 0)
 
 		for _, vvv := range argsT {
@@ -3489,13 +3491,13 @@ func NewObject(p *XieVM, r *RunningContext, typeA string, argsA ...interface{}) 
 		} else {
 			rs = &blT
 		}
-	case "bytesBuffer", "bytesBuf":
+	case "bytesbuffer", "bytesBuf":
 		if makeT {
 			rs = bytes.Buffer{}
 		} else {
 			rs = new(bytes.Buffer)
 		}
-	case "stringBuffer", "strBuf", "strings.Builder":
+	case "stringbuffer", "strbuf", "strings.builder":
 		if makeT {
 			rs = strings.Builder{}
 
@@ -3525,7 +3527,7 @@ func NewObject(p *XieVM, r *RunningContext, typeA string, argsA ...interface{}) 
 			return p.Errf(r, "type not supported: %T(%v)", vs1, vs1)
 		}
 
-	case "fileReader": // 打开字符串参数指定的路径名的文件，转为io.Reader/FILE
+	case "filereader": // 打开字符串参数指定的路径名的文件，转为io.Reader/FILE
 		if len(argsT) < 1 {
 			return p.Errf(r, "not enough parameters(参数不够)")
 		}
@@ -3540,7 +3542,7 @@ func NewObject(p *XieVM, r *RunningContext, typeA string, argsA ...interface{}) 
 			rs = fileT
 		}
 
-	case "bufio.Reader": // 打开支持io.Reader接口的对象为缓冲io对象
+	case "bufio.reader": // 打开支持io.Reader接口的对象为缓冲io对象
 		if len(argsT) < 1 {
 			return p.Errf(r, "not enough parameters(参数不够)")
 		}
@@ -3567,7 +3569,7 @@ func NewObject(p *XieVM, r *RunningContext, typeA string, argsA ...interface{}) 
 		} else {
 			rs = new(sync.RWMutex)
 		}
-	case "waitGroup": // 同步等待组
+	case "waitgroup": // 同步等待组
 		// var wg sync.WaitGroup
 		// wg.Add(1)
 		// go func() {
@@ -3620,13 +3622,13 @@ func NewObject(p *XieVM, r *RunningContext, typeA string, argsA ...interface{}) 
 			}
 		}
 
-	case "messageQueue", "syncQueue": // 线程安全的先进先出队列
+	case "messagequeue", "syncqueue": // 线程安全的先进先出队列
 		if makeT {
 			rs = tk.SyncQueue{}
 		} else {
 			rs = tk.NewSyncQueue()
 		}
-	case "mailSender": // 邮件发送客户端
+	case "mailsender": // 邮件发送客户端
 		hostT := strings.TrimSpace(p.GetSwitchVarValueI(r, argsT, "-host=", ""))
 		portT := strings.TrimSpace(p.GetSwitchVarValueI(r, argsT, "-port=", "25"))
 		userT := strings.TrimSpace(p.GetSwitchVarValueI(r, argsT, "-user=", ""))
@@ -3738,7 +3740,7 @@ func NewObject(p *XieVM, r *RunningContext, typeA string, argsA ...interface{}) 
 	// 	}
 
 	// 	p.SetVar(r, pr, deleT)
-	case "quickDelegate": // quickDelegate中，CodePointerM并不跳转（除非有移动其的指令执行）
+	case "quickdelegate": // quickDelegate中，CodePointerM并不跳转（除非有移动其的指令执行）
 		if len(argsT) < 1 {
 			return p.Errf(r, "not enough parameters(参数不够)")
 		}
@@ -3803,7 +3805,7 @@ func NewObject(p *XieVM, r *RunningContext, typeA string, argsA ...interface{}) 
 		}
 
 		rs = deleT
-	case "image.Point", "point":
+	case "image.point", "point":
 		// var p1 image.Point
 		if makeT {
 			rs = image.Point{X: 0, Y: 0}
@@ -3821,7 +3823,12 @@ func NewObject(p *XieVM, r *RunningContext, typeA string, argsA ...interface{}) 
 		}
 
 	default:
-		return p.Errf(r, "unsupported object: %v", typeA)
+		rs = tk.NewObject(typeT)
+
+		// if tk.IsErrX(rs) {
+
+		// }
+		// return p.Errf(r, "unsupported object: %v", typeA)
 	}
 
 	return rs
