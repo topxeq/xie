@@ -39,7 +39,7 @@ Xielang is a free, open-source, cross-platform, cross-language, ASM/SHELL-like, 
   - [- **else分支**（Else branch）](#--else分支else-branch)
   - [- **虚拟标号/伪标号跳转**（Virtual label/pseudolabel jump）](#--虚拟标号伪标号跳转virtual-labelpseudolabel-jump)
   - [- **for循环**（The for loop）](#--for循环the-for-loop)
-  - [- **利用for指令进行for循环**](#--利用for指令进行for循环)
+  - [- **利用for指令进行for循环**（Use the for instruction to carry out a for loop）](#--利用for指令进行for循环use-the-for-instruction-to-carry-out-a-for-loop)
   - [- **用range指令进行简单数据的遍历**](#--用range指令进行简单数据的遍历)
   - [- **函数调用**](#--函数调用)
   - [- **全局变量和局部变量**](#--全局变量和局部变量)
@@ -1877,66 +1877,103 @@ The above example code (for.xie) implements a classic three-segment for loop str
 
 与inc指令对应的是dec指令，会将对应值减1。
 
+The inc instruction corresponds to the dec instruction, which will reduce the corresponding value by 1.
+
 &nbsp;
 
-##### - **利用for指令进行for循环**
+##### - **利用for指令进行for循环**（Use the for instruction to carry out a for loop）
 
 &nbsp;
 
 谢语言也提供了for指令来进行常规的for循环，结合表达式可以实现灵活的循环控制，参看下面的例子（for3.xie）：
 
+Xielang also provides for instructions to carry out regular 'for' loops. Combining with expressions can realize flexible loop control. See the following example (for3.xie):
+
 ```go
-  // 第一个循环开始
-  // 将变量i赋值为整数0
-  assign $i #i0
+// 第一个循环开始
+// 将变量i赋值为整数0
+// the first loop starts here
+// Assign variable i to integer 0
+assign $i #i0
 
-  // 赋值用于循环终止条件判断的变量cond
-  // 赋值为布尔值true，以便第一次循环条件判断为true从而开始循环
-  // 否则一次都不会执行
-  assign $cond #btrue
+// 赋值用于循环终止条件判断的变量cond
+// 赋值为布尔值true，以便第一次循环条件判断为true从而开始循环
+// 否则一次都不会执行
+// variable $cond is used for loop condition
+// here we give it an initial value true(bool type)
+// otherwise the first loop will not even run once
+assign $cond #btrue
 
-  // 循环执行标号label1处的代码（即循环体）
-  // 直至变量cond的值为布尔值false
-  // 循环体中应该用continue指令继续循环或break中断循环
-  for $cond :label1
+// 循环执行标号label1处的代码（即循环体）
+// 直至变量cond的值为布尔值false
+// 循环体中应该用continue指令继续循环或break中断循环
+// 这是常见的三段式for循环，省略了第一和第三部分的代码（即不执行初始代码和每次循环后代码），等价于下面的代码：
+// for loop
+// Loop execution code at label1 (i.e. loop body)
+// Until the value of variable cond is boolean false
+// The continue instruction should be used in the loop body to continue the loop or break the loop
+// This is a common three-segment 'for' loop, omitting the code in the first and third parts (that is, not executing the initial code and the code after each loop), which is equivalent to the following code:
+//
+// for (;cond;) { ... }
+//
+// 或者（or）:
+// for cond { ... }
+// 
+for "" $cond "" :label1
 
-  // 第二个循环开始
-  // 将变量j赋值为浮点数0
-  assign $j #f0.0
+// 第二个循环开始
+// the second loop starts here
 
-  // 循环执行label2处代码
-  // 表达式是判断变量j小于2.8则执行label2处代码
-  for ?`($j < #f2.8)` :label2
+// 循环执行label2处代码
+// 表达式是判断变量j小于2.8则执行label2处代码
+// 这次将初始化循环变量的指令和给循环变量增长的指令放入了for指令中，构成了标准的三段式for循环结果
+// 这条语句等价于C/C++语言中的：
+// the quick eval expression in the first parameter(determines if variable $j < float value 2.8)
+// the same as in C/C++：
+//
+// for (float j = 0.0; j < 2.8; j = j + 0.5) {...}
+// 
+// for指令最后两个标号分别是循环编号（循环条件满足时执行哪里）和跳出循环编号（即循环条件不满足时跳转到哪里），跳出循环编号可以省略，默认为:+1，即下一条语句
+// The last two labels of the for instruction are the loop number (where to execute when the loop condition is satisfied) and the jump loop number (where to jump when the loop condition is not satisfied). The jump loop number can be omitted. The default is:+1, which is the next statement
+for "assign $j #f0.0" @`$j < #f2.8` "add $j $j #f0.5" :label2 :+1
 
-  // 循环结束输出
-  pln "for end"
+// （两个）循环结束输出
+// the end of the both of the loops
+pln "for end"
 
-  // 终止程序运行，否则将继续往下执行
-  exit
+// 终止程序运行，否则将继续往下执行
+// terminate the program, otherwise will run down to the following code
+exit
 
-  :label1
-      // 输出变量i的值作参考
-      pl i=%v $i
+// 第一个循环体代码
+:label1
+     // 输出变量i的值作参考
+     pl "i=%v" $i
 
-      // 将变量i的值加1
-      inc $i
+    // 将变量i的值加1
+    // same as "++ $i" and "i++" in C/C++
+    inc $i
 
-      // 判断变量i的值是否小于整数5
-      // 结果放入变量cond
-      < $cond $i #i5
+    // 判断变量i的值是否小于整数5
+    // 结果放入变量cond
+    // check if $i < 5(int value) and put the bool result into $cond
+    < $cond $i #i5
 
-      // 继续执行循环（会再次判断for指令中的条件）
-      continue
+    // 继续执行循环（会再次判断for指令中的条件，结果为true才继续，否则跳出循环继续执行for指令后面的指令）
+    // continue the loop(will check the condition defined in $cond again to determine if continue or end the loop and run the following code）
+    // if break, default label is ":+1", means running the code line right after the "for" instruction
+    continue
 
-  :label2
-      // 输出变量j的值作参考
-      pl j=%v $j
+// 第二个循环体代码
+// Second loop body code
+:label2
+    // 输出变量j的值作参考
+    // The value of output variable j is used as reference
+    pl j=%v $j
 
-      // 将变量j的值加上0.3，结果仍放回变量j中
-      add $j $j #f0.3
-
-      // 继续执行循环（会再次判断for指令中的条件）
-      continue
+    // 继续执行循环（会再次判断for指令中的条件）
+    // Continue to execute the loop (the condition in the for instruction will be judged again)
+    continue
 
 ```
 

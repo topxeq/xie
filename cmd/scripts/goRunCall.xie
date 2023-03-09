@@ -82,9 +82,9 @@ exit
 // 赋值（自动声明一个局部变量）一个局部字符串变量$b
 assign $b "abc123"
 
-// 用goRunCall指令调用并发函数，前两个参数是函数的开始和结束标号
+// 用goRunCall指令调用并发函数，除结果参数外，前两个参数是函数的开始和结束标号
 // 后面是传入的参数
-goRunCall :goFunc1Start :goFunc1End $a $b $p
+goRunCall $rs :goFunc1Start :goFunc1End $a $b $p
 
 // 主线程中循环5次（之间休眠1秒）并输出变量值进行监测
 range #i6 :loop2 :+1

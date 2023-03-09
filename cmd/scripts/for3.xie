@@ -1,6 +1,7 @@
 // 第一个循环开始
 // 将变量i赋值为整数0
 // the first loop starts here
+// Assign variable i to integer 0
 assign $i #i0
 
 // 赋值用于循环终止条件判断的变量cond
@@ -14,13 +15,22 @@ assign $cond #btrue
 // 循环执行标号label1处的代码（即循环体）
 // 直至变量cond的值为布尔值false
 // 循环体中应该用continue指令继续循环或break中断循环
+// 这是常见的三段式for循环，省略了第一和第三部分的代码（即不执行初始代码和每次循环后代码），等价于下面的代码：
 // for loop
+// Loop execution code at label1 (i.e. loop body)
+// Until the value of variable cond is boolean false
+// The continue instruction should be used in the loop body to continue the loop or break the loop
+// This is a common three-segment 'for' loop, omitting the code in the first and third parts (that is, not executing the initial code and the code after each loop), which is equivalent to the following code:
+//
+// for (;cond;) { ... }
+//
+// 或者（or）:
+// for cond { ... }
+// 
 for "" $cond "" :label1
 
 // 第二个循环开始
-// 将变量j赋值为浮点数0
 // the second loop starts here
-
 
 // 循环执行label2处代码
 // 表达式是判断变量j小于2.8则执行label2处代码
@@ -30,7 +40,9 @@ for "" $cond "" :label1
 // the same as in C/C++：
 //
 // for (float j = 0.0; j < 2.8; j = j + 0.5) {...}
+// 
 // for指令最后两个标号分别是循环编号（循环条件满足时执行哪里）和跳出循环编号（即循环条件不满足时跳转到哪里），跳出循环编号可以省略，默认为:+1，即下一条语句
+// The last two labels of the for instruction are the loop number (where to execute when the loop condition is satisfied) and the jump loop number (where to jump when the loop condition is not satisfied). The jump loop number can be omitted. The default is:+1, which is the next statement
 for "assign $j #f0.0" @`$j < #f2.8` "add $j $j #f0.5" :label2 :+1
 
 // （两个）循环结束输出
@@ -61,12 +73,12 @@ exit
     continue
 
 // 第二个循环体代码
+// Second loop body code
 :label2
     // 输出变量j的值作参考
+    // The value of output variable j is used as reference
     pl j=%v $j
 
-    // 将变量j的值加上0.5，结果仍放回变量j中
-    
-
     // 继续执行循环（会再次判断for指令中的条件）
+    // Continue to execute the loop (the condition in the for instruction will be judged again)
     continue
