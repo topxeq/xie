@@ -119,8 +119,9 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"wait": 191, // 等待可等待的对象，例如waitGroup或chan，如果没有指定，则无限循环等待（中间会周期性休眠），用于等待用户按键退出或需要静止等待等场景；如果给出一个字符串，则输出字符串后等待输入（回车确认）后继续；如果是整数或浮点数则休眠相应的秒数后继续；
 
-	"exitL": 197, // terminate the program(maybe quickDelegate), can with a return value(same as assign the semi-global value $outL)
-	"exit":  199, // terminate the program, can with a return value(same as assign the global value $outG)
+	"exitL":  197, // terminate the program(maybe quickDelegate), can with a return value(same as assign the semi-global value $outL)
+	"exitfL": 198, // terminate the program(maybe quickDelegate), can with a return string value assembled like fatalf/sprintf(same as assign the semi-global value $outL), usage: exitfL "error is %v" err1
+	"exit":   199, // terminate the program, can with a return value(same as assign the global value $outG)
 
 	// var related
 	"global": 201, // define a global variable
@@ -128,6 +129,8 @@ var InstrNameSet map[string]int = map[string]int{
 	"var": 203, // define a local variable
 
 	"const": 205, // 获取预定义常量
+
+	"nil": 207, // make a variable nil
 
 	"ref": 210, //-> 获取变量的引用（取地址）
 
@@ -210,7 +213,7 @@ var InstrNameSet map[string]int = map[string]int{
 	"ifErr":  651, // if error or TXERROR string then ... else ...
 	"ifErrX": 651,
 
-	"switch": 691, // 用法：switch $condition1 $value1 :label1 $value2 :label2 ...
+	"switch": 691, // 用法：switch $condition1 $value1 :label1 $value2 :label2 ... :defaultLabel
 
 	// compare related
 	"==": 701, // 判断两个数值是否相等，无参数时，比较两个弹栈值，结果压栈；参数为1个时是结果参数，两个数值从堆栈获取；参数为2个时，表示两个数值，结果压栈；参数为3个时，第一个参数是结果参数，后两个为待比较数值
@@ -426,6 +429,10 @@ var InstrNameSet map[string]int = map[string]int{
 	"dataToBytes": 1603,
 	"bytesToHex":  1605,
 
+	// thread related 并发/线程相关
+	"lock":   1701,
+	"unlock": 1703,
+
 	// time related 时间相关
 	"now": 1910, // 获取当前时间
 
@@ -537,6 +544,11 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"errf": 10949, // 生成错误对象，类似printf
 
+	// common related 通用相关
+	"clear": 12001, // clear various object, and the object with Close method
+
+	"close": 12003, // 关闭文件等具有Close方法的对象
+
 	// http request/response related HTTP请求相关
 	"writeResp":       20110, // 写一个HTTP请求的响应
 	"setRespHeader":   20111, // 设置一个HTTP请求的响应头，如setRespHeader $responseG "Content-Type" "text/json; charset=utf-8"
@@ -624,11 +636,13 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"closeFile": 21507, // 关闭文件
 
-	"close": 21509, // 关闭文件等具有Close方法的对象
-
 	"readByte": 21521, // 从io.Reader或bufio.Reader读取一个字节
 
-	"writeBytes": 21533, // 从io.Writer或bufio.Writer写入多个字节
+	"readBytesN": 21525, // 从io.Reader或bufio.Reader读取多个字节，第二个参数指定所需读取的字节数
+
+	"writeByte": 21531, // 向io.Writer或bufio.Writer写入1个字节
+
+	"writeBytes": 21533, // 向io.Writer或bufio.Writer写入多个字节
 
 	"flush": 21541, // bufio.Writer等具有缓存的对象清除缓存
 
@@ -667,6 +681,7 @@ var InstrNameSet map[string]int = map[string]int{
 
 	// console related 命令行相关
 	"getInput":    22001, // 从命令行获取输入，第一个参数开始是提示字符串，可以类似printf加多个参数，用法：getInput $text1 "请输入%v个数字：" #i2
+	"getInputf":   22001,
 	"getPassword": 22003, // 从命令行获取密码输入（输入字符不显示），第一个参数是提示字符串
 
 	// json related JSON相关
@@ -3823,7 +3838,11 @@ func NewObject(p *XieVM, r *RunningContext, typeA string, argsA ...interface{}) 
 		}
 
 	default:
-		rs = tk.NewObject(typeT)
+		if len(argsT) > 0 {
+			rs = tk.NewObject(append([]interface{}{typeT}, argsT...)...)
+		} else {
+			rs = tk.NewObject(typeT)
+		}
 
 		// if tk.IsErrX(rs) {
 
@@ -5538,6 +5557,25 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		return "exit"
 
+	case 198: // exitfL
+
+		list1T := []interface{}{}
+
+		formatT := ""
+
+		for i, v := range instrT.Params {
+			if i == 0 {
+				formatT = tk.ToStr(v.Value)
+				continue
+			}
+
+			list1T = append(list1T, p.GetVarValue(r, v))
+		}
+
+		p.SetVar(r, "outL", fmt.Sprintf(formatT, list1T...))
+
+		return "exit"
+
 	case 199: // exit
 		if instrT.ParamLen < 1 {
 			return "exit"
@@ -5827,6 +5865,23 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		}
 
 		p.SetVar(r, pr, GlobalsG.Vars[tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))])
+
+		return ""
+
+	case 207: // nil
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		// var pr interface{} = -5
+		// v1p := 0
+
+		// if instrT.ParamLen > 1 {
+		pr := instrT.Params[0]
+		// v1p := 1
+		// }
+
+		p.SetVar(r, pr, nil)
 
 		return ""
 
@@ -7154,11 +7209,15 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		vs := p.ParamsToList(r, instrT, 1)
 
-		lenT := len(vs) / 2
+		len1T := len(vs)
+
+		lenT := len1T / 2
 
 		for i := 0; i < lenT; i++ {
 			if v1 == vs[i*2] {
 				labelT := vs[i*2+1]
+
+				// tk.Pl("labelT: %v", labelT)
 
 				c := r.GetLabelIndex(labelT)
 
@@ -7170,6 +7229,19 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 					return p.Errf(r, "标号格式错误：%T(%v)", labelT, labelT)
 				}
 			}
+		}
+
+		if len1T > (lenT * 2) {
+			labelT := vs[len1T-1]
+
+			c := r.GetLabelIndex(labelT)
+
+			if c >= 0 {
+				return c
+			} else {
+				return p.Errf(r, "标号格式错误：%T(%v)", labelT, labelT)
+			}
+
 		}
 
 		return ""
@@ -8785,9 +8857,9 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		}
 
-		// tk.Pl("v1: %#v, instr: %#v", v1, instrT)
-
 		v2 := tk.ToInt(p.GetVarValue(r, instrT.Params[2]))
+
+		// tk.Pl("v1: %#v, v2: %#v, instr: %#v", v1, v2, instrT)
 
 		switch nv := v1.(type) {
 		case []interface{}:
@@ -8799,6 +8871,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 					return p.Errf(r, "index out of range: %v/%v", v2, len(nv))
 				}
 			}
+			// tk.Pl("r: %v", nv[v2])
 			p.SetVar(r, pr, nv[v2])
 		case []bool:
 			if (v2 < 0) || (v2 >= len(nv)) {
@@ -11076,6 +11149,70 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		return ""
 
+	case 1701: // lock
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		// pr := instrT.Params[0]
+		v1p := 0
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		switch nv := v1.(type) {
+		case *sync.RWMutex:
+			nv.Lock()
+
+			return ""
+		case *sync.Mutex:
+			nv.Lock()
+
+			return ""
+		case sync.Mutex:
+			nv.Lock()
+
+			return ""
+
+		default:
+			return p.Errf(r, "不支持的类型(type not supported)：%T(%v)", v1, v1)
+
+		}
+
+		// tk.Pl("v1: %T(%#v), nv1: %#v, ok: %v", v1, v1, nv1, ok)
+
+		return ""
+
+	case 1703: // unlock
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		// pr := instrT.Params[0]
+		v1p := 0
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		switch nv := v1.(type) {
+		case *sync.RWMutex:
+			nv.Unlock()
+
+			return ""
+		case *sync.Mutex:
+			nv.Unlock()
+
+			return ""
+		case sync.Mutex:
+			nv.Unlock()
+
+			return ""
+
+		default:
+			return p.Errf(r, "不支持的类型(type not supported)：%T(%v)", v1, v1)
+
+		}
+
+		return ""
+
 	case 1910: // now
 		var pr interface{} = -5
 
@@ -11497,16 +11634,16 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		return p.Errf(r, "invalid parameter type: %T(%#v)", v1)
 	case 10011: // parseCommandLine
-		if instrT.ParamLen < 2 {
+		if instrT.ParamLen < 1 {
 			return p.Errf(r, "not enough paramters")
 		}
 
 		var pr interface{} = -5
 		v1p := 0
 
-		if instrT.ParamLen > 2 {
-			v1p = 1
+		if instrT.ParamLen > 1 {
 			pr = instrT.Params[0]
+			v1p = 1
 		}
 
 		v1 := p.GetVarValue(r, instrT.Params[v1p])
@@ -12505,6 +12642,70 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		p.SetVar(r, pr, tk.Errf(formatT, list1T...))
 		return ""
+
+	case 12001: // clear
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		// var pr interface{} = -5
+		v1p := 0
+
+		// if instrT.ParamLen > 1 {
+		// 	pr = instrT.Params[0]
+		// 	v1p = 1
+		// }
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		switch nv := v1.(type) {
+		case *tk.ByteQueue:
+			nv.Clear()
+
+			return ""
+		default:
+			tk.Pl("clear %T(%v)", v1, v1)
+			tk.ReflectCallMethod(v1, "Clear")
+
+			return ""
+		}
+
+		return p.Errf(r, "不支持的类型(type not supported)：%T(%v)", v1, v1)
+
+	case 12003: // close
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		switch nv := v1.(type) {
+		case *os.File:
+			errT := nv.Close()
+
+			p.SetVar(r, pr, errT)
+
+			return ""
+		default:
+			tk.Pl("close %T(%v)", v1, v1)
+			rvr := tk.ReflectCallMethod(v1, "Close", p.ParamsToList(r, instrT, v1p+1)...)
+
+			p.SetVar(r, pr, rvr)
+
+			return ""
+		}
+
+		p.SetVar(r, pr, nil)
+
+		return p.Errf(r, "不支持的类型(type not supported)：%T(%v)", v1, v1)
 
 	case 20110: // writeResp
 		if instrT.ParamLen < 2 {
@@ -13613,41 +13814,6 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		return ""
 
-	case 21509: // close
-		if instrT.ParamLen < 1 {
-			return p.Errf(r, "not enough parameters(参数不够)")
-		}
-
-		var pr interface{} = -5
-		v1p := 0
-
-		if instrT.ParamLen > 1 {
-			pr = instrT.Params[0]
-			v1p = 1
-		}
-
-		v1 := p.GetVarValue(r, instrT.Params[v1p])
-
-		switch nv := v1.(type) {
-		case *os.File:
-			errT := nv.Close()
-
-			p.SetVar(r, pr, errT)
-
-			return ""
-		default:
-			tk.Pl("close %T(%v)", v1, v1)
-			rvr := tk.ReflectCallMethod(v1, "Close", p.ParamsToList(r, instrT, v1p+1)...)
-
-			p.SetVar(r, pr, rvr)
-
-			return ""
-		}
-
-		p.SetVar(r, pr, nil)
-
-		return p.Errf(r, "不支持的类型(type not supported)：%T(%v)", v1, v1)
-
 	case 21521: // readByte
 		if instrT.ParamLen < 1 {
 			return p.Errf(r, "not enough parameters(参数不够)")
@@ -13712,6 +13878,126 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		p.SetVar(r, pr, nil)
 
 		return p.Errf(r, "不支持的类型(type not supported)：%T(%v)", v1, v1)
+
+	case 21525: // readBytesN
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 2 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		v2 := tk.ToInt(p.GetVarValue(r, instrT.Params[v1p+1]))
+
+		switch nv := v1.(type) {
+		case io.Reader:
+			bufT := make([]byte, v2)
+
+			cntT, errT := nv.Read(bufT)
+
+			if errT != nil {
+				p.SetVar(r, pr, errT)
+				return ""
+			}
+
+			if cntT == v2 {
+				p.SetVar(r, pr, bufT)
+				return ""
+			}
+
+			leftT := v2 - cntT
+
+			for {
+				buf1T := make([]byte, leftT)
+
+				cntT, errT = nv.Read(buf1T)
+
+				if errT != nil {
+					p.SetVar(r, pr, errT)
+					return ""
+				}
+
+				bufT = append(bufT[:v2-leftT], buf1T[:cntT]...)
+
+				leftT = leftT - cntT
+
+				if leftT <= 0 {
+					p.SetVar(r, pr, bufT)
+					return ""
+				}
+			}
+
+			p.SetVar(r, pr, fmt.Errorf("failed to read %v bytes: %#v", v2, bufT))
+
+			return ""
+		default:
+			p.SetVar(r, pr, fmt.Errorf("type not supported(不支持的类型): %T(%v)", v1, v1))
+
+			return ""
+		}
+
+		p.SetVar(r, pr, fmt.Errorf("type not supported(不支持的类型): %T(%v)", v1, v1))
+
+		return ""
+
+	case 21531: // writeByte
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		// var pr interface{} = -5
+		// v1p := 0
+
+		// if instrT.ParamLen > 1 {
+		pr := instrT.Params[0]
+		v1p := 1
+		// }
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		v2 := tk.ToByte(p.GetVarValue(r, instrT.Params[v1p+1]))
+
+		nv1, ok := v1.(*tk.ByteQueue)
+
+		if ok {
+			nv1.Push(v2)
+			p.SetVar(r, pr, nil)
+			return ""
+		}
+
+		w1, ok := v1.(io.Writer)
+
+		if !ok {
+			return p.Errf(r, "type not supported(不支持的类型): %T(%v)", v1, v1)
+		}
+
+		w2, ok := v1.(*bufio.Writer)
+
+		if !ok {
+			w2 = nil
+		}
+
+		_, err1 := w1.Write([]byte{v2})
+
+		if err1 != nil {
+			p.SetVar(r, pr, err1)
+			return nil
+		}
+
+		if w2 != nil {
+			w2.Flush()
+		}
+
+		p.SetVar(r, pr, nil)
+
+		return ""
 
 	case 21533: // writeBytes
 		if instrT.ParamLen < 2 {
