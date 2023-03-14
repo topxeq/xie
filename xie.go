@@ -49,7 +49,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var VersionG string = "1.1.5"
+var VersionG string = "1.1.6"
 
 func Test() {
 	tk.Pl("test")
@@ -430,8 +430,16 @@ var InstrNameSet map[string]int = map[string]int{
 	"bytesToHex":  1605,
 
 	// thread related 并发/线程相关
-	"lock":   1701,
-	"unlock": 1703,
+	"lock":   1701, // lock an object which is lockable
+	"unlock": 1703, // unlock an object which is unlockable
+
+	"lockN":    1721, // lock a global, internal, predefined lock in a lock pool/array, 0 <= N < 10
+	"unlockN":  1722, // unlock a global, internal, predefined lock, 0 <= N < 10
+	"tryLockN": 1723, // try lock a global, internal, predefined lock, 0 <= N < 10
+
+	"readLockN":    1725, // read lock a global, internal, predefined lock in a lock pool/array, 0 <= N < 10
+	"readUnlockN":  1726, // read unlock a global, internal, predefined lock, 0 <= N < 10
+	"tryReadLockN": 1727, // try read lock a global, internal, predefined lock, 0 <= N < 10
 
 	// time related 时间相关
 	"now": 1910, // 获取当前时间
@@ -11213,7 +11221,102 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		return ""
 
+	case 1721: // lockN
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		// pr := instrT.Params[0]
+		v1p := 0
+
+		v1 := tk.ToInt(p.GetVarValue(r, instrT.Params[v1p]), 0)
+
+		tk.LockN(v1)
+
+		return ""
+
+	case 1722: // unlockN
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		// pr := instrT.Params[0]
+		v1p := 0
+
+		v1 := tk.ToInt(p.GetVarValue(r, instrT.Params[v1p]), 0)
+
+		tk.UnlockN(v1)
+
+		return ""
+
+	case 1723: // tryLockN
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := tk.ToInt(p.GetVarValue(r, instrT.Params[v1p]), 0)
+
+		p.SetVar(r, pr, tk.TryLockN(v1))
+
+		return ""
+
+	case 1725: // readLockN
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		// pr := instrT.Params[0]
+		v1p := 0
+
+		v1 := tk.ToInt(p.GetVarValue(r, instrT.Params[v1p]), 0)
+
+		tk.RLockN(v1)
+
+		return ""
+
+	case 1726: // readUnlockN
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		// pr := instrT.Params[0]
+		v1p := 0
+
+		v1 := tk.ToInt(p.GetVarValue(r, instrT.Params[v1p]), 0)
+
+		tk.RUnlockN(v1)
+
+		return ""
+
+	case 1727: // tryReadLockN
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := tk.ToInt(p.GetVarValue(r, instrT.Params[v1p]), 0)
+
+		p.SetVar(r, pr, tk.TryRLockN(v1))
+
+		return ""
+
 	case 1910: // now
+
 		var pr interface{} = -5
 
 		if instrT.ParamLen > 0 {
