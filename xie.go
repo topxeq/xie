@@ -842,7 +842,7 @@ var InstrNameSet map[string]int = map[string]int{
 	"leViewAll":     70045, // 查看行文本编辑器缓冲区中的所有内容，例：leViewAll $textT
 	"leView":        70047, // 查看行文本编辑器缓冲区中的指定行，例：leView $lineText 18
 	"leViewLine":    70047,
-	"leSort":        70049, // 将行文本编辑器缓冲区中的行进行排序，唯一参数表示是否降序排序，例：leSort $result true
+	"leSort":        70049, // 将行文本编辑器缓冲区中的行进行排序，唯一参数（可省略，默认为false）表示是否降序排序，例：leSort $result true
 	"leEnc":         70051, // 将行文本编辑器缓冲区中的文本转换为UTF-8编码，如果不指定原始编码则默认为GB18030编码，用法：leEnc $result gbk
 	"leLineEnd":     70061, // 读取或设置行文本编辑器缓冲区中行末字符（一般是\n或\r\n），不带参数是获取，带参数是设置
 	"leSilent":      70071, // 读取或设置行文本编辑器的静默模式（布尔值），不带参数是获取，带参数是设置
@@ -4427,6 +4427,29 @@ func leLoadFile(fileNameA string) error {
 	return nil
 }
 
+func leAppendFile(fileNameA string) error {
+	if leBufG == nil {
+		leClear()
+	}
+
+	strT, errT := tk.LoadStringFromFileE(fileNameA)
+
+	if errT != nil {
+		return errT
+	}
+
+	if strings.Contains(strT, "\r") {
+		leLineEndG = "\r\n"
+	} else {
+		leLineEndG = "\n"
+	}
+
+	leBufG = append(leBufG, tk.SplitLines(strT)...)
+	// leBufG, errT = tk.LoadStringListBuffered(fileNameA, false, false)
+
+	return nil
+}
+
 func leLoadUrl(urlA string) error {
 	if leBufG == nil {
 		leClear()
@@ -4533,7 +4556,12 @@ func leViewLine(idxA int) error {
 	return nil
 }
 
-func leSort(descentA bool) error {
+func leSort(descentA ...bool) error {
+	descentT := false
+	if len(descentA) > 0 {
+		descentT = descentA[0]
+	}
+
 	if leBufG == nil {
 		leClear()
 	}
@@ -4542,7 +4570,7 @@ func leSort(descentA bool) error {
 		return tk.Errf("buffer not initalized")
 	}
 
-	if descentA {
+	if descentT {
 		sort.Sort(sort.Reverse(sort.StringSlice(leBufG)))
 	} else {
 		sort.Sort(sort.StringSlice(leBufG))
@@ -15943,6 +15971,27 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		// v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
 
 		rs := leLoadClip()
+
+		p.SetVar(r, pr, rs)
+
+		return ""
+
+	case 70013: // leAppendFile
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+
+		rs := leAppendFile(v1)
 
 		p.SetVar(r, pr, rs)
 
