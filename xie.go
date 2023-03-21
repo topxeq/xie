@@ -3529,7 +3529,9 @@ func NewObject(p *XieVM, r *RunningContext, typeA string, argsA ...interface{}) 
 			}
 		} else {
 			rs = new(strings.Builder)
-			rs.(*strings.Builder).WriteString(tk.ToStr(argsT[0]))
+			if len(argsT) > 0 {
+				rs.(*strings.Builder).WriteString(tk.ToStr(argsT[0]))
+			}
 		}
 
 	case "reader": // 读取参数中的类型，自动判断后统一转为Go语言中的io.Reader
