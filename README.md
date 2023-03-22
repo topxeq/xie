@@ -2383,7 +2383,7 @@ switch $a "123" :label1  "abc" :label2 :label3
 
 本例应该跳转到label2。
 
-This example should jump to label2
+This example should jump to label2.
 
 &nbsp;
 
