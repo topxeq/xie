@@ -40,7 +40,10 @@ Xielang is a free, open-source, cross-platform, cross-language, ASM/SHELL-like, 
   - [- **虚拟标号/伪标号跳转**（Virtual label/pseudolabel jump）](#--虚拟标号伪标号跳转virtual-labelpseudolabel-jump)
   - [- **for循环**（The for loop）](#--for循环the-for-loop)
   - [- **利用for指令进行for循环**（Use the for instruction to carry out a for loop）](#--利用for指令进行for循环use-the-for-instruction-to-carry-out-a-for-loop)
-  - [- **用range指令进行简单数据的遍历**](#--用range指令进行简单数据的遍历)
+  - [- **用range指令进行简单数据的遍历**（Iterating data using the range instruction）](#--用range指令进行简单数据的遍历iterating-data-using-the-range-instruction)
+  - [- **range嵌套**（range in range）](#--range嵌套range-in-range)
+  - [- **更多range数字的例子**（range numbers）](#--更多range数字的例子range-numbers)
+  - [- **switch分支**（switch branches）](#--switch分支switch-branches)
   - [- **函数调用**](#--函数调用)
   - [- **全局变量和局部变量**](#--全局变量和局部变量)
   - [- **快速函数**](#--快速函数)
@@ -1977,7 +1980,22 @@ exit
 
 ```
 
-for指令后面的第一个参数是循环条件，满足条件（即值为布尔值true）才会进行循环；第二个参数是一个标号，表示循环体代码开始的位置。循环体代码中应该用continue指令继续循环或break中断循环，exit也是可以的。代码中演示了两个for循环，第一个for循环的循环条件是一个放在一个变量中的，第二个这直接用一个表达式来表示，每次循环都会重新计算这个表达式。运行结果如下：
+可以看出，谢语言中for指令做循环标准的写法如下：
+
+It can be seen that the for instruction in Xie language is written as a loop standard as follows:
+
+```
+for "初始化指令" 判断条件 "循环间指令" 循环体标号 跳出循环标号
+```
+
+```
+For "initialization instruction" condition "inter loop instruction" loopLabel breakLabel
+```
+
+
+for指令后面的第一个参数是循环前的初始化指令，第二个参数是循环条件，可以是一个表达式，满足条件（即值为布尔值true）才会进行循环；第三个参数是循环间指令，即每次循环体代码执行完后要执行的指令；第四个参数是一个标号，表示循环体代码开始的位置。循环体代码中应该用continue指令继续循环或break中断循环；第五个参数是跳出循环体的标号，即循环结束或跳出时要执行的代码，默认为:+1，即下一条语句。代码中演示了两个for循环，第一个for循环的循环条件是放在一个变量中的，第二个则直接用一个表达式来表示，每次循环都会重新计算这个表达式。运行结果如下：
+
+The first parameter after the for instruction is the initialization instruction before the loop, and the second parameter is the loop condition, which can be an expression. Only when the condition is satisfied (that is, the value is a Boolean value of true) can the loop be performed; The third parameter is the inter loop instruction, which is the instruction to be executed after each loop body code execution; The fourth parameter is a label indicating the position where the loop body code starts. The loop body code should use the continue instruction to continue the loop or break to interrupt the loop; The fifth parameter is the label of the loop body that jumps out, which is the code to execute when the loop ends or jumps out. The default value is :+1, which indicates the next statement. The code demonstrates two for loops. The first for loop's loop conditions are placed in a variable, and the second is directly represented by an expression, which is recalculated each time the loop is executed. The operation results are as follows:
 
 ```shell
 i=0
@@ -1986,106 +2004,394 @@ i=2
 i=3
 i=4
 j=0
-j=0.3
-j=0.6
-j=0.8999999999999999
-j=1.2
+j=0.5
+j=1
 j=1.5
-j=1.8
-j=2.1
-j=2.4
-j=2.6999999999999997
+j=2
+j=2.5
 for end
 ```
 
-其中有些小数位数长是因为计算机浮点数计算误差导致的，与循环无关，我们将在后面介绍如何消除这种问题。
-
-
 &nbsp;
 
-##### - **用range指令进行简单数据的遍历**
+##### - **用range指令进行简单数据的遍历**（Iterating data using the range instruction）
 
 &nbsp;
 
 对于整数、字符串和一些简单的数组（后面会详细说明），可以用range指令对其进行遍历，即循环执行一定次数，每次循环体内可以获得遍历序号和遍历值进行相应操作，参看下面的代码（range.xie）：
 
+For integers, strings, and some simple arrays (described in detail later), you can use the range instruction to traverse them, that is, execute the loop for a certain number of times, and each time the loop body can obtain the traversal number and traversal value for corresponding operations. See the following code (range.xie):
+
 ```go
-  // 循环遍历整数5，每次执行标号label1处的循环体代码
-  // 将循环5次，遍历值分别是0，1，2，3，4
-  // 相当于其他语言中的 for i := 1, i < 5; i ++……
-  range #i5 :label1
+// 循环遍历整数5，每次执行标号label1处的循环体代码
+// 将循环5次，遍历值分别是0，1，2，3，4
+// 相当于其他语言中的 for i := 1, i < 5; i ++……
+// range/iterate integer 5, run the loop body at the position of label ":label1"
+// then (break) run the code in label ":+1", ie. the next line of the "range" instr
+// loop for 5 times, the iterated value will be 0，1，2，3，4
+// the same as in C/C++: for i := 1, i < 5; i ++……
+range #i5 :label1 :+1
 
-  // 第一个循环结束
-  pln "end for1"
+// 第一个循环结束
+// end of the first range
+pln "end range1"
 
-  // 跳转到标号next1处
-  goto :next1
+// 跳转到标号next1处
+goto :next1
 
-  :label1
-      // 从栈中分别弹出遍历序和遍历值
-      assign $i $pop
-      assign $v $pop
+:label1
+    // 用getIter指令获取遍历序号和遍历值
+    // get the i, v from iterator
+    // if iteration failed, $i will be an error object
+    getIter $i $v
+    checkErrX $i
 
-      // 输出供参考
-      pl "i: %v, v: %v" $i $v
+    // 输出供参考
+    pl "i: %v, v: %v" $i $v
 
-      // 继续循环遍历
-      continue
+    // 继续循环遍历
+    // continue the loop/range
+    continue
 
-  :next1
+:next1
 
-  // 进行第二个循环
-  range "abc123" :label2
+// 进行第二个循环，循环体在标号:label2处
+// 第二个表示跳出循环的标号可以省略，默认为“:+1”
+// 遍历字符串每次的遍历值是一个byte类型的整数
+// the break label could be omitted, default is ":+1"
+range "abc123" :label2
 
-  // 第二个循环结束
-  pln "end for2"
+// 第二个循环结束
+// end of the second range
+pln "end range2"
 
-  // 退出程序执行
-  exit
+// exit the program, or the next line will be run
+exit
 
-  :label2
-      // 从栈中分别弹出遍历序和遍历值
-      assign $i $pop
-      assign $v $pop
+:label2
+    // 用getIter指令获取遍历序号和遍历值
+    getIter $i $v
 
-      // 输出供参考
-      pl "i: %v, v: %v" $i $v
+    checkErrX $i
 
-      // 继续循环遍历
-      continue
+    pl "i: %v, v: %v" $i $v
+
+    continue
+
 ```
 
 执行结果是：
 
+The execution result is:
+
 ```shell
 i: 0, v: 0
-i: 1, v: 1
-i: 2, v: 2
-i: 3, v: 3
-i: 4, v: 4
-end for1
-i: 0, v: a
-i: 1, v: b
-i: 2, v: c
-i: 3, v: 1
-i: 4, v: 2
-i: 5, v: 3
-end for2
+i: 1, v: 1 
+i: 2, v: 2 
+i: 3, v: 3 
+i: 4, v: 4 
+end range1 
+i: 0, v: 97
+i: 1, v: 98
+i: 2, v: 99
+i: 3, v: 49
+i: 4, v: 50
+i: 5, v: 51
+end range2 
 ```
 
 注意遍历整数和字符串的区别。
 
+Note the difference between traversing integers and strings.
+
 最新版的谢语言中，range指令也支持切片（数组）和映射（字典）的遍历。
 
-另外请注意，range指令可以嵌套，但多层嵌套的range指令中的break不能用标号跳出至超出本级之上的循环遍历；
-   
+In the latest version of Xie language, the range instruction also supports traversal of slices (arrays) and maps (dictionaries).
+
+&nbsp;
+
+##### - **range嵌套**（range in range）
+
+&nbsp;
+
+另外请注意，range指令可以嵌套，如下所示（rangeInRange.xie）；
+
+Note also that range instructions can be nested, as shown in the following(rangeInRange.xie);
+
+```go
+= $n1 #i5
+
+range $n1 :range1
+
+pln "end"
+
+exit
+
+:range1
+    getIter $i $v
+
+    pl "[1] %v: %v" $i $v
+
+    range "abc" :range2
+
+    continue
+
+
+:range2
+    getIter $j $jv
+
+    pl "[2] %v: %v" $j $jv
+
+    range @`$j + $j + #i1` :range3 :+1  $j @`$j + $j + #i1`
+
+    continue
+
+:range3
+    getIter $k $kv
+
+    pl "[3] %v: %v" $k @`$kv * $kv`
+
+    continue
+
+```
+
+运行效果如下：
+
+The operation effect is as follows:
+
+```shell
+[1] 0: 0
+[2] 0: 97
+[3] 0: 0 
+[2] 1: 98
+[3] 0: 1 
+[3] 1: 4 
+[2] 2: 99
+[3] 0: 4 
+[3] 1: 9 
+[3] 2: 16
+[1] 1: 1 
+[2] 0: 97
+[3] 0: 0 
+[2] 1: 98
+[3] 0: 1 
+[3] 1: 4 
+[2] 2: 99
+[3] 0: 4 
+[3] 1: 9 
+[3] 2: 16
+[1] 2: 2 
+[2] 0: 97
+[3] 0: 0
+[2] 1: 98
+[3] 0: 1
+[3] 1: 4
+[2] 2: 99
+[3] 0: 4
+[3] 1: 9
+[3] 2: 16
+[1] 3: 3
+[2] 0: 97
+[3] 0: 0
+[2] 1: 98
+[3] 0: 1
+[3] 1: 4
+[2] 2: 99
+[3] 0: 4
+[3] 1: 9
+[3] 2: 16
+[1] 4: 4
+[2] 0: 97
+[3] 0: 0
+[2] 1: 98
+[3] 0: 1
+[3] 1: 4
+[2] 2: 99
+[3] 0: 4
+[3] 1: 9
+[3] 2: 16
+end
+```
+
+&nbsp;
+
+##### - **更多range数字的例子**（range numbers）
+
+&nbsp;
+
+下面是更多一些遍历数字的例子（rangeNumber.xie）；
+
+```go
+// 本例展示对整数或小数使用range指令遍历
+// shows the range/iterate action of integer and float
+
+// range指令后带一个整数则表示遍历整数5，循环体代码在标号label1处
+// 跳出循环的标号在第三个，但可以省略，默认为“:+1”，即跳转到下一条指令继续执行
+// 将依次输出每个循环序号和遍历值
+// 遍历整数5相当于依次取0, 1, 2, 3, 4共5个遍历值
+// 对应循环序号是0, 1, 2, 3, 4
+// range integer 5
+// range value for each round will be: 0, 1, 2, 3, 4
+// range index will be: 0, 1, 2, 3, 4
+range #i5 :label1
+
+pln
+
+// range指令后带两个整数表示范围遍历，此时跳出循环的标号不可省略
+// 然后跟随遍历范围中的起始值，range后的数是结束值（不含）
+// 这里是遍历整数2到5，也就是
+// 依次取2, 3, 4共3个遍历值
+// 对应循环序号是0, 1, 2
+// range from 2 to 5
+// range value for each round will be: 2, 3, 4
+// range index will be: 0, 1, 2
+// here the break label ":+1"(or other label) could not be omitted
+range #i5 :label1 :+1 #i2
+
+pln
+
+// range指令后带三个整数表示指定步长的范围遍历
+// 这里是遍历整数20到50，步长为5，也就是
+// 依次取20, 25, 30, 35, 40, 45共6个遍历值
+// 对应循环序号是0, 1, 2, 3, 4, 5
+// 因此，完整的range指令应该类似：range 需遍历的值 继续遍历循环标号 跳出遍历循环标号 起始值 结束值（不含） 步长
+// 对于数字的遍历，“需遍历的值”应于“结束值”一致，对于数组等的遍历，需遍历的值为数组等对象，起始值、结束值为整数
+// range from 20 to 50, step 5(if not set, the default step is always 1)
+// range value for each round will be: 20, 25, 30, 35, 40, 45
+// range index will be: 0, 1, 2, 3, 4, 5
+range #i50 :label1 :+1 #i20 #i50 #i5
+
+pln
+
+// 浮点数的遍历与整数类似，注意如果不指定步长，默认步长为1.0
+// range of float value is the same as integer, if the step is not set, the default step is 1.0
+// range value for each round will be: 0.2, 0.7, 1.2
+// range index will be: 0, 1, 2
+range #f1.6 :label1 :+1 #f0.2 #f1.6 #f0.5
+
+pln
+
+// 本例中步长为负值
+// 将遍历12, 9, 6, 3, 0这5个值
+// 并输出60除以这些值的结果
+// 遍历过程中遇到为0的遍历值时，因为除数为零属于错误，会检查出错误信息并继续执行
+// the step could be a negative value
+// the last parameter is direction: 0(default): >=, 1: <=, 2: >, 3: <, 4: ==, means the condition operator to terminate the range loop
+// in most cases, for positive range(0, 1, 2...), it should be 0, for negative range(9, 8, 7...), it will be 1
+// range value for each round will be: 12, 9, 6, 3, 0
+// the output will be 60 / range value
+// range index will be: 0, 1, 2, 3, 4
+// when range to value of 0, will trigger the error handler
+range #i-9 :label2 :+1 #i12 #i-9 #i-3 1
+
+exit
+
+:label1
+    // 遍历与循环一样，用getIter指令获取序号值与遍历值
+    // get the range index and value
+    getIter $i $v
+
+    pln $i -> $v
+
+    continue
+
+:label2
+
+    getIter $i $v
+
+    div $rs1 #i60 $v
+
+    ifErrX $rs1 :+1 :+3
+        pl "failed to cal (60 / %v): %v" $v $rs1
+        continue     
+    
+    pl "%v -> 60 / %v = %v" $i $v $rs1
+
+    continue
+
+```
+
+运行结果是：
+
+The operation effect is as follows:
+
+```shell
+0 -> 0
+1 -> 1
+2 -> 2
+3 -> 3
+4 -> 4
+
+0 -> 2
+1 -> 3
+2 -> 4
+
+0 -> 20
+1 -> 25
+2 -> 30
+3 -> 35
+4 -> 40
+5 -> 45
+
+0 -> 0.2
+1 -> 0.7
+2 -> 1.2
+
+0 -> 60 / 12 = 5
+1 -> 60 / 9 = 6
+2 -> 60 / 6 = 10
+3 -> 60 / 3 = 20
+failed to cal (60 / 0): failed: runtime error: integer divide by zero(60, 0)
+5 -> 60 / -3 = -20
+6 -> 60 / -6 = -10
+```
+
+&nbsp;
+
+##### - **switch分支**（switch branches）
+
+&nbsp;
+
+如同其他语言中的switch语句，谢语言中也支持用switch指令实现多种条件分支的便捷跳转，请看下面的例子（switch.xie）：
+
+Like switch statements in other languages, Xielang also supports the use of switch instructions to achieve convenient jumps of multiple conditional branches. Please see the following example (switch.xie):
+
+```go
+= $a "abc"
+
+// switch指令后，第一个参数是要判断的变量或数值
+// 后面是一个个的数值与标号对，符合某个数值的情况下，将跳转到对应的标号
+// 最后可以有一个单独的标号，表示默认跳转，即不符合任何条件的情况下跳转到哪里，默认是:+1，即下一条指令
+// After the switch command, the first parameter is the variable or value to determine
+// The following is a pair of numerical values and labels. If a certain value is met, it will jump to the corresponding label
+// Finally, there can be a separate label indicating the default jump, that is, where to jump if any conditions are not met. The default is:+1, that is, the next instruction
+switch $a "123" :label1  "abc" :label2 :label3
+
+:label1
+    pln label1
+    exit
+
+:label2
+    pln label2
+    exit
+
+:label3
+    pln label3
+    exit
+
+```
+
+本例应该跳转到label2。
+
+This example should jump to label2
+
 &nbsp;
 
 ##### - **函数调用**
 
 &nbsp;
 
-谢语言中的函数调用分为快速函数调用、一般函数调用和封装函数调用，先介绍一般函数调用，一般函数调用的标准结构如下（func.xie）：
+谢语言中的函数调用分为快速函数调用、一般函数调用和封装函数调用等好几种，各有不同的优缺点，需要熟悉以便在不同场景下选择合适的调用方式。先介绍一般函数调用，一般函数调用的标准结构如下（func.xie）：
 
   ```go
 // 将变量s赋值为一个多行字符串

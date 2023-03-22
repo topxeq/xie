@@ -1,0 +1,21 @@
+= $a "abc"
+
+// switch指令后，第一个参数是要判断的变量或数值
+// 后面是一个个的数值与标号对，符合某个数值的情况下，将跳转到对应的标号
+// 最后可以有一个单独的标号，表示默认跳转，即不符合任何条件的情况下跳转到哪里，默认是:+1，即下一条指令
+// After the switch command, the first parameter is the variable or value to determine
+// The following is a pair of numerical values and labels. If a certain value is met, it will jump to the corresponding label
+// Finally, there can be a separate label indicating the default jump, that is, where to jump if any conditions are not met. The default is:+1, that is, the next instruction
+switch $a "123" :label1  "abc" :label2 :label3
+
+:label1
+    pln label1
+    exit
+
+:label2
+    pln label2
+    exit
+
+:label3
+    pln label3
+    exit
