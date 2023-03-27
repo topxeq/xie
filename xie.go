@@ -213,7 +213,9 @@ var InstrNameSet map[string]int = map[string]int{
 	"ifErr":  651, // if error or TXERROR string then ... else ...
 	"ifErrX": 651,
 
-	"switch": 691, // 用法：switch $condition1 $value1 :label1 $value2 :label2 ... :defaultLabel
+	"switch": 691, // 用法：switch $variableOrValue $value1 :label1 $value2 :label2 ... :defaultLabel
+
+	"switchCond": 693, // 用法：switch $condition1 :label1 $condition2 :label2 ... :defaultLabel
 
 	// compare related
 	"==": 701, // 判断两个数值是否相等，无参数时，比较两个弹栈值，结果压栈；参数为1个时是结果参数，两个数值从堆栈获取；参数为2个时，表示两个数值，结果压栈；参数为3个时，第一个参数是结果参数，后两个为待比较数值
@@ -7253,6 +7255,57 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		for i := 0; i < lenT; i++ {
 			if v1 == vs[i*2] {
+				labelT := vs[i*2+1]
+
+				// tk.Pl("labelT: %v", labelT)
+
+				c := r.GetLabelIndex(labelT)
+
+				// c, ok := labelT.(int)
+
+				if c >= 0 {
+					return c
+				} else {
+					return p.Errf(r, "标号格式错误：%T(%v)", labelT, labelT)
+				}
+			}
+		}
+
+		if len1T > (lenT * 2) {
+			labelT := vs[len1T-1]
+
+			c := r.GetLabelIndex(labelT)
+
+			if c >= 0 {
+				return c
+			} else {
+				return p.Errf(r, "标号格式错误：%T(%v)", labelT, labelT)
+			}
+
+		}
+
+		return ""
+
+	case 693: // switchCond
+		if instrT.ParamLen < 3 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		vs := p.ParamsToList(r, instrT, 0)
+
+		len1T := len(vs)
+
+		lenT := len1T / 2
+
+		for i := 0; i < lenT; i++ {
+			objT := vs[i*2]
+
+			nv, ok := objT.(string)
+			if ok {
+				objT = QuickEval(nv, p, r)
+			}
+
+			if tk.ToBool(objT) {
 				labelT := vs[i*2+1]
 
 				// tk.Pl("labelT: %v", labelT)

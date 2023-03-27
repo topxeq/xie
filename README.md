@@ -44,6 +44,7 @@ Xielang is a free, open-source, cross-platform, cross-language, ASM/SHELL-like, 
   - [- **range嵌套**（range in range）](#--range嵌套range-in-range)
   - [- **更多range数字的例子**（range numbers）](#--更多range数字的例子range-numbers)
   - [- **switch分支**（switch branches）](#--switch分支switch-branches)
+  - [- **switchCond分支**（switchCond branches）](#--switchcond分支switchcond-branches)
   - [- **函数调用**](#--函数调用)
   - [- **全局变量和局部变量**](#--全局变量和局部变量)
   - [- **快速函数**](#--快速函数)
@@ -2384,6 +2385,45 @@ switch $a "123" :label1  "abc" :label2 :label3
 本例应该跳转到label2。
 
 This example should jump to label2.
+
+&nbsp;
+
+##### - **switchCond分支**（switchCond branches）
+
+&nbsp;
+
+谢语言中还有一种类似switch指令的写法是switchCond指令，也可以实现多种条件分支的便捷跳转，比switch更接近于其他语言中的if...else if...else...结构，请看下面的例子（switchCond.xie）：
+
+In Xielang, another method similar to the switch instruction is the switchCond instruction, which can also achieve convenient jumps of multiple conditional branches, which is closer to the structure of "if ... else if ... else..." in other languages, please see the following example (switchCond.xie):
+
+```go
+= $a "abc"
+
+// switchCond指令后，是一个个的表达式（也可以是标识表达式的字符串）与标号对
+// 这些表达式将一个个被依次计算，如果遇到有结果的布尔值为true的，将跳转到其对应的标号
+// 最后可以有一个单独的标号，表示默认跳转，即不符合任何条件的情况下跳转到哪里，默认是:+1，即下一条指令
+// After the switchCond instruction, there are expression and label pairs one by one
+// These expressions will be evaluated one by one, and if a Boolean value with a result is true, it will jump to its corresponding label
+// Finally, there can be a separate label indicating the default jump, that is, where to jump if any conditions are not met. The default is:+1, that is, the next instruction
+switchCond @`$a == "123"` :label1  `$a > "aaa"` :label2 :label3
+
+:label1
+    pln label1
+    exit
+
+:label2
+    pln label2
+    exit
+
+:label3
+    pln label3
+    exit
+
+```
+
+本例也会跳转到label2。
+
+This example should jump to label2 as well.
 
 &nbsp;
 
