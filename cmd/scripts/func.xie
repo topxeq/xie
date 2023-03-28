@@ -1,41 +1,68 @@
+// 本例展示一般函数调用的方法
+// 通过堆栈传入并传出参数
+// This example shows the method of general function calls
+// Pass in and out parameters through the stack
+
 // 将变量s赋值为一个多行字符串
+// Assign the variable s to a multiline string
 assign $s ` ab c123 天然
 森林 `
 
-// 输出变量s中的值
-// plv会用内部表达形式输出后面变量中的值
+// 输出变量s中的值作为为参考
+// plv指令会用内部表达形式输出后面变量中的值
 // 例如会将其中的换行符等转义
+// The value in the output variable s is used as a reference
+// The plv instruction outputs the values in the following variables in an internal representation
+// For example, it will escape line breaks and other characters
 plv $s
 
 // 将变量s中的值压栈
+// Push the value in variable s onto the stack
 push $s
 
 // 调用函数func1
 // 即跳转到标号func1处
 // 而ret命令将返回到call语句的下一行有效代码处
-call :func1
+// call指令后第一个参数为函数返回值，此处我们不用，所以用$drop变量将其丢弃
+// Call function func1
+// Jump to the label func1
+// And the ret command will return to the next valid line of code in the call statement
+// The first parameter after the call instruction is the function return value, which we do not use here, so we use the $drop variable to discard it
+call $drop :func1
 
-// 弹栈到变量s中
+// 弹栈到变量s中，以便获取函数中通过堆栈传出的参数
+// Pop the stack into the variable s to obtain the parameters in the function that pass through the stack
 pop $s
 
 // 再次输出变量s中的值
+// Output the value in the variable s again
 plv $s
 
 // 终止代码执行
+// Terminate code execution
 exit
 
 // 标号func1
 // 也是函数的入口
 // 一般称作函数func1
+// Label func1
+// Is also the entry point of the function
+// It is commonly referred to as the function func1
 :func1
-    // 弹栈到变量v中
+    // 弹栈到变量v中，以便获取通过堆栈传入的参数
+    // Pop the stack into the variable v to obtain the parameters passed through the stack
     pop $v
 
     // 将变量v中字符串做trim操作
     // 即去掉首尾的空白字符
     // 结果压入栈中
+    // Trim the string in variable v
+    // That is, remove the first and last white space characters
+    // Results pushed onto the stack
     trim $push $v
 
     // 函数返回
     // 从相应call指令的下一条指令开始继续执行
+    // Function return
+    // Continue execution from the next instruction of the corresponding call instruction
     ret

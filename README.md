@@ -2431,61 +2431,95 @@ This example should jump to label2 as well.
 
 &nbsp;
 
-谢语言中的函数调用分为快速函数调用、一般函数调用和封装函数调用等好几种，各有不同的优缺点，需要熟悉以便在不同场景下选择合适的调用方式。先介绍一般函数调用，一般函数调用的标准结构如下（func.xie）：
+谢语言中的函数调用分为快速函数调用、一般函数调用和封装函数调用等多种方式，各有不同的优缺点，需要分别熟悉以便在不同场景下选择合适的调用方式。先介绍一般函数调用，一般函数调用的标准结构如下（func.xie）：
+Function calls in Xielang can be divided into multiple methods, such as fast function calls, general function calls, and encapsulated function calls. Each method has different advantages and disadvantages, and it is necessary to be familiar with each method to select the appropriate call method in different scenarios. First, introduce general function calls. The standard structure of general function calls is as follows (func.xie):
 
-  ```go
+```go
+// 本例展示一般函数调用的方法
+// 通过堆栈传入并传出参数
+// This example shows the method of general function calls
+// Pass in and out parameters through the stack
+
 // 将变量s赋值为一个多行字符串
+// Assign the variable s to a multiline string
 assign $s ` ab c123 天然
 森林 `
 
-// 输出变量s中的值
-// plv会用内部表达形式输出后面变量中的值
+// 输出变量s中的值作为为参考
+// plv指令会用内部表达形式输出后面变量中的值
 // 例如会将其中的换行符等转义
+// The value in the output variable s is used as a reference
+// The plv instruction outputs the values in the following variables in an internal representation
+// For example, it will escape line breaks and other characters
 plv $s
 
 // 将变量s中的值压栈
+// Push the value in variable s onto the stack
 push $s
 
 // 调用函数func1
 // 即跳转到标号func1处
 // 而ret命令将返回到call语句的下一行有效代码处
-call :func1
+// call指令后第一个参数为函数返回值，此处我们不用，所以用$drop变量将其丢弃
+// Call function func1
+// Jump to the label func1
+// And the ret command will return to the next valid line of code in the call statement
+// The first parameter after the call instruction is the function return value, which we do not use here, so we use the $drop variable to discard it
+call $drop :func1
 
-// 弹栈到变量s中
+// 弹栈到变量s中，以便获取函数中通过堆栈传出的参数
+// Pop the stack into the variable s to obtain the parameters in the function that pass through the stack
 pop $s
 
 // 再次输出变量s中的值
+// Output the value in the variable s again
 plv $s
 
 // 终止代码执行
+// Terminate code execution
 exit
 
 // 标号func1
 // 也是函数的入口
 // 一般称作函数func1
+// Label func1
+// Is also the entry point of the function
+// It is commonly referred to as the function func1
 :func1
-    // 弹栈到变量v中
+    // 弹栈到变量v中，以便获取通过堆栈传入的参数
+    // Pop the stack into the variable v to obtain the parameters passed through the stack
     pop $v
 
     // 将变量v中字符串做trim操作
     // 即去掉首尾的空白字符
     // 结果压入栈中
+    // Trim the string in variable v
+    // That is, remove the first and last white space characters
+    // Results pushed onto the stack
     trim $push $v
 
     // 函数返回
     // 从相应call指令的下一条指令开始继续执行
+    // Function return
+    // Continue execution from the next instruction of the corresponding call instruction
     ret
 
-
-  ```
+```
 
 上面代码中，plv指令会输出后面值的内部形式，主要为了调试时便于看出其中值的类型。call标号加ret指令是谢语言实现函数的基本方法，call语句将保存当前程序所处的代码位置，然后调用指定标号处的代码，直至ret语句时将返回到call时代码位置的下一条指令继续执行。这就实现了一个基本函数调用的逻辑。
+
+In the above code, the plv instruction will output the internal form of the following values, mainly to facilitate the identification of the type of values during debugging. The call label plus the ret instruction is the basic method for Xielang to implement functions. The call statement will save the code location of the current program, and then call the code at the specified label until the ret statement returns to the next instruction at the code location at the time of the call to continue execution. This implements a basic function call logic.
     
 &nbsp;
 
-如果要给函数传递参数，则一般通过堆栈来进行。同样地，函数返回值也通过堆栈来传递。trim指令实际上是对后面的变量进行去字符串首尾空白的操作，然后通过预置全局变量\$push进行压栈操作。
+如果要给函数传递参数，可以通过堆栈来进行。同样地，函数返回值也可以通过堆栈来传递。trim指令实际上是对后面的变量进行去字符串首尾空白的操作，然后通过预置全局变量\$push进行压栈操作。
 
-   
+If you want to pass parameters to a function, you can do so through the stack. Similarly, function return values can also be passed through the stack. The trim instruction actually performs a whitespace removal operation on the following variables, and then performs a stack pushing operation by presetting the global variable \$push.
+
+函数调用的其他方法将在后面逐一介绍。
+
+The other methods of function calls will be described one by one later.
+
 &nbsp;
 
 ##### - **全局变量和局部变量**
