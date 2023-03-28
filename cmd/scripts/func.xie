@@ -11,7 +11,7 @@ assign $s ` ab c123 天然
 // 输出变量s中的值作为为参考
 // plv指令会用内部表达形式输出后面变量中的值
 // 例如会将其中的换行符等转义
-// The value in the output variable s is used as a reference
+// Print the value in the variable s for reference
 // The plv instruction outputs the values in the following variables in an internal representation
 // For example, it will escape line breaks and other characters
 plv $s

@@ -45,7 +45,8 @@ Xielang is a free, open-source, cross-platform, cross-language, ASM/SHELL-like, 
   - [- **更多range数字的例子**（range numbers）](#--更多range数字的例子range-numbers)
   - [- **switch分支**（switch branches）](#--switch分支switch-branches)
   - [- **switchCond分支**（switchCond branches）](#--switchcond分支switchcond-branches)
-  - [- **函数调用**](#--函数调用)
+  - [- **函数调用**（Function call）](#--函数调用function-call)
+  - [- **函数调用时传递参数**（passing/retieving parameters in function call）](#--函数调用时传递参数passingretieving-parameters-in-function-call)
   - [- **全局变量和局部变量**](#--全局变量和局部变量)
   - [- **快速函数**](#--快速函数)
   - [- **取变量引用及取引用对应的变量实际值**](#--取变量引用及取引用对应的变量实际值)
@@ -2427,7 +2428,7 @@ This example should jump to label2 as well.
 
 &nbsp;
 
-##### - **函数调用**
+##### - **函数调用**（Function call）
 
 &nbsp;
 
@@ -2448,7 +2449,7 @@ assign $s ` ab c123 天然
 // 输出变量s中的值作为为参考
 // plv指令会用内部表达形式输出后面变量中的值
 // 例如会将其中的换行符等转义
-// The value in the output variable s is used as a reference
+// Print the value in the variable s for reference
 // The plv instruction outputs the values in the following variables in an internal representation
 // For example, it will escape line breaks and other characters
 plv $s
@@ -2519,6 +2520,93 @@ If you want to pass parameters to a function, you can do so through the stack. S
 函数调用的其他方法将在后面逐一介绍。
 
 The other methods of function calls will be described one by one later.
+
+&nbsp;
+
+##### - **函数调用时传递参数**（passing/retieving parameters in function call）
+
+&nbsp;
+
+上例中的函数调用，使用堆栈作为参数传递的路径。实际上，一般函数调用的参数传递还可以使用局部变量\$inputL和\$outL，这也是大多数函数调用时参数传递的常用方式。看下面的例子（func1.xie）来了解这种方式：
+
+```go
+// 本例展示一般函数调用的方法
+// 通过$inputL和$outL堆栈来传入并传出参数
+// This example shows the method of general function calls
+// Pass in and out parameters through the $inputL and $outL stacks
+
+// 将变量s赋值为一个多行字符串
+// Assign the variable s to a multiline string
+assign $s ` ab c123 天然
+森林 `
+
+// 输出变量s中的值作为为参考
+// Print the value in the variable s for reference
+plv $s
+
+// 调用函数func1
+// call指令后第一个参数为函数返回值，函数标号后的参数为输入参数，可以为0个、1个或多个
+// 这些参数将以数组的形式传入到函数内的局部变量$inputL中
+// Call function func1
+// The first parameter after the call instruction is the function return value, and the parameters after the function label are the input parameters, which can be 0, 1, or more
+// These parameters will be passed as an array into the local variable $inputL within the function
+call $rs :func1 $s
+
+// 再次输出变量s中的值
+// Output the value in the variable s again
+plv $rs
+
+// 调用函数func2
+// Call the function func2
+call $rs :func2 $s
+
+// 再次输出变量s中的值
+// Output the value in the variable s again
+plv $rs
+
+// 终止代码执行
+// Terminate code execution
+exit
+
+// 函数func1
+// Function func1
+:func1
+    // 获取$inputL中的第一项，及我们传入的参数s
+    // Get the first item in $inputL and the parameters we passed in, s
+    getArrayItem $strL $inputL 0
+
+    // 将变量strL中的字符串做trim操作
+    // 结果存入变量outL中，这是约定的函数返回值的变量
+    // Trim the string in variable strL
+    // The result is stored in the variable outL, which is the default variable returned by the function
+    trim $outL $strL
+
+    // 函数返回
+    // Function return
+    ret
+
+// 函数func2
+// Function func2
+:func2
+    // 获取$inputL中的第一项，及我们传入的参数s
+    // Get the first item in $inputL and the parameters we passed in, s
+    getArrayItem $strL $inputL 0
+
+    // 将变量strL中的字符串做trim操作
+    // 结果存入变量outL中，这是约定的函数返回值的变量
+    // Trim the string in variable strL
+    // The result is stored in the variable rsL
+    trim $rsL $strL
+
+    // 函数返回时，如果ret指令后面带有一个参数，将被自动存入$outL中，达到函数返回值的目的
+    // When a function returns, if the ret instruction is followed by a parameter, it will be automatically stored in $outL to achieve the purpose of returning the value of the function
+    ret $rsL
+
+```
+
+本例演示了通过\$inputL和\$outL来传递函数的入参和出参，也演示了用ret指令后跟随出参的方式代替\$outL的方法。
+
+This example demonstrates passing in and out parameters of a function through \$inputL and \$outL. It also demonstrates the method of replacing \$outL with a ret instruction followed by an out parameter.
 
 &nbsp;
 
