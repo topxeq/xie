@@ -74,6 +74,14 @@ systemCmd $rs "xie" "-gopath" "fastCall.xie"
 
 test $rs "124\n" $seq "fastCall.xie"
 
+systemCmd $rs "xie" "-gopath" "func.xie"
+
+test $rs "\" ab c123 天然\\n森林 \"\n\"ab c123 天然\\n森林\"\n" $seq "func.xie"
+
+systemCmd $rs "xie" "-gopath" "func1.xie"
+
+test $rs "\" ab c123 天然\\n森林 \"\n\"ab c123 天然\\n森林\"\n\"ab c123 天然\\n森林\"\n" $seq "func1.xie"
+
 systemCmd $rs "xie" "-gopath" "local.xie"
 
 test $rs "1.6 2.8 undefined undefined\n2.5 10 abc true\nfunction result: done\n2.5 2.8 undefined true\n" $seq "local.xie"

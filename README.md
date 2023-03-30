@@ -47,8 +47,8 @@ Xielang is a free, open-source, cross-platform, cross-language, ASM/SHELL-like, 
   - [- **switchCond分支**（switchCond branches）](#--switchcond分支switchcond-branches)
   - [- **函数调用**（Function call）](#--函数调用function-call)
   - [- **函数调用时传递参数**（passing/retieving parameters in function call）](#--函数调用时传递参数passingretieving-parameters-in-function-call)
-  - [- **全局变量和局部变量**](#--全局变量和局部变量)
-  - [- **快速函数**](#--快速函数)
+  - [- **全局变量和局部变量**（Global and local variables）](#--全局变量和局部变量global-and-local-variables)
+  - [- **快速函数**（Fast functions）](#--快速函数fast-functions)
   - [- **取变量引用及取引用对应的变量实际值**](#--取变量引用及取引用对应的变量实际值)
   - [- **复杂数据类型-列表**](#--复杂数据类型-列表)
   - [- **复杂数据类型-映射**](#--复杂数据类型-映射)
@@ -2610,59 +2610,84 @@ This example demonstrates passing in and out parameters of a function through \$
 
 &nbsp;
 
-##### - **全局变量和局部变量**
+##### - **全局变量和局部变量**（Global and local variables）
 
 &nbsp;
 
 一般函数中会具有自己的局部变量空间，在函数中定义的变量（使用var指令），只能在函数内部使用，函数返回后将不复存在。而对变量值取值使用的情况，函数会先从局部变量寻找，如果有则使用之，如果没有该名字的变量则会到上一级函数（如果有的话，因为函数可以层层嵌套）中寻找，直至寻找到全局变量为止仍未找到才会返回“未定义”。对变量进行赋值操作的情况（对变量），如果在进入函数前没有定义过，则也会层层向上寻找，如果全没有找到，则会在本函数的空间内创建一个新的局部变量。如果要在函数中创建全局变量，则需要使用global指令。global指令与var指令用法一致，唯一的区别就是global指令将声明一个全局变量。看下面的例子（local.xie）来了解全局变量和局部变量的使用：
 
-  ```go
-    // 给全局变量a和b赋值为浮点数
-    assign $a #f1.6
-    assign $b #f2.8
+Generally, a function will have its own local variable space. Variables defined in the function (using the var instruction) can only be used inside the function, and will no longer exist after the function returns. For the use of variable values, the function will first search for local variables, if any, use them. If there is no variable with that name, it will search for a higher level function (if any, because the function can be nested hierarchically). Until the global variable is found and still not found, it will return "undefined". When performing an assignment operation on a variable (for a variable), if it has not been defined before entering the function, it will also be searched up layer by layer. If none is found, a new local variable will be created in the space of the function. If you want to create global variables in a function, you need to use the global directive. The global directive is used in the same way as the var directive, with the only difference being that the global directive declares a global variable. Look at the following example (local.xie) to understand the use of global and local variables:
 
-    // 调用函数func1
-    call :func1
+```go
+// 给全局变量a和b赋值为浮点数
+// assign float values to variabe $a and $b
+assign $a #f1.6
+assign $b #f2.8
 
-    // 输出调用函数后a、b、c、d四个变量的值
+// 调用函数func1
+// call function from label 'func1'
+// and get the return result in variabe $rs
+// the callFunction should return result in local variable $outL, or use instruction "ret" with a paramter for it
+call $rs :func1
+
+// 输出函数返回值
+pln "function result:" $rs
+
+// 输出调用函数后a、b、c、d四个变量的值
+// output all the 4 variables after calling function :func1
+pln $a $b $c $d
+
+// 退出程序执行
+// terminate the program
+exit
+
+// 函数func1
+// function 'func1'
+:func1
+    // 输出进入函数时a、b、c、d四个变量的值
+    // output all the 4 variables for reference
     pln $a $b $c $d
 
-    // 退出程序执行
-    exit
+    // 将变量a与0.9相加后将结果再放入变量a中
+    // add $a and float value 0.9, put the result again to $a
+    add $a $a #f0.9
 
-    // 函数func1
-    :func1
-        // 输出进入函数时a、b、c、d四个变量的值
-        pln $a $b $c $d
+    // 声明一个局部变量b（与全局变量b是两个变量）
+    // define a local variable with the same name $b as the global one(but they are completely different variables)
+    var $b
 
-        // 将变量a与0.9相加后将结果再放入变量a中
-        add $a $a #f0.9
+    // 给局部变量b赋值为整数9
+    // assign an integer value 9 to local variable $b
+    assign $b #i9
 
-        // 声明一个局部变量b（与全局变量b是两个变量）
-        var $b
+    // 将局部变量b中的值加1
+    // increase the number of local $b by 1
+    inc $b
 
-        // 给局部变量b赋值为整数9
-        assign $b #i9
+    // 将变量c赋值为字符串
+    // assing a string value 'abc' to variable $c, also a local variable since not declared in global context
+    = $c `abc`
 
-        // 将局部变量b中的值加1
-        inc $b
+    // 声明一个全局变量d
+    // explicitly declare a global variabe $d
+    global $d
 
-        // 将变量c赋值为字符串
-        = $c `abc`
+    // 给变量d赋值为布尔值true
+    // assign a bool value 'true' to global variable $d
+    = $d #btrue
 
-        // 声明一个全局变量d
-        global $d
+    // 退出函数时输出a、b、c、d四个变量的值
+    // output all the 4 variables for reference
+    pln $a $b $c $d
 
-        // 给变量d赋值为布尔值true
-        = $d #btrue
-
-        // 退出函数时输出a、b、c、d四个变量的值
-        pln $a $b $c $d
-
-        ret
-  ```
+    // 函数返回，并带一个返回值
+    // return from the function call, with a result value "done"
+    ret "done"
+```
 
 注意其中的“=”是assign指令的另一种简便写法，另外assign指令前如果没有用global或var指令生命变量，相当于先用var命令声明一个变量然后给其赋值。这段代码的运行结果是：
+
+Note that "=" is another convenient way to write the assign instruction. In addition, if the global or var instruction is not used before the assign instruction, it is equivalent to declaring a variable with the var command and assigning a value to it. The result of running this code is:
 
   ```
     1.6 2.8 未定义 未定义
@@ -2672,48 +2697,65 @@ This example demonstrates passing in and out parameters of a function through \$
 
 注意其中4个变量a、b、c、d的区别，可以看出：变量a是在主代码中定义的全局变量，在函数func1中对其进行了计算（将a与0.9相加后的结果又放入a中）后，最后出了函数体之后的输出仍然是计算后的值，说明函数中操作的是全局变量；变量b则是在函数中定义了一个同名的局部变量，因此在函数中虽然有所变化，但退出函数后其值会变回原来的值，其实是局部变量b已经被销毁，此时的b是全局变量b；变量c完全是函数内的局部变量，因此入函数前和出了函数后都是“未定义”；变量c则是在函数中用global指令新建的全局变量，因此退出函数后任然有效。
 
-&nbsp;
-
-##### - **快速函数**
+Note the differences between the four variables a, b, c, and d, and it can be seen that variable a is a global variable defined in the main code. After calculating it in function func1 (adding the result of a and 0.9 into a), the output after the function body is finally output is still the calculated value, indicating that the function operates on global variables; Variable b refers to a local variable with the same name defined in the function. Therefore, although there are changes in the function, its value will change back to the original value after exiting the function. In fact, the local variable b has been destroyed, and at this time, b is the global variable b; The variable c is completely a local variable within the function, so both before and after entering the function are "undefined"; The variable c is a new global variable created in the function using the global instruction, so it remains valid after exiting the function.
 
 &nbsp;
 
-快速函数与一般函数的区别是：快速函数不会有自己的独立变量空间。快速函数与主函数（指不属于任何函数的代码所处的环境）共享同一个变量空间，在其中定义和使用的变量都将是全局变量。使用快速函数的好处是，速度比一般函数更快，因为减少了分配函数局部空间的开销。对一些实现简单功能的函数来说，有时候这是很好的选择。
+##### - **快速函数**（Fast functions）
+
+&nbsp;
+
+快速函数与一般函数的区别是：快速函数不会有自己的独立变量空间。快速函数与主函数（指不属于任何函数的代码所处的环境）共享同一个变量空间，在其中定义和使用的变量都将是全局变量。使用快速函数的好处是，速度比一般函数更快，因为减少了分配函数局部空间的开销。对一些实现简单功能的函数来说，有时候这是很好的选择。与快速函数传递参数可以使用堆栈或变量。
+
+The difference between fast functions and general functions is that fast functions do not have their own independent variable space. The fast function shares the same variable space as the main function (the environment in which code that does not belong to any function), and the variables defined and used in it will be global variables. The advantage of using fast functions is that they are faster than regular functions because they reduce the overhead of allocating function local space. Sometimes this is a good choice for functions that implement simple functions. Passing parameters with fast functions can use a stack or variable.
 
 快速函数类似call与ret的配对指令，使用fastCall与fastRet两个指令来控制函数调用与返回。下面是例子（fastCall.xie）：
 
-  ```go
-    // 将两个整数压栈
-    push #i108
-    push #i16
+The fast function is similar to the pairing instruction of call and ret, using two instructions, fastCall and fastRet, to control function calls and returns. The following is an example (fastCall.xie):
 
-    // 快速调用函数func1
-    // 而fastRet命令将返回到fastCall语句的下一行有效代码处
-    fastCall :func1
+```go
+// 将两个整数压栈
+// push 2 integer values
+push #i108
+push #i16
 
-    // 输出弹栈值（为函数func1压栈的返回结果）
-    plv $pop
+// 快速调用函数func1
+// 而fastRet命令将返回到fastCall语句的下一行有效代码处
+// fast call func1
+fastCall :func1
 
-    // 终止代码执行
-    exit
+// 输出弹栈值（为函数func1压栈的返回结果）
+// output the value upmost of the stack
+plv $pop
 
-    // 函数func1
-    // 功能是将两个数相加
-    :func1
-        // 弹栈两个数值
-        pop $v2
-        pop $v1
+// 终止代码执行
+// terminate the program
+exit
 
-        // 将两个数值相加后压栈
-        add $push $v1 $v2
+// 函数func1
+// 功能是将两个数相加
+// function func1
+// add 2 nubmers
+:func1
+    // 弹栈两个数值
+    // pop 2 values from stack to add
+    pop $v2
+    pop $v1
 
-        // 函数返回
-        // 从相应fastCall指令的下一条指令开始继续执行
-        fastRet
+    // 将两个数值相加后压栈
+    // add 2 nubmers and push the result to the stack
+    add $push $v1 $v2
 
-  ```
+    // 函数返回（也可以用ret指令）
+    // 从相应fastCall指令的下一条指令开始继续执行
+    // return, continue to the next command of the fastCall(ret is also valid instead of fastRet)
+    fastRet
+
+```
 
 运行结果为：
+
+The running result is:
 
 ```shell
 124
