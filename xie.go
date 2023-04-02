@@ -49,7 +49,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var VersionG string = "1.1.6"
+var VersionG string = "1.1.7"
 
 func Test() {
 	tk.Pl("test")
@@ -392,7 +392,8 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"strAdd": 1520,
 
-	"strSplit": 1530, // 按指定分割字符串分割字符串，结果参数不可省略，用法示例：strSplit $result $str1 "," 3，其中第3个参数可选（即可省略），表示结果列表最多的项数（例如为3时，将只按逗号分割成3个字符串的列表，后面的逗号将忽略；省略或为-1时将分割出全部）
+	"strSplit":      1530, // 按指定分割字符串分割字符串，结果参数不可省略，用法示例：strSplit $result $str1 "," 3，其中第3个参数可选（即可省略），表示结果列表最多的项数（例如为3时，将只按逗号分割成3个字符串的列表，后面的逗号将忽略；省略或为-1时将分割出全部）
+	"strSplitByLen": 1533, // 按长度拆分一个字符串为数组，注意由于是rune，可能不是按字节长度，例： strSplitByLen $listT $strT 10，可以加第三个参数表示字节数不能超过多少，加第四个参数表示分隔符（遇上分隔符从分隔符后重新计算长度，也就是说分割长度可以超过指定的个数，一般用于有回车的情况）
 
 	"strReplace":   1540, // 字符串替换，用法示例：strReplace $result $str1 $find $replacement
 	"strReplaceIn": 1543, // 字符串替换，可同时替换多个子串，用法示例：strReplace $result $str1 $find1 $replacement1 $find2 $replacement2
@@ -429,7 +430,8 @@ var InstrNameSet map[string]int = map[string]int{
 	// binary related 二进制数据相关
 	"bytesToData": 1601,
 	"dataToBytes": 1603,
-	"bytesToHex":  1605,
+	"bytesToHex":  1605, // 以16进制形式输出字节数组
+	"bytesToHexX": 1606, // 以16进制形式输出字节数组，字节中间以空格分割
 
 	// thread related 并发/线程相关
 	"lock":   1701, // lock an object which is lockable
@@ -10825,6 +10827,25 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		return ""
 
+	case 1533: // strSplitByLen
+		if instrT.ParamLen < 3 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		pr := instrT.Params[0]
+
+		s1 := tk.ToStr(p.GetVarValue(r, instrT.Params[1]))
+
+		c2 := tk.ToInt(p.GetVarValue(r, instrT.Params[2]))
+
+		vs := p.ParamsToList(r, instrT, 3)
+
+		listT := tk.SplitByLen(s1, c2, vs...)
+
+		p.SetVar(r, pr, listT)
+
+		return ""
+
 	case 1540: // strReplace
 		if instrT.ParamLen < 3 {
 			return p.Errf(r, "not enough parameters(参数不够)")
@@ -11236,7 +11257,23 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		v1 := p.GetVarValue(r, instrT.Params[v1p]).([]byte)
 
-		p.SetVar(r, pr, tk.BytesToHex(v1))
+		vs := p.ParamsToStrs(r, instrT, v1p+1)
+
+		p.SetVar(r, pr, tk.BytesToHex(v1, vs...))
+
+		return ""
+
+	case 1606: // bytesToHexX
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		pr := instrT.Params[0]
+		v1p := 1
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p]).([]byte)
+
+		p.SetVar(r, pr, tk.BytesToHexX(v1))
 
 		return ""
 
