@@ -49,7 +49,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var VersionG string = "1.1.7"
+var VersionG string = "1.1.8"
 
 func Test() {
 	tk.Pl("test")
@@ -452,6 +452,7 @@ var InstrNameSet map[string]int = map[string]int{
 	"nowStr":        1912, // 获取当前时间字符串的正式表达
 	"nowStrFormal":  1912, // 获取当前时间字符串的正式表达
 	"nowTick":       1913, // 获取当前时间的Unix时间戳形式
+	"timestamp":     1913,
 
 	"nowUTC": 1918,
 
@@ -578,7 +579,7 @@ var InstrNameSet map[string]int = map[string]int{
 	"startHttpsServer": 20153, // 启动https(SSL)服务器，用法示例：startHttpsServer $resultT ":443" $muxT /root/server.crt /root/server.key -go
 
 	// web related WEB相关
-	"getWeb": 20210, // 发送一个HTTP网络请求，并获取响应结果（字符串格式），getWeb指令除了第一个参数必须是返回结果的变量，第二个参数是访问的URL，其他所有参数都是可选的，method可以是GET、POST等；encoding用于指定返回信息的编码形式，例如GB2312、GBK、UTF-8等；headers是一个JSON格式的字符串，表示需要加上的自定义的请求头内容键值对；参数中还可以有一个映射类型的变量或值，表示需要POST到服务器的参数，用法示例：getWeb $resultT "http://127.0.0.1:80/xms/xmsApi" -method=POST -encoding=UTF-8 -timeout=15 -headers=`{"Content-Type": "application/json"}` $mapT
+	"getWeb": 20210, // 发送一个HTTP网络请求，并获取响应结果（字符串格式），getWeb指令除了第一个参数必须是返回结果的变量，第二个参数是访问的URL，其他所有参数都是可选的，method可以是GET、POST等；encoding用于指定返回信息的编码形式，例如GB2312、GBK、UTF-8等；headers是一个JSON格式的字符串，表示需要加上的自定义的请求头内容键值对；参数中还可以有一个映射类型的变量或值，表示需要POST到服务器的参数，另外可加-bytes参数表示传回字节数组结果，用法示例：getWeb $resultT "http://127.0.0.1:80/xms/xmsApi" -method=POST -encoding=UTF-8 -timeout=15 -headers=`{"Content-Type": "application/json"}` $mapT
 
 	"downloadFile": 20220, // 下载文件
 
@@ -13244,7 +13245,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		listT := p.ParamsToList(r, instrT, 2)
 
-		rs := tk.DownloadWebPageX(tk.ToStr(v2), listT...)
+		rs := tk.GetWeb(tk.ToStr(v2), listT...)
 
 		p.SetVar(r, pr, rs)
 
