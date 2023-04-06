@@ -49,7 +49,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var VersionG string = "1.1.8"
+var VersionG string = "1.1.9"
 
 func Test() {
 	tk.Pl("test")
@@ -1512,6 +1512,15 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 
 				// tk.Plv(listT)
 				return VarRef{-3, mapT}
+			} else if typeT == '#' { // regs
+
+				s1DT := s1T[2:] // tk.UrlDecode(s1T[2:])
+
+				if len(s1DT) < 1 {
+					return VarRef{-3, s1T}
+				}
+
+				return VarRef{-17, tk.ToInt(s1T, 0)}
 			}
 
 			return VarRef{-3, s1T}
@@ -1541,14 +1550,14 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 			}
 
 			return VarRef{-10, s1T}
-		} else if strings.HasPrefix(s1T, "^") { // regs
-			if len(s1T) < 2 {
-				return VarRef{-3, s1T}
-			}
+			// } else if strings.HasPrefix(s1T, "^") { // regs
+			// 	if len(s1T) < 2 {
+			// 		return VarRef{-3, s1T}
+			// 	}
 
-			s1T = strings.TrimSpace(s1T[1:])
+			// 	s1T = strings.TrimSpace(s1T[1:])
 
-			return VarRef{-17, tk.ToInt(s1T, 0)}
+			// 	return VarRef{-17, tk.ToInt(s1T, 0)}
 		} else if strings.HasPrefix(s1T, "%") { // compiled
 			if len(s1T) < 2 {
 				return VarRef{-3, s1T}

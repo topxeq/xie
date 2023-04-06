@@ -49,6 +49,7 @@ Xielang is a free, open-source, cross-platform, cross-language, ASM/SHELL-like, 
   - [- **函数调用时传递参数**（passing/retieving parameters in function call）](#--函数调用时传递参数passingretieving-parameters-in-function-call)
   - [- **全局变量和局部变量**（Global and local variables）](#--全局变量和局部变量global-and-local-variables)
   - [- **快速函数**（Fast functions）](#--快速函数fast-functions)
+  - [- **寄存器**（Registers）](#--寄存器registers)
   - [- **取变量引用及取引用对应的变量实际值**](#--取变量引用及取引用对应的变量实际值)
   - [- **复杂数据类型-列表**](#--复杂数据类型-列表)
   - [- **复杂数据类型-映射**](#--复杂数据类型-映射)
@@ -2760,6 +2761,81 @@ The running result is:
 ```shell
 124
 ```
+
+&nbsp;
+
+##### - **寄存器**（Registers）
+
+&nbsp;
+
+如同汇编语言一样，谢语言也提供“寄存器”供便捷的存放和使用数值。谢语言中提供至少30个寄存器，按照数字索引使用，每个寄存器中可以存放一个数值。一定意义上，寄存器可以看做使用索引（而非名称）引用的全局变量。在编写简单的脚本时，有时候使用寄存器比使用变量更方便，代码更简洁。这里先给出一个寄存器使用的例子（reg.xie）以便理解：
+
+Like assembly language, Xielang also provides "registers" for convenient storage and use of numerical values. Xielang provides at least 30 registers, which can be used according to numerical indexes, and each register can store a numerical value. In a certain sense, registers can be seen as global variables referenced using indexes rather than names. When writing simple scripts, sometimes using registers is more convenient and the code is simpler than using variables. Here is an example of using registers (reg.xie) to understand:
+
+```go
+// 本例演示使用寄存器来计算10的阶乘
+// This example demonstrates using registers to calculate the factorial of 10
+
+// 将编号为0的寄存器中存入整数1
+// Store integer 1 in register number 0
+= $#0 #i1
+
+// 将编号为1的寄存器中存入整数1
+// Store integer 1 in register number 1
+= $#1 #i1
+
+// 开始循环，loop1是循环开始的标号
+// Start loop, loop1 is the label for the beginning of the loop
+:loop1
+    // 将寄存器1中的数值加1
+    // Add 1 to the value in register 1
+    inc $#1
+
+    // 输出寄存器0和寄存器1中的数值作为参考
+    // Output the values in register 0 and register 1 as references
+    pln $#0 $#1
+    
+    // 将寄存器0中的数值与寄存器1中的数值相乘，结果存入寄存器0
+    // Multiply the value in register 0 by the value in register 1, and store the result in register 0
+    * $#0 $#0 $#1
+
+    // 如果寄存器1中的数值大于等于10，则跳出循环
+    // If the value in register 1 is greater than or equal to 10, jump out the loop
+    if @"$#1 >= #i10" :end
+
+    // 继续循环
+    // Continue the loop
+    goto loop1
+
+:end
+    // 中止程序运行
+    // Exit the program
+    exit
+
+```
+
+从上面的代码中可以看出，寄存器通过“\$#”加数字来引用，使用方法与变量一致，“\$#0”表示编号为0的寄存器（简称寄存器0），“\$#1”表示编号为1的寄存器（简称寄存器1）。30个寄存器的话，最后一个寄存器编号为29，即“\$#29”。
+
+From the above code, it can be seen that registers are referenced by adding numbers to "\$#", using the same method as variables. "\$#0" represents the register with index 0 (referred to as register 0), and "\$#1" represents the register with index 1 (referred to as register 1). If there are 30 registers, the last register index is 29, i.e. "\$#29".
+
+本段代码的运行结果是：
+
+The running result of the code is as below:
+
+```shell
+1 2
+2 3
+6 4
+24 5
+120 6
+720 7
+5040 8
+40320 9
+362880 10
+
+```
+
+顺利计算出了10的阶乘。
 
 &nbsp;
 
