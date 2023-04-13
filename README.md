@@ -3002,6 +3002,10 @@ As shown above, the runCall instruction can run a compiled piece of code or a ru
 
 Note that the function called by the runCall instruction uses the \$inputL local variable to pass in parameters, which is an array (list). The getArrayItem instruction needs to retrieve each parameter by index from it, and the \$outL parameter needs to be used to pass out return parameters. In addition, the functions called by runCall can access global variables defined in the virtual machine where they are located.
 
+后面在合适的时候，我们还将介绍使用不同运行上下文的并发调用指令goRunCall。
+
+Later, when appropriate, we will also introduce the use of the concurrent call instruction goRunCall with different running contexts.
+
 &nbsp;
 
 ##### - **取变量引用及取引用对应的变量实际值**
