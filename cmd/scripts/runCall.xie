@@ -1,24 +1,29 @@
 // 编译一个函数
 // 然后调用它，传入参数，接收返回值并处理
-// runCall 指令将另起一个运行环境与当前代码运行环境分离以避免冲突
+// runCall 指令将另起一个运行环境（上下文）与当前代码运行环境分离以避免冲突
 // 两者仅共享虚拟机的基础设施（堆栈、寄存器）和全局变量
 // 传递入参在函数中使用inputL变量引用，出参则通过outL变量赋值，如没有赋值outL，则返回undefined
+// Compile a function
+// Then call it, pass in parameters, receive the return value and process
+// The runCall instruction separates another runtime environment (context) from the current code runtime environment to avoid conflicts
+// Both only share the infrastructure (stack, registers) and global variables of the virtual machine
+// Pass in the input parameter and use the inputL variable reference in the function, assign the output parameter to the outL variable, or return undefined if no outL value is assigned
 
 compile $func1 `
-    # plv $inputL
-
+    // 从$inputL中获取外界传入的两个参数
+    // Obtain two parameters passed in from the outside world from $inputL
     getArrayItem $f1 $inputL 0
     getArrayItem $f2 $inputL 1
-
-    # debugInfo $pln
 
     pln arg1= $f1
     pln arg2= $f2
 
+    // 将两个参数相加获取结果
+    // Add two parameters to obtain the result
     add $result $f1 $f2
 
-    pln $result
-
+    // 在变量$outL中放入返回参数
+    // Placing return parameters in variable $outL
     var $outL
     assign $outL $result
 
@@ -26,6 +31,7 @@ compile $func1 `
 `
 
 // 调用函数，并传入两个浮点数作为参数，返回结果存入$rs中
+// Call the function, pass in two floating point numbers as parameters, and store the returned results in $rs
 runCall $rs $func1 #f1.6 #f2.3
 
 pln "runCall result:" $rs

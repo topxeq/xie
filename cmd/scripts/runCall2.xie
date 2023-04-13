@@ -1,0 +1,32 @@
+// extractRun指令将把从标号:func1Start开始到:func1End为止的指令转换为一个运行上下文以便调用
+// The extractRun instruction will convert instructions from label :func1Start to :func1End into a running context for calling
+extractRun $func1 :func1Start :func1End
+
+// runCall指令可以直接将一个运行上下文当做一个函数来调用
+// The runCall instruction can directly call a running context as a function
+runCall $rs $func1 #f1.6 #f2.3
+
+pln "runCall result:" $rs
+
+// 注意要终止代码运行，否则将继续往下执行
+// Be sure to terminate the code run, otherwise it will continue to execute
+exit
+
+// 标记函数开始的标号
+// The label that marks the beginning of a function
+:func1Start
+    getArrayItem $f1 $inputL 0
+    getArrayItem $f2 $inputL 1
+
+    pln arg1= $f1
+    pln arg2= $f2
+
+    add $result $f1 $f2
+
+    var $outL
+    assign $outL $result
+
+// 标记函数结束的标号
+// The label that marks the end of the function
+:func1End
+    exit

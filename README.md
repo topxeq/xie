@@ -51,6 +51,7 @@ Xielang is a free, open-source, cross-platform, cross-language, ASM/SHELL-like, 
   - [- **快速函数**（Fast functions）](#--快速函数fast-functions)
   - [- **寄存器**（Registers）](#--寄存器registers)
   - [- **谢语言的基础设施**（Infrastructure provided by Xielang）](#--谢语言的基础设施infrastructure-provided-by-xielang)
+  - [- **用runCall指令在不同运行上下文中执行代码**（Executing code in different running contexts using the runCall instruction）](#--用runcall指令在不同运行上下文中执行代码executing-code-in-different-running-contexts-using-the-runcall-instruction)
   - [- **取变量引用及取引用对应的变量实际值**](#--取变量引用及取引用对应的变量实际值)
   - [- **复杂数据类型-列表**](#--复杂数据类型-列表)
   - [- **复杂数据类型-映射**](#--复杂数据类型-映射)
@@ -2846,23 +2847,156 @@ The running result of the code is as below:
 
 基础设施是计算机语言提供给开发者使用的各种工具和便利措施，基础设施一定程度上也影响语言代码的结构。谢语言提供了一系列基础设施以保证语言能力并提高开发效率，下面先介绍谢语言基础设施的整体结构，然后按照从底层到高层的顺序介绍谢语言中提供的基础设施。
 
+Infrastructure is a variety of tools and convenience measures provided by computer language for developers to use. Infrastructure also affects the structure of language code to some extent. Xie Language provides a series of infrastructure to ensure language proficiency and improve development efficiency. Below, we will first introduce the overall structure of Xielang's infrastructure, and then introduce the infrastructure provided in Xielang from the bottom to the top in order.
+
 谢语言基础设施的整体结构包括：
 
-- 跨虚拟机的全局上下文
-- 虚拟机
-- 运行上下文
-- 函数上下文
+The overall structure of Xie Language Infrastructure includes:
+
+- 跨虚拟机的全局上下文（Global Context Across Virtual Machines）
+- 虚拟机（Virtual Machines）
+- 运行上下文（Running Context）
+- 函数上下文（Function Context）
 
 一般来说，谢语言中代码是在单独的虚拟机中运行的，虚拟机中提供了堆栈和寄存器等供虚拟机内部的代码使用。一个虚拟机中包含默认的运行上下文和默认的“根”函数上下文。运行上下文包含了代码运行所需的基本信息，有时候也称为“运行环境”。函数是谢语言中组织代码的基本方式，函数上下文包含了函数中代码运行所需的变量等内容。谢语言中，直接编写的代码都是运行在默认运行上下文和根函数上下文中的，在某些情况下，代码也可以运行在不同的运行上下文中；而在进行函数调用操作时，一般代码将在不同函数上下文中运行。
 
+Generally speaking, the code in Xielang runs in a separate virtual machine, which provides stacks and registers for internal code use. A virtual machine contains default runtime context and default 'root' function context. The runtime context contains the basic information required for code execution, sometimes also known as the "runtime environment". Functions are the basic way of organizing code in Xie language, and the function context includes variables and other content required for the code to run in the function. In Xielang, directly written code runs in the default runtime context and root function context, and in some cases, code can also run in different runtime contexts; When performing function call operations, the general code will run in different function contexts.
+
 在并发调用或者某些特殊需要时，谢语言中也可以启动另一个虚拟机来执行代码。谢语言也提供一些跨虚拟机共享的基础设施供所有虚拟机中的代码使用，例如线程安全的队列、堆栈、序号发生器等。
+
+In case of concurrent calls or certain special needs, Xie language can also start another virtual machine to execute code. Xielang also provides some shared infrastructure across virtual machines for code usage in all virtual machines, such as thread safe queues, stacks, sequence generators, etc.
 
 下面详细介绍谢语言中的各个基础设施：
 
+Below is a detailed introduction to the various infrastructure in Xielang:
+
 - **函数上下文**：函数是谢语言中组织代码的基本方式，函数上下文即提供给某个函数中的代码使用的基础设施。函数上下文中的基础设施主要包括：局部变量（仅能再该函数内部使用，并可以被该函数中嵌套调用的函数使用）、\$tmp预置变量（、$tmp虽然说是预置全局变量，但为了尽量减少干扰，实际上是每个函数中有一个）、延迟调用栈（存放函数正常返回或异常退出时，会依次执行的一系列指令，参见defer指令相关的章节）。注意，即使没有显式地声明任何函数，所有代码也是在虚拟机默认提供的一个“根函数”的上下文中运行的，其他函数可以视为在根函数中嵌套调用的。
-- **运行上下文**：运行上下文是谢语言中代码运行的必须的环境，包含源代码、编译后的指令集、标号表、指令运行指针、函数栈、循环遍历栈等重要的运行时基础设施。虚拟机中提供一个默认的运行上下文，使用runCall等指令可以让代码在另一个运行上下文中运行。不同运行上下文有不同函数栈，除了虚拟机的根函数外，两个运行上下文中的函数互不干扰，但可以通过根函数中的变量等进行共享；因此，运行上下文可以实现将代码有效隔离起来。一个运行上下文中只有一个指令运行指针，意味着其中代码是无法并发执行的，因此如果要进行并发调用时，也可以使用goRunCall指令来创建新的运行上下文来实现，此时新的运行上下文将在不同线程中运行，但仍然可以与其他运行上下文共享根函数和虚拟机中的基础设施。
+
+- **Function Context**: Functions are the basic way of organizing code in Xielang, and function context is the infrastructure provided for the use of code in a certain function. The infrastructure in the context of a function mainly includes: local variables (which can only be used internally within the function and can be used by nested functions within the function), \$tmp preset variables (although \$tmp is said to be a preset global variable, in order to minimize interference, there is actually one in each function) Delay the call stack (it stores a series of instructions that will be executed in sequence when the function returns normally or exits abnormally. See the chapter related to defer instructions). Note that even if no function is explicitly declared, all code runs in the context of a "root function" provided by the virtual machine by default, and other functions can be considered nested calls within the root function.
+
+- **运行上下文**：运行上下文是谢语言中代码运行的必须的环境（因此有时候也称为运行环境），包含源代码、编译后的指令集、标号表、指令运行指针、函数栈、循环遍历栈等重要的运行时基础设施。虚拟机中提供一个默认的运行上下文，使用runCall等指令可以让代码在另一个运行上下文中运行。不同运行上下文有不同函数栈，除了虚拟机的根函数外，两个运行上下文中的函数互不干扰，但可以通过根函数中的变量等进行共享；因此，运行上下文可以实现将代码有效隔离起来。一个运行上下文中只有一个指令运行指针，意味着其中代码是无法并发执行的，因此如果要进行并发调用时，也可以使用goRunCall指令来创建新的运行上下文来实现，此时新的运行上下文将在不同线程中运行，但仍然可以与其他运行上下文共享根函数和虚拟机中的基础设施。
+
+- **Running Context**: Running context is a necessary environment for code execution in Xielang(therefore, sometimes also known as the running environment), including important runtime infrastructure such as source code, compiled instruction sets, label tables, instruction run pointers, function stacks, and loop traversal stacks. Provide a default runtime context in the virtual machine, and use instructions such as runCall to allow code to run in another runtime context. Different running contexts have different function stacks. Except for the root function of the virtual machine, the functions in the two running contexts do not interfere with each other, but can be shared through variables in the root function; Therefore, the runtime context can effectively isolate the code. There is only one instruction running pointer in a running context, which means that the code cannot be executed concurrently. Therefore, if concurrent calls are to be made, the goRunCall instruction can also be used to create a new running context. At this time, the new running context will run in different threads, but it can still share the root function and infrastructure in the virtual machine with other running contexts.
+
 - **虚拟机**：虚拟机是谢语言最基本的代码运行环境，虚拟机中除了前面提到的，提供一个默认的根函数上下文，以及一个默认运行上下文之外，还提供一个虚拟机内共享的堆栈，和30个寄存器（索引序号分别为0到29）。
-- **跨虚拟机共享设施**：谢语言还提供一些跨虚拟机的全局共享设施，大多数情况下是为了并发处理时共享数据或者互通消息使用
+
+- **Virtual Machine**: Virtual machine is the most basic code runtime environment for Xielang. In addition to providing a default root function context and a default runtime context, virtual machine also provides a shared stack within the virtual machine and 30 registers (index numbers 0 to 29, respectively).
+
+- **跨虚拟机共享设施**：谢语言还提供一些跨虚拟机的全局共享设施，跨虚拟机的全局设施我们称之为“泛全局”设施，大多数情况下泛全局设施是为了并发处理时共享数据或者互通消息使用。这些共享设施都是并发（线程）安全的，包括一个队列、一个映射、一个堆栈、一个自增长序列号发生器、可定义的变量等。注意，泛全局设施仅在一个宿主进程中有效，例如两个谢语言主程序各自启动的虚拟机之间是无法共享泛全局设施的；但是一个谢语言主程序启动的多个虚拟机、某个虚拟机启动的嵌套虚拟机之间均可以使用泛全局共享设施。
+
+- **Cross Virtual Machine Sharing Facilities**: Xielang also provides some global sharing facilities across virtual machines, which we call "pan global" facilities. In most cases, pan global facilities are used for sharing data or exchanging messages during concurrent processing. These shared facilities are all concurrency (thread) safe, including a queue, a map, a stack, a self growing sequence number generator, definable variables, and so on. Note that pan global facilities are only valid in one host process, for example, virtual machines launched by two Xielang main programs cannot share pan global facilities; However, multiple virtual machines initiated by a Xie language main program, as well as nested virtual machines initiated by a certain virtual machine, can all use pan global shared facilities.
+
+Here we summarize the relationship between infrastructure in Xielang in a simple, less rigorous, but relatively easy to understand way: virtual machines contain a default runtime context and a function context (root function); A virtual machine can also contain more running contexts, each of which can contain multiple functions that are nested and called. The highest level of these functions in each running context is the only root function of the virtual machine; If we use function stacks to understand, each runtime context has a function stack, and the bottom layer of the function stack is the root function of the virtual machine. The meaning of running context is to isolate and run a piece of code, such as in the case of concurrent function calls.
+
+&nbsp;
+
+##### - **用runCall指令在不同运行上下文中执行代码**（Executing code in different running contexts using the runCall instruction）
+
+&nbsp;
+
+上面介绍了谢语言中的基础设施，了解了一个虚拟机中可以有多个运行上下文（简称运行环境）。常见的运行上下文的使用方式之一是使用runCall指令来调用函数，这种函数调用方式我们姑且称为runCall调用，下面是一个runCall调用的例子（runCall.xie）：
+
+The above introduced the infrastructure in Xielang and learned that a virtual machine can have multiple runtime contexts (referred to as runtime environments). One of the common ways to use runtime context is to use the runCall instruction to call a function, which we can refer to as a runCall call. Here is an example of a runCall call (runCall.xie):
+
+```go
+// 编译一个函数
+// 然后调用它，传入参数，接收返回值并处理
+// runCall 指令将另起一个运行环境（上下文）与当前代码运行环境分离以避免冲突
+// 两者仅共享虚拟机的基础设施（堆栈、寄存器）和全局变量
+// 传递入参在函数中使用inputL变量引用，出参则通过outL变量赋值，如没有赋值outL，则返回undefined
+// Compile a function
+// Then call it, pass in parameters, receive the return value and process
+// The runCall instruction separates another runtime environment (context) from the current code runtime environment to avoid conflicts
+// Both only share the infrastructure (stack, registers) and global variables of the virtual machine
+// Pass in the input parameter and use the inputL variable reference in the function, assign the output parameter to the outL variable, or return undefined if no outL value is assigned
+
+compile $func1 `
+    // 从$inputL中获取外界传入的两个参数
+    // Obtain two parameters passed in from the outside world from $inputL
+    getArrayItem $f1 $inputL 0
+    getArrayItem $f2 $inputL 1
+
+    pln arg1= $f1
+    pln arg2= $f2
+
+    // 将两个参数相加获取结果
+    // Add two parameters to obtain the result
+    add $result $f1 $f2
+
+    // 在变量$outL中放入返回参数
+    // Placing return parameters in variable $outL
+    var $outL
+    assign $outL $result
+
+    exit
+`
+
+// 调用函数，并传入两个浮点数作为参数，返回结果存入$rs中
+// Call the function, pass in two floating point numbers as parameters, and store the returned results in $rs
+runCall $rs $func1 #f1.6 #f2.3
+
+pln "runCall result:" $rs
+
+```
+
+这段代码的执行结果是：
+
+The running result is:
+
+```shell
+arg1= 1.6
+arg2= 2.3
+runCall result: 3.9
+```
+
+上面是将一段文本代码编译后进行runCall调用。实际上，为了书写简单，我们也可以直接从代码中抽取一段形成一个运行上下文对象后进行runCall调用，参看下面的例子（runCall2.xie）：
+
+The above is to compile a section of text code and make a runCall call. In fact, to simplify writing, we can also directly extract a segment from the code to form a runtime context object and make a runCall call, as shown in the following example (runCall2.xie):
+
+```go
+
+// extractRun指令将把从标号:func1Start开始到:func1End为止的指令转换为一个运行上下文以便调用
+// The extractRun instruction will convert instructions from label :func1Start to :func1End into a running context for calling
+extractRun $func1 :func1Start :func1End
+
+// runCall指令可以直接将一个运行上下文当做一个函数来调用
+// The runCall instruction can directly call a running context as a function
+runCall $rs $func1 #f1.6 #f2.3
+
+pln "runCall result:" $rs
+
+// 注意要终止代码运行，否则将继续往下执行
+// Be sure to terminate the code run, otherwise it will continue to execute
+exit
+
+// 标记函数开始的标号
+// The label that marks the beginning of a function
+:func1Start
+    getArrayItem $f1 $inputL 0
+    getArrayItem $f2 $inputL 1
+
+    pln arg1= $f1
+    pln arg2= $f2
+
+    add $result $f1 $f2
+
+    var $outL
+    assign $outL $result
+
+// 标记函数结束的标号
+// The label that marks the end of the function
+:func1End
+    exit
+
+```
+
+这段代码的执行结果与前面一段是一样的。
+
+The execution result of this code is the same as the previous one.
+
+如上所示，runCall指令可以运行一段编译后的代码，也可以运行一个运行上下文。实际上runCall指令还可以直接跟一个起始标号和一个结束标号来调用一段函数代码，也可以直接调用一个字符串表示的函数代码。
+
+As shown above, the runCall instruction can run a compiled piece of code or a runtime context. In fact, the runCall instruction can also directly call a section of function code with a starting label and an ending label, or directly call a function code represented by a string.
 
 &nbsp;
 
