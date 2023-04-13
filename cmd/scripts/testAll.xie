@@ -110,6 +110,10 @@ systemCmd $rs "xie" "-gopath" "runCall.xie"
 
 test $rs "arg1= 1.6\narg2= 2.3\n3.9\nrunCall result: 3.9\n" $seq "runCall.xie"
 
+systemCmd $rs "xie" "-gopath" "runCall2.xie"
+
+test $rs "arg1= 1.6\narg2= 2.3\n3.9\nrunCall result: 3.9\n" $seq "runCall2.xie"
+
 systemCmd $rs "xie" "-gopath" "sealCall.xie"
 
 test $rs "num1= 1.62\nnum2= 2.8\n4.536\nseal-function result: 4.536\n" $seq "sealCall.xie"

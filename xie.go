@@ -3814,7 +3814,7 @@ func NewObject(p *XieVM, r *RunningContext, typeA string, argsA ...interface{}) 
 
 		rs = deleT
 
-	case "delegate": // delegate中，类似callFunc，将使用单独的虚拟机执行代码
+	case "delegate": // delegate中，类似sealCall，将使用单独的虚拟机执行代码
 		if len(argsT) < 1 {
 			return p.Errf(r, "not enough parameters(参数不够)")
 		}
@@ -4114,7 +4114,7 @@ func NewVar(p *XieVM, r *RunningContext, typeA string, argsA ...interface{}) int
 
 		rs = deleT
 
-	case "delegate": // delegate中，类似callFunc，将使用单独的虚拟机执行代码
+	case "delegate": // delegate中，类似sealCall，将使用单独的虚拟机执行代码
 		if len(argsA) < 1 {
 			return p.Errf(r, "not enough parameters(参数不够)")
 		}

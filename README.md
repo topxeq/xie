@@ -2998,6 +2998,10 @@ The execution result of this code is the same as the previous one.
 
 As shown above, the runCall instruction can run a compiled piece of code or a runtime context. In fact, the runCall instruction can also directly call a section of function code with a starting label and an ending label, or directly call a function code represented by a string.
 
+注意，runCall指令调用的函数，使用\$inputL局部变量来传入参数，这是一个数组（列表），需要用getArrayItem指令按索引从其中获取各个参数，使用\$outL参数来传出返回参数。另外，runCall调用的函数中，是可以访问所在虚拟机中定义的全局变量的。
+
+Note that the function called by the runCall instruction uses the \$inputL local variable to pass in parameters, which is an array (list). The getArrayItem instruction needs to retrieve each parameter by index from it, and the \$outL parameter needs to be used to pass out return parameters. In addition, the functions called by runCall can access global variables defined in the virtual machine where they are located.
+
 &nbsp;
 
 ##### - **取变量引用及取引用对应的变量实际值**
