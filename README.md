@@ -52,8 +52,8 @@ Xielang is a free, open-source, cross-platform, cross-language, ASM/SHELL-like, 
   - [- **寄存器**（Registers）](#--寄存器registers)
   - [- **谢语言的基础设施**（Infrastructure provided by Xielang）](#--谢语言的基础设施infrastructure-provided-by-xielang)
   - [- **用runCall指令在不同运行上下文中执行代码**（Executing code in different running contexts using the runCall instruction）](#--用runcall指令在不同运行上下文中执行代码executing-code-in-different-running-contexts-using-the-runcall-instruction)
-  - [- **取变量引用及取引用对应的变量实际值**](#--取变量引用及取引用对应的变量实际值)
-  - [- **复杂数据类型-列表**](#--复杂数据类型-列表)
+  - [- **取变量引用及取引用对应变量的实际值**（Reference and Dereference）](#--取变量引用及取引用对应变量的实际值reference-and-dereference)
+  - [- **复杂数据类型-列表**（Complex Data Types - List）](#--复杂数据类型-列表complex-data-types---list)
   - [- **复杂数据类型-映射**](#--复杂数据类型-映射)
   - [- **嵌套的复杂数据结构及JSON编码**](#--嵌套的复杂数据结构及json编码)
   - [- **JSON解码**](#--json解码)
@@ -3008,204 +3008,302 @@ Later, when appropriate, we will also introduce the use of the concurrent call i
 
 &nbsp;
 
-##### - **取变量引用及取引用对应的变量实际值**
+##### - **取变量引用及取引用对应变量的实际值**（Reference and Dereference）
 
 &nbsp;
 
 这里的“引用”可以理解成一般语言中的取变量地址的操作。使用引用的目的是为了直接修改其中的值，尤其是对一些复杂数据类型来说。这里先给出一个对基础数据类型的取引用与解引用操作的例子（ref.xie）：
 
+The 'reference' here can be understood as the operation of taking variable addresses in general language. The purpose of using references is to directly modify the values, especially for some complex data types. Here is an example of reference and dereference operations for basic data types (ref.xie):
+
 ```go
-// 给全局变量a和b赋值为浮点数
-assign $a #f16
+// 新建一个整数类型的引用变量$ref1
+// 此时该引用将指向一个已经分配好可以容纳一个整数空间的地址
+// Create a new reference variable $ref1 of integer type 
+// At this point, the reference will point to an address that has already been allocated to accommodate an integer space
+new $ref1 int
 
-// 获取变量a的引用并入栈
-ref $push $a
+// 将该引用指向的地址中存入整数9
+// Store the integer 9 in the address pointed to by this reference
+assignRef $ref1 #i9
 
-// 调用函数func1
-call :func1
+// 将$ref1指向的整数值取出存入$v中
+// 这一步也称作将$ref1解引用
+// Extract the integer value pointed to by $ref1 and store it in $v
+// This step is also known as dereferencing $ref1
+unref $v $ref1
 
-// 输出调用函数func1后的变量a值
-plo $a
+// 输出$v的值作为参考
+// Output the value of $v as a reference
+plo $v
+
+// 变量前加*，表示将其解引用
+// 输出的值应该与$v一样
+// Adding a "*" before a variable indicates its dereference
+// The output value should be the same as $v
+plo *$ref1
+
+// 调用函数func1，并将引用变量$ref1作为参数传入
+// Call function func1 and pass in the reference variable $ref1 as a parameter
+call $rs :func1 $ref1
+
+// 输出调用函数func1后$ref1变量的引用值与解引用值
+// Output the reference and dereference values of the $ref1 variable after calling function func1
+plo $ref1
+plo *$ref1
 
 // 退出程序执行
+// Exit the program
 exit
 
 // 函数func1
+// Function func1
 :func1
 
-    // 出栈到变量p
-    pop $p
+    // 获取第一个输入参数
+    // 即传入的引用变量$ref1
+    // Get the first input parameter
+    // That is, the passed in reference variable $ref1
+    getArrayItem $p $inputL 0
 
-    // 输出变量p
+    // 输出变量p参考
+    // Output $p for reference
     plo $p
 
     // 将引用变量p中的对应的数值放入变量v中
+    // Place the corresponding numerical value in the reference variable p into the variable v
     unref $v $p
 
     // 输出变量v
+    // Output $v
     plo $v
 
-    // 将引用变量p中的值重新置为整数9
-    assignRef $p #i9
+    // 尝试将引用变量p中存放的实际数值重新置为浮点数1.6
+    // 由于$p是个整数的引用，因此实际上存入的将是截取了小数点后部分的整数1
+    // Try to reset the actual value stored in the reference variable p to floating point 1.6
+    // Since $p is a reference to an integer, what is actually stored will be the integer 1 that has been truncated after the decimal point
+    assignRef $p #f1.6
 
     // 函数返回
+    // return from the function
     ret
+
 ```
 
 代码中有详细的注释，运行结果为：
 
-  ```
-    (*interface {})0xc00014e150
-    (float64)16
-    (int)9
-  ```
+There are detailed comments in the code, and the running result is:
 
-其中，ref指令用于取变量的引用，unref指令用于获取引用变量指向的值（解引用），assignRef指令则直接将引用变量指向的值赋以新值。可以看出，使用变量引用，成功将全局变量中的数值进行了改变。
+```shell
+(int)9
+(int)9
+(*int)(*int)(0xc0003bc940)
+(int)9
+(*int)(*int)(0xc0003bc940)
+(int)1
+```
 
+注意，其中的地址值可能随每次运行有所变化。
+
+Note that the address values may vary with each run.
+
+其中，ref指令用于取变量的引用，unref指令用于获取引用变量指向的值（解引用），assignRef指令则直接将引用变量指向的值赋以新值。可以看出，使用变量引用，成功地在函数中将全局变量中的数值进行了改变。
+
+Among them, the ref instruction is used to obtain the reference of a variable, the unref instruction is used to obtain the value pointed to by the reference variable (dereference), and the assignRef instruction directly assigns a new value to the value pointed to by the reference variable. It can be seen that using variable referencing successfully changed the numerical values in the global variable in the function.
 
 &nbsp;
 
-##### - **复杂数据类型-列表**
+##### - **复杂数据类型-列表**（Complex Data Types - List）
 
 &nbsp;
 
 列表在其他语言中有时候也称作“数组”、“切片”等。在谢语言中，列表可以理解为可变长的数组，其中可以存放任意类型的值。列表的操作包括创建、增加项、删除项、切片（截取其中一部分）、合并（与其他列表合并）、遍历（逐个对列表中所有的数据项进行操作）等。下面的代码演示了这些操作的方法（list.xie）：
 
+Lists are sometimes referred to as "arrays", "slices", etc. in other languages. In Xielang, a list can be understood as a variable length array that can hold any type of value. The operations of a list include creating, adding items, deleting items, slicing (taking a part of it), merging (merging with other lists), traversing (operating on all data items in the list one by one), and so on. The following code demonstrates the methods of these operations (list.xie):
+
 ```go
 // 定义一个列表变量list1
+// Define a list variable list1
 var $list1 list
 
 // 查看列表对象，此时应为空的列表
+// View the list object, which should be an empty list at this time
 plo $list1
 
 // 给列表list1中添加一项整数8
+//Add an integer 8 to list1
 addItem $list1 #i8
 
 // 给列表list1中添加一项浮点数12.7
+// Add a floating point number 12.7 to the list list1
 addItem $list1 #f12.7
 
 // 再次查看列表list1中内容，此时应有两项
+// Review the contents of list 1 again, and there should be two items at this time
 plo $list1
 
 // 用赋值的方法直接将一个数组赋值给列表变量list2
 // #号后带大写的L表示后接JSON格式表达的数组
+// Directly assign an array to the list variable list2 using the assignment method
+// The L with uppercase after the # sign represents an array followed by JSON format expression
 assign $list2 #L`["abc", 2, 1.3, true]`
 
 // 输出list2进行查看
+// Output list2 for viewing
 plo $list2
 
 // 查看list2的长度（即其中元素的个数）
+// View the length of list2 (i.e. the number of elements in it)
 len $list2
 
 pln length= $tmp
 
 // 获取列表list1中序号为0的项（列表序号从零开始，即第1项）
 // 结果将入栈
+// Get the item with sequence number 0 in list 1 (the list sequence number starts from zero, which is the first item)
+// The result will be stacked
 getItem $push $list1 #i0
 
 // 获取list2中的序号为1的项，结果放入变量a中
+// Obtain the item with sequence number 1 in list2 and place the result in variable a
 getItem $a $list2 #i1
 
 // 将变量a转换为整数（原来是浮点数）并存回a中
+// Convert variable a to an integer (originally a floating point number) and return it to a
 convert $a $a int
 
 // 查看变量a中的值
+// View the value in variable a
 plo $a
 
 // 将弹栈值（此时栈顶值是列表list1中序号为0的项）与变量a相加
 // 结果压栈
+// Add the stack value (where the top value of the stack is the item with number 0 in list 1) to variable a
+// Result Stacking
 add $push $pop $a
 
 // 查看弹栈值
+// Check the stack top value
 plo $pop
 
 // 将列表list1与列表list2进行合并
 // 结果放入新的列表变量list3中
 // 注意，如果没有指定结果参数（省略第一个，此时应共有2个参数），将把结果存回list1
 // 相当于把list1加上了list2中所有的项
+// Merge list 1 with list 2
+// Place the results in the new list variable list3
+// Note that if no result parameter is specified (omitting the first one, there should be a total of 2 parameters), the result will be saved back to list1
+// Equivalent to adding all the items in list1 and list2
 addItems $list3 $list1 $list2
 
 // 查看列表list3的内容
+// View the contents of list 3
 plo $list3
 
 // 将list3进行切片，截取序号1（包含）至序号5（不包含）之间的项
 // 形成一个新的列表，放入变量list4中
+// Slice list3 and extract items between numbers 1 (inclusive) and 5 (exclusive)
+// Form a new list and place it in variable list4
 slice $list4 $list3 #i1 #i5
 
-// 查看列表list3的内容
+// 查看列表list4的内容
+// View the contents of list 4
 plo $list4
 
 // 循环遍历列表list4中所有的项，对其调用标号range1开始的代码块
 // 该代码块必须使用continue指令继续循环遍历
 // 或者break指令跳出循环遍历
 // 遍历完毕或者break跳出遍历后，代码将继续从rangeList指令的下一条指令继续执行
-// 遍历每项时，rangeList会先将当前遍历项和当前序号值（从0开始）先后压栈
-rangeList $list4 :range1
+// 遍历每项时，range指令指向的遍历体代码应用getIter指令获得当前当前序号值（从0开始）和遍历项的值
+// 并保证用continue进行继续遍历，遍历完毕后将默认返回range指令后的下一条指令继续执行
+// Loop through all items in list 4 and call the code block starting with the label range1 on them
+// This code block must continue to loop through using the continue instruction
+// Or break instruction jumps out of loop traversal
+// After the traversal is completed or the break jumps out, the code will continue to execute from the next instruction in the rangeList instruction
+// When traversing each item, the range instruction points to the traversal body code and applies the getIter instruction to obtain the current ordinal value (starting from 0) and the value of the traversal item
+// And ensure to continue the traversal using continue. After the traversal is completed, the next instruction after the range instruction will be returned by default to continue execution
+range $list4 :range1
 
 // 删除list4中序号为2的项(此时该项为整数2)
+// Delete the item with sequence number 2 in list 4 (at this point, the item is an integer 2)
 deleteItem $list4 #i2
 
 // 再次删除list4中序号为2的项(此时该项为浮点数1.3)
+// Delete the item with No. 2 in list4 again (at this time, the item is floating point 1.3)
 deleteItem $list4 #i2
 
 // 修改list4中序号为1的项为字符串“烙红尘”
+// Modify the item with serial number 1 in list 4 to the string "烙红尘"
 setItem $list4 #i1 烙红尘
 
 // 再次删除list4中序号为0的项(此时该项为浮点数12.7)
+// Delete the item with serial number 0 in list4 again (at this time, the item is a floating point 12.7)
 deleteItem $list4 #i0
 
 // 再次查看列表list4的内容
 // 此时应只剩1项字符串“烙红尘”
+// Review the contents of list 4 again
+// At this point, there should only be one string left, "烙红尘"
 plo $list4
 
 // 结束程序的运行
+// Exit the program
 exit
 
 // 标号range1的代码段，用于遍历列表list4
+// Code snippet labeled range1 for traversing list list4
 :range1
-    // 弹栈获得遍历序号值放入变量i中
-    pop $i
+    // 获得遍历序号和遍历值分别放入变量i和v中
+    // Obtain the traversal sequence number and traversal value and place them in variables i and v, respectively
+    getIter $i $v
 
-    // 弹栈获得遍历项放入变量v中
-    pop $v
-
-    // 判断i值是否小于3，结果压栈
+    // 判断i值是否小于3，结果存入$tmp
+    // Determine if the value of i is less than 3, and store the result in $tmp
     < $i #i3
 
     // 如果是则跳转到next1（继续执行遍历代码）
+    // If true, jump to label next1 (continue the iterating code)
     if $tmp :next1
 
         // 否则跳出循环遍历
+        // Otherwise, skip the loop traversal
         break
 
     // 标号next1
+    // Label next1
     :next1
 
     // 输出提示信息
+    // output the info
     pl `第%v项是%v` $i $v
 
     // 继续循环遍历，如欲跳出循环遍历，可以使用break指令
+    // Continue loop traversal, if you want to break out of the loop traversal, you can use the break instruction
     continue
 ```
 
 代码中有详细注释，运行的结果是：
 
-  ```
-    ([]interface {})[]
-    ([]interface {})[8 12.7]
-    ([]interface {})[abc 2 1.3 true]
-    length= 4
-    (int)2
-    (int)10
-    ([]interface {})[8 12.7 abc 2 1.3 true]
-    ([]interface {})[12.7 abc 2 1.3]
-    第0项是12.7
-    第1项是abc
-    第2项是2
-    ([]interface {})[烙红尘]
-  ```
+There are detailed comments in the code, and the result of running is:
+
+```shell
+  ([]interface {})[]
+  ([]interface {})[8 12.7]
+  ([]interface {})[abc 2 1.3 true]
+  length= 4
+  (int)2
+  (int)10
+  ([]interface {})[8 12.7 abc 2 1.3 true]
+  ([]interface {})[12.7 abc 2 1.3]
+  第0项是12.7
+  第1项是abc
+  第2项是2
+  ([]interface {})[烙红尘]
+```
 
 谢语言还有其他类型的列表，包括字节列表（byteList）和如痕列表（runeList）等，用法类似。
+
+Xielang also has other types of lists, including byteList and runeList, with similar usage.
 
 &nbsp;
 

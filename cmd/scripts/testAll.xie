@@ -108,11 +108,11 @@ test $rs "2584\n" $seq "call.xie"
 
 systemCmd $rs "xie" "-gopath" "runCall.xie"
 
-test $rs "arg1= 1.6\narg2= 2.3\n3.9\nrunCall result: 3.9\n" $seq "runCall.xie"
+test $rs "arg1= 1.6\narg2= 2.3\nrunCall result: 3.9\n" $seq "runCall.xie"
 
 systemCmd $rs "xie" "-gopath" "runCall2.xie"
 
-test $rs "arg1= 1.6\narg2= 2.3\n3.9\nrunCall result: 3.9\n" $seq "runCall2.xie"
+test $rs "arg1= 1.6\narg2= 2.3\nrunCall result: 3.9\n" $seq "runCall2.xie"
 
 systemCmd $rs "xie" "-gopath" "sealCall.xie"
 
@@ -169,4 +169,9 @@ strReplace $str1q $str1q "TXXT" ".*"
 = $str1q `(?sm)\(map\[string\]interface \{\}\)map\[string\]interface \{\}\{\}\n\(map\[string\]interface \{\}\)map\[string\]interface \{\}\{"Age":23, "Name":"李白"\}\n\(map\[string\]interface \{\}\)map\[string\]interface \{\}\{"日期":"2022年4月23日", "气温":23\.3, "空气质量":"良"\}\nlength= 3\n\(string\)"李白良"\n键名为 .*\(map\[string\]interface \{\}\)map\[string\]interface \{\}\{"日期":"2022年4月23日", "空气质量":"良"\}\n` 
 
 testByReg $rs $str1q $seq "map.xie"
+
+systemCmd $rs "xie" "-gopath" "refUnref.xie"
+
+testByReg $rs `\(int\)9\n\(int\)9\n\(\*int\)\(\*int\)\([^\)]+\)\n\(int\)9\n\(\*int\)\(\*int\)\([^\)]+\)\n\(int\)1\n` $seq "refUnref.xie"
+
 

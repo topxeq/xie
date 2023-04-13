@@ -5953,6 +5953,8 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		v1 := p.GetVarValue(r, instrT.Params[v1p])
 
+		tk.Plo(v1)
+
 		valueT := reflect.ValueOf(v1)
 
 		if !valueT.CanAddr() {

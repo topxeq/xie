@@ -1,0 +1,70 @@
+// 新建一个整数类型的引用变量$ref1
+// 此时该引用将指向一个已经分配好可以容纳一个整数空间的地址
+// Create a new reference variable $ref1 of integer type 
+// At this point, the reference will point to an address that has already been allocated to accommodate an integer space
+new $ref1 int
+
+// 将该引用指向的地址中存入整数9
+// Store the integer 9 in the address pointed to by this reference
+assignRef $ref1 #i9
+
+// 将$ref1指向的整数值取出存入$v中
+// 这一步也称作将$ref1解引用
+// Extract the integer value pointed to by $ref1 and store it in $v
+// This step is also known as dereferencing $ref1
+unref $v $ref1
+
+// 输出$v的值作为参考
+// Output the value of $v as a reference
+plo $v
+
+// 变量前加*，表示将其解引用
+// 输出的值应该与$v一样
+// Adding a "*" before a variable indicates its dereference
+// The output value should be the same as $v
+plo *$ref1
+
+// 调用函数func1，并将引用变量$ref1作为参数传入
+// Call function func1 and pass in the reference variable $ref1 as a parameter
+call $rs :func1 $ref1
+
+// 输出调用函数func1后$ref1变量的引用值与解引用值
+// Output the reference and dereference values of the $ref1 variable after calling function func1
+plo $ref1
+plo *$ref1
+
+// 退出程序执行
+// Exit the program
+exit
+
+// 函数func1
+// Function func1
+:func1
+
+    // 获取第一个输入参数
+    // 即传入的引用变量$ref1
+    // Get the first input parameter
+    // That is, the passed in reference variable $ref1
+    getArrayItem $p $inputL 0
+
+    // 输出变量p参考
+    // Output $p for reference
+    plo $p
+
+    // 将引用变量p中的对应的数值放入变量v中
+    // Place the corresponding numerical value in the reference variable p into the variable v
+    unref $v $p
+
+    // 输出变量v
+    // Output $v
+    plo $v
+
+    // 尝试将引用变量p中存放的实际数值重新置为浮点数1.6
+    // 由于$p是个整数的引用，因此实际上存入的将是截取了小数点后部分的整数1
+    // Try to reset the actual value stored in the reference variable p to floating point 1.6
+    // Since $p is a reference to an integer, what is actually stored will be the integer 1 that has been truncated after the decimal point
+    assignRef $p #f1.6
+
+    // 函数返回
+    // return from the function
+    ret
