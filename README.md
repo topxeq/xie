@@ -54,7 +54,7 @@ Xielang is a free, open-source, cross-platform, cross-language, ASM/SHELL-like, 
   - [- **用runCall指令在不同运行上下文中执行代码**（Executing code in different running contexts using the runCall instruction）](#--用runcall指令在不同运行上下文中执行代码executing-code-in-different-running-contexts-using-the-runcall-instruction)
   - [- **取变量引用及取引用对应变量的实际值**（Reference and Dereference）](#--取变量引用及取引用对应变量的实际值reference-and-dereference)
   - [- **复杂数据类型-列表**（Complex Data Types - List）](#--复杂数据类型-列表complex-data-types---list)
-  - [- **复杂数据类型-映射**](#--复杂数据类型-映射)
+  - [- **复杂数据类型-映射**（Complex Data Types - Map）](#--复杂数据类型-映射complex-data-types---map)
   - [- **嵌套的复杂数据结构及JSON编码**](#--嵌套的复杂数据结构及json编码)
   - [- **JSON解码**](#--json解码)
   - [- **加载外部模块**](#--加载外部模块)
@@ -3111,6 +3111,10 @@ Note that the address values may vary with each run.
 
 Among them, the ref instruction is used to obtain the reference of a variable, the unref instruction is used to obtain the value pointed to by the reference variable (dereference), and the assignRef instruction directly assigns a new value to the value pointed to by the reference variable. It can be seen that using variable referencing successfully changed the numerical values in the global variable in the function.
 
+另外，new \$ref1 int也可以用var \$ref1 "\*int"来达到同样的效果，还可以用var \$ref1 "\*int" \#i23来进行初始化赋值（注意赋的是引用指向的数值而非指针地址）。
+
+In addition, new \$ref1 int can also be used with var \$ref1 "\*int" to achieve the same effect, and var \$ref1 "\*int" \#i23 can also be used for initialization assignment (note that the assignment is to the numerical value pointed to by the reference rather than the pointer address).
+
 &nbsp;
 
 ##### - **复杂数据类型-列表**（Complex Data Types - List）
@@ -3307,89 +3311,117 @@ Xielang also has other types of lists, including byteList and runeList, with sim
 
 &nbsp;
 
-##### - **复杂数据类型-映射**
+##### - **复杂数据类型-映射**（Complex Data Types - Map）
 
 &nbsp;
 
-  映射在其他语言中也称作字典、哈希表等，其中存储的是一对对“键（key）”与“值（value）”，也称为键值对（key-value pair）。谢语言中运用映射各种基本操作的例子如下（map.xie）：
+映射在其他语言中也称作字典、哈希表等，其中存储的是一对对“键（key）”与“值（value）”，也称为键值对（key-value pair）。谢语言中运用映射各种基本操作的例子如下（map.xie）：
+
+Map, also known as dictionary, hash table, etc. in other languages, stores a pair of "key" and "value" pairs, also known as key value pairs. An example of using map for various basic operations in Xielang is as follows (map.xie):
 
 ```go
 // 定义一个映射变量map1
+// Define a map variable map1
 var $map1 map
 
 // 查看映射对象，此时应为空的映射
+// View the map object, which should be an empty map at this time
 plo $map1
 
 // 给映射map1中添加一个键值对 “"Name": "李白"”
 // setItem也可用于修改
+// Add a key value pair 'Name' to map1: '李白'
+// SetItem can also be used to modify values in map
 setMapItem $map1 Name "李白"
 
 // 再给映射map1中添加一个键值对 “"Age": 23”
 // 此处23为整数
+// Add a key value pair "Age": 23" to map1
+// Here 23 is an integer
 setMapItem $map1 Age #i23
 
 // 再次查看映射map1中内容，此时应有两个键值对
+// Looking at the content in map1 again, there should be two key value pairs at this point
 plo $map1
 
 // 用赋值的方法直接将一个数组赋值给映射变量map2
 // #号后带大写的M表示后接JSON格式表达的映射
+// Directly assign an array to the variable map2 using the assignment method
+// The M with uppercase after the # sign represents a map followed by JSON format expression
 assign $map2 #M`{"日期": "2022年4月23日","气温": 23.3, "空气质量": "良"}`
 
 // 输出map2进行查看
+// Output map2 for viewing
 plo $map2
 
 // 查看map2的长度（即其中元素的个数）
+// View the length of map2 (i.e. the number of elements in it)
 len $map2
 
 pln length= $tmp
 
 // 获取映射map1中键名为“Name”的项
 // 结果入栈
+// Obtain the item with key name 'Name' in map1
+// Then push the result value to the stack
 getMapItem $push $map1 Name
 
 // 获取map2中的键名为“空气质量”的项，结果放入变量a中
+// Obtain the key named "空气质量" in map2 and place the result in variable a
 getMapItem $a $map2 空气质量
 
 // 将弹栈值（此时栈顶值是映射map1中键名为“Name”的项）与变量a相加
 // 结果压栈
+// Add the stack value (where the top value of the stack is the key named "Name" in map1) to the variable a
+// Then push the result value to the stack
 add $push $pop $a
 
 // 查看弹栈值
+// View the popped value in stack
 plo $pop
 
 // 循环遍映射map2中所有的项，对其调用标号range1开始的代码块
 // 该代码块必须使用continue指令继续循环遍历
 // 或者break指令跳出循环遍历
 // 遍历完毕或者break跳出遍历后，代码将继续从rangeMap指令的下一条指令继续执行
-// 遍历每项时，rangeMap会先将当前键值和当前键名先后压栈
-rangeMap $map2 :range1
+// Loop through all the items in map2 and call the code block starting with the label range1 on it
+// This code block must continue to loop through using the continue instruction
+// Or break instruction jumps out of loop traversal
+// After the traversal is completed or the break jumps out, the code will continue to execute from the next instruction of the rangeMap instruction
+range $map2 :range1
 
 // 删除map2中键名为“气温”的项(此时该项为浮点数23.3)
+// Delete the item named "气温" in map2 (at this time, it is a floating point 23.3)
 deleteMapItem $map2 "气温"
 
 // 再次查看映射map2的内容
+// View the content in map2 again
 plo $map2
 
 // 结束程序的运行
+// Exit the program
 exit
 
 // 标号range1的代码段，用于遍历映射
+// Label range, used to iterating the map
 :range1
-    // 弹栈获得遍历序号值放入变量i中
-    pop $k
-
-    // 弹栈获得遍历项放入变量v中
-    pop $v
+    // 用getIter指令获取遍历序号与遍历项的值
+    // Using the getIter instruction to obtain the traversal sequence number and the value of the traversal term
+    getIter $k $v
 
     // 输出提示信息
+    // Output the information for reference
     pl `键名为 %v 项的键值是 %v` $k $v
 
     // 继续循环遍历，如欲跳出循环遍历，可以使用break指令
+    // Continue loop traversal, if you want to break out of the loop traversal, you can use the break instruction
     continue
 
 ```
 
-  其中详细介绍了映射类型的主要操作，代码的运行结果是：
+其中详细介绍了映射类型的主要操作，代码的运行结果是：
+
+The main operations of mapping types are described in detail, and the running results of the code are:
 
 ```shell
 (map[string]interface {})map[]
@@ -3439,7 +3471,7 @@ pln $pop
 
 ```
 
-例子中建议了一个简单的父子关系的数据结构，父亲张三，孩子张胜利，父亲这个数据对象本身是用映射来表示的，而其子女是用列表来表示，列表中的数据项——他的孩子张胜利本身又是用一个映射来表示的。另外，为了展示更清楚，我们使用了toJson指令，这个指令可以将数据结构转换为JSON格式的字符串，第一个参数是结果放入的变量，这里用内置变量$push表示将结果压栈。目前，toJson函数支持两个可选参数，-indent表示将JSON字符串用缩进的方式表达，-sort表示将映射内的键值对按键名排序。代码运行结果如下：
+例子中建立了一个简单的父子关系的数据结构，父亲张三，孩子张胜利，父亲这个数据对象本身是用映射来表示的，而其子女是用列表来表示，列表中的数据项——他的孩子张胜利本身又是用一个映射来表示的。另外，为了展示更清楚，我们使用了toJson指令，这个指令可以将数据结构转换为JSON格式的字符串，第一个参数是结果放入的变量，这里用内置变量$push表示将结果压栈。目前，toJson函数支持两个可选参数，-indent表示将JSON字符串用缩进的方式表达，-sort表示将映射内的键值对按键名排序。代码运行结果如下：
 
 ```shell
 (map[string]interface {})map[姓名:张三 子女:[map[姓名:张胜利 年龄:5]] 年龄:39]

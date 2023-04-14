@@ -1,69 +1,96 @@
 // 定义一个映射变量map1
+// Define a map variable map1
 var $map1 map
 
 // 查看映射对象，此时应为空的映射
+// View the map object, which should be an empty map at this time
 plo $map1
 
 // 给映射map1中添加一个键值对 “"Name": "李白"”
 // setItem也可用于修改
+// Add a key value pair 'Name' to map1: '李白'
+// SetItem can also be used to modify values in map
 setMapItem $map1 Name "李白"
 
 // 再给映射map1中添加一个键值对 “"Age": 23”
 // 此处23为整数
+// Add a key value pair "Age": 23" to map1
+// Here 23 is an integer
 setMapItem $map1 Age #i23
 
 // 再次查看映射map1中内容，此时应有两个键值对
+// Looking at the content in map1 again, there should be two key value pairs at this point
 plo $map1
 
 // 用赋值的方法直接将一个数组赋值给映射变量map2
 // #号后带大写的M表示后接JSON格式表达的映射
+// Directly assign an array to the variable map2 using the assignment method
+// The M with uppercase after the # sign represents a map followed by JSON format expression
 assign $map2 #M`{"日期": "2022年4月23日","气温": 23.3, "空气质量": "良"}`
 
 // 输出map2进行查看
+// Output map2 for viewing
 plo $map2
 
 // 查看map2的长度（即其中元素的个数）
+// View the length of map2 (i.e. the number of elements in it)
 len $map2
 
 pln length= $tmp
 
 // 获取映射map1中键名为“Name”的项
 // 结果入栈
+// Obtain the item with key name 'Name' in map1
+// Then push the result value to the stack
 getMapItem $push $map1 Name
 
 // 获取map2中的键名为“空气质量”的项，结果放入变量a中
+// Obtain the key named "空气质量" in map2 and place the result in variable a
 getMapItem $a $map2 空气质量
 
 // 将弹栈值（此时栈顶值是映射map1中键名为“Name”的项）与变量a相加
 // 结果压栈
+// Add the stack value (where the top value of the stack is the key named "Name" in map1) to the variable a
+// Then push the result value to the stack
 add $push $pop $a
 
 // 查看弹栈值
+// View the popped value in stack
 plo $pop
 
 // 循环遍映射map2中所有的项，对其调用标号range1开始的代码块
 // 该代码块必须使用continue指令继续循环遍历
 // 或者break指令跳出循环遍历
 // 遍历完毕或者break跳出遍历后，代码将继续从rangeMap指令的下一条指令继续执行
-// 遍历每项时，range指令会先将当前键值和当前键名先后压栈
+// Loop through all the items in map2 and call the code block starting with the label range1 on it
+// This code block must continue to loop through using the continue instruction
+// Or break instruction jumps out of loop traversal
+// After the traversal is completed or the break jumps out, the code will continue to execute from the next instruction of the rangeMap instruction
 range $map2 :range1
 
 // 删除map2中键名为“气温”的项(此时该项为浮点数23.3)
+// Delete the item named "气温" in map2 (at this time, it is a floating point 23.3)
 deleteMapItem $map2 "气温"
 
 // 再次查看映射map2的内容
+// View the content in map2 again
 plo $map2
 
 // 结束程序的运行
+// Exit the program
 exit
 
 // 标号range1的代码段，用于遍历映射
+// Label range, used to iterating the map
 :range1
     // 用getIter指令获取遍历序号与遍历项的值
+    // Using the getIter instruction to obtain the traversal sequence number and the value of the traversal term
     getIter $k $v
 
     // 输出提示信息
+    // Output the information for reference
     pl `键名为 %v 项的键值是 %v` $k $v
 
     // 继续循环遍历，如欲跳出循环遍历，可以使用break指令
+    // Continue loop traversal, if you want to break out of the loop traversal, you can use the break instruction
     continue

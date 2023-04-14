@@ -49,7 +49,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var VersionG string = "1.1.9"
+var VersionG string = "1.2.0"
 
 func Test() {
 	tk.Pl("test")
@@ -3450,6 +3450,12 @@ func NewObject(p *XieVM, r *RunningContext, typeA string, argsA ...interface{}) 
 		} else {
 			rs = &url.Values{}
 		}
+	case "any", "interface{}":
+		if makeT {
+			rs = nil
+		} else {
+			rs = new(interface{})
+		}
 	case "bool":
 		if makeT {
 			rs = false
@@ -3905,11 +3911,31 @@ func NewVar(p *XieVM, r *RunningContext, typeA string, argsA ...interface{}) int
 	switch typeA {
 	case "postData", "url.Values":
 		rs = url.Values{}
+	case "any", "interface{}":
+		if argsLenT < 1 {
+			rs = nil
+		} else {
+			rs = argsA[0]
+		}
+	case "*any", "*interface{}":
+		if argsLenT < 1 {
+			rs = new(interface{})
+		} else {
+			rs = new(interface{})
+			*(rs.(*interface{})) = argsA[0]
+		}
 	case "bool":
 		if argsLenT < 1 {
 			rs = false
 		} else {
 			rs = tk.ToBool(argsA[0])
+		}
+	case "*bool":
+		if argsLenT < 1 {
+			rs = new(bool)
+		} else {
+			rs = new(bool)
+			*(rs.(*bool)) = tk.ToBool(argsA[0])
 		}
 	case "int":
 		if argsLenT < 1 {
@@ -3917,11 +3943,25 @@ func NewVar(p *XieVM, r *RunningContext, typeA string, argsA ...interface{}) int
 		} else {
 			rs = tk.ToInt(argsA[0], 0)
 		}
+	case "*int":
+		if argsLenT < 1 {
+			rs = new(int)
+		} else {
+			rs = new(int)
+			*(rs.(*int)) = tk.ToInt(argsA[0])
+		}
 	case "int64":
 		if argsLenT < 1 {
 			rs = int64(0)
 		} else {
 			rs = int64(tk.ToInt(argsA[0], 0))
+		}
+	case "*int64":
+		if argsLenT < 1 {
+			rs = new(int64)
+		} else {
+			rs = new(int64)
+			*(rs.(*int64)) = int64(tk.ToInt(argsA[0]))
 		}
 	case "uint64":
 		if argsLenT < 1 {
@@ -3935,17 +3975,38 @@ func NewVar(p *XieVM, r *RunningContext, typeA string, argsA ...interface{}) int
 		} else {
 			rs = tk.ToByte(argsA[0], 0)
 		}
+	case "*byte":
+		if argsLenT < 1 {
+			rs = new(byte)
+		} else {
+			rs = new(byte)
+			*(rs.(*byte)) = tk.ToByte(argsA[0])
+		}
 	case "rune":
 		if argsLenT < 1 {
 			rs = rune(0)
 		} else {
 			rs = tk.ToRune(argsA[0], 0)
 		}
+	case "*rune":
+		if argsLenT < 1 {
+			rs = new(rune)
+		} else {
+			rs = new(rune)
+			*(rs.(*rune)) = tk.ToRune(argsA[0])
+		}
 	case "float", "float64":
 		if argsLenT < 1 {
 			rs = float64(0.0)
 		} else {
 			rs = tk.ToFloat(argsA[0], 0)
+		}
+	case "*float":
+		if argsLenT < 1 {
+			rs = new(float64)
+		} else {
+			rs = new(float64)
+			*(rs.(*float64)) = tk.ToFloat(argsA[0])
 		}
 	case "float32":
 		if argsLenT < 1 {
@@ -3958,6 +4019,13 @@ func NewVar(p *XieVM, r *RunningContext, typeA string, argsA ...interface{}) int
 			rs = ""
 		} else {
 			rs = tk.ToStr(argsA[0])
+		}
+	case "*str", "*string":
+		if argsLenT < 1 {
+			rs = new(string)
+		} else {
+			rs = new(string)
+			*(rs.(*string)) = tk.ToStr(argsA[0])
 		}
 	case "list", "array", "[]":
 		blT := make([]interface{}, 0, argsLenT)
