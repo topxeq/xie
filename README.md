@@ -6667,6 +6667,10 @@ Generally, there are two ways to extend Xielang:
 
 #### 编译谢语言（Compile Xielang）
 
+- 目前谢语言还在积极开发中，为方便起见，go.mod中所有“replace github.com/topxeq/tk v1.0.1 => ../tk”一行，以便使用本地的tk库代替在线的。因此编译时需要将github.com/topxeq/tk中的库git clone到本地，或者将go.mod中这一行去掉即可。
+
+- At present, Xielang is still actively developing. For convenience, the "replace github.com/topxeq/tk v1.0.1=>../tk" line in go.mod are used to use local tk libraries instead of the online one. Therefore, during compilation, it is necessary to "git clone" the library from github.com/topxeq/tk locally, or remove this line from go.mod.
+
 - **在Linux下如果出现类似“package gl was not found in the pkg-config search path.”的错误**：请执行 apt install libgl1-mesa-dev 命令安装依赖库。
 
 - **出现类似“github.com/AllenDang/imgui-go@v1.12.1: replacement directory ../../../../../github.com/AllenDang/imgui-go does not exist”的错误**：由于Linux下使用github.com/AllenDang/imgui-go在Github上的库有小问题，因此需要本地git clone该库，并在作少许修改后使用（Windows下无需改动）。
