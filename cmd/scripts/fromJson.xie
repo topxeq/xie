@@ -1,5 +1,7 @@
 // 将变量s赋值为一个多行字符串
 // 即所需解码的JSON文本
+// Assign variable s as a multiline string
+// The JSON text that needs to be decoded
 assign $s `
 {
   "姓名": "张三",
@@ -14,30 +16,43 @@ assign $s `
 `
 
 // 用fromJson指令将s中的文本解码到变量map1中
+// Decode the text in s into variable map1 using the fromJson instruction
 fromJson $map1 $s
 
 // 获取map1的数据类型
 // 可用于以后根据不同类型进行不同处理
 // 结果入栈
+// Obtain the data type of map1
+// Can be used for different processing according to different types in the future
+// Then push the result to the stack
 typeOf $push $map1
 
 // 输出类型名称
+// Output the type name
 pln 类型是： $pop
 
 // 输出map1的内容
+// Output the content of map1
 plo $map1
 
 // 获取map1中的键名为子女的项
 // 结果放入变量list1中
+// Obtain the key named child in map1
+// Place the results in variable list1
 getMapItem $list1 $map1 子女
 
 // 获取list1中序号为0的项
 // 结果放入变量map2中
+// Get the item with sequence number 0 in list1
+// Place the results in variable map2
 getItem $map2 $list1 #i0
 
 // 获取map2中键名为姓名的项
 // 结果压栈
+// Obtain items with key name in map2
+// Then push the result to the stack
 getMapItem $push $map2 姓名
 
 // 输出弹栈值
+// Output stack value
 pln 姓名： $pop

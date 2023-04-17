@@ -55,8 +55,8 @@ Xielang is a free, open-source, cross-platform, cross-language, ASM/SHELL-like, 
   - [- **取变量引用及取引用对应变量的实际值**（Reference and Dereference）](#--取变量引用及取引用对应变量的实际值reference-and-dereference)
   - [- **复杂数据类型-列表**（Complex Data Types - List）](#--复杂数据类型-列表complex-data-types---list)
   - [- **复杂数据类型-映射**（Complex Data Types - Map）](#--复杂数据类型-映射complex-data-types---map)
-  - [- **嵌套的复杂数据结构及JSON编码**](#--嵌套的复杂数据结构及json编码)
-  - [- **JSON解码**](#--json解码)
+  - [- **嵌套的复杂数据结构及JSON编码**（Nested complex data structures and JSON encoding）](#--嵌套的复杂数据结构及json编码nested-complex-data-structures-and-json-encoding)
+  - [- **JSON解码**（JSON decoding）](#--json解码json-decoding)
   - [- **加载外部模块**](#--加载外部模块)
   - [- **封装函数调用**](#--封装函数调用)
   - [- **引用与解引用**](#--引用与解引用)
@@ -3438,11 +3438,13 @@ length= 3
 
 &nbsp;
 
-##### - **嵌套的复杂数据结构及JSON编码**
+##### - **嵌套的复杂数据结构及JSON编码**（Nested complex data structures and JSON encoding）
 
 &nbsp;
 
 谢语言中，复杂数据结构也是可以嵌套的，例如列表中的数据项可以是一个映射或列表，映射中的键值也可以是列表或映射。看下面的例子（toJson.xie）：
+
+In Xielang, complex data structures can also be nested, for example, data items in a list can be a map or list, and key values in the map can also be a list or map. Take the following example (toJson.xie):
 
 ```go
 var $map1 map
@@ -3471,7 +3473,9 @@ pln $pop
 
 ```
 
-例子中建立了一个简单的父子关系的数据结构，父亲张三，孩子张胜利，父亲这个数据对象本身是用映射来表示的，而其子女是用列表来表示，列表中的数据项——他的孩子张胜利本身又是用一个映射来表示的。另外，为了展示更清楚，我们使用了toJson指令，这个指令可以将数据结构转换为JSON格式的字符串，第一个参数是结果放入的变量，这里用内置变量$push表示将结果压栈。目前，toJson函数支持两个可选参数，-indent表示将JSON字符串用缩进的方式表达，-sort表示将映射内的键值对按键名排序。代码运行结果如下：
+例子中创建了一个简单的父子关系的数据结构，父亲张三，孩子张胜利，父亲这个数据对象本身是用映射来表示的，而其子女是用列表来表示，列表中的数据项——他的孩子张胜利本身又是用一个映射来表示的。另外，为了展示更清楚，我们使用了toJson指令，这个指令可以将数据结构转换为JSON格式的字符串，第一个参数是结果放入的变量，这里用内置变量$push表示将结果压栈。目前，toJson函数支持两个可选参数，-indent表示将JSON字符串用缩进的方式表达，-sort表示将映射内的键值对按键名排序。代码运行结果如下：
+
+In the example, a simple parent-child relationship data structure was created, with father 张三 and child 张胜利. The father data object itself is represented by a map, while its children are represented by a list. The data items in the list - his child 张胜利 itself - are represented by a map. In addition, for clarity, we used the toJson instruction, which can convert data structures into JSON formatted strings. The first parameter is the variable into which the result is placed. Here, the built-in variable \$push is used to push the result onto the stack. Currently, the toJson function supports two optional parameters: - indent represents the indentation of JSON strings, and - sort represents the sorting of key values within the mapping by key names. The code run results are as follows:
 
 ```shell
 (map[string]interface {})map[姓名:张三 子女:[map[姓名:张胜利 年龄:5]] 年龄:39]
@@ -3489,18 +3493,23 @@ pln $pop
 
 注意对比谢语言对该数据的表达形式与JSON形式的区别。
 
+Pay attention to the difference between Xie language's expression of this data and JSON format.
 
 &nbsp;
 
-##### - **JSON解码**
+##### - **JSON解码**（JSON decoding）
 
 &nbsp;
 
-我们对JSON编码的反操作就是将JSON格式的字符串转换为内部的数据。这可以通过定义参数时加上“#L”或“#M”形式来进行，也可以通过fromJson指令来执行。使用“#L”或“#M”的方式我们前面已经介绍过了，这里是使用fromJson关键字的例子，我们就直接用上面生成的JSON来反向操作试一下（fromJson.xie）：
+我们对JSON编码的反操作就是将JSON格式的字符串转换为内部的数据。这可以通过定义参数时加上“#L”或“#M”形式来进行，也可以通过fromJson指令来执行。使用“#L”或“#M”的方式我们前面已经介绍过了，这里是使用fromJson指令的例子，我们就直接用上面生成的JSON来反向操作试一下（fromJson.xie）：
+
+Our reverse operation of JSON encoding is to convert JSON formatted strings into internal data. This can be done by adding "#L" or "#M" forms when defining parameters, or by executing the from Json instruction. We have already introduced the method of using "#L" or "#M". Here is an example of using the "fromJson" instruction. We will directly use the JSON generated above to reverse the operation and try it out (fromJson.xie):
 
 ```go
 // 将变量s赋值为一个多行字符串
 // 即所需解码的JSON文本
+// Assign variable s as a multiline string
+// The JSON text that needs to be decoded
 assign $s `
 {
   "姓名": "张三",
@@ -3515,38 +3524,53 @@ assign $s `
 `
 
 // 用fromJson指令将s中的文本解码到变量map1中
+// Decode the text in s into variable map1 using the fromJson instruction
 fromJson $map1 $s
 
 // 获取map1的数据类型
 // 可用于以后根据不同类型进行不同处理
 // 结果入栈
+// Obtain the data type of map1
+// Can be used for different processing according to different types in the future
+// Then push the result to the stack
 typeOf $push $map1
 
 // 输出类型名称
+// Output the type name
 pln 类型是： $pop
 
 // 输出map1的内容
+// Output the content of map1
 plo $map1
 
 // 获取map1中的键名为子女的项
 // 结果放入变量list1中
+// Obtain the key named child in map1
+// Place the results in variable list1
 getMapItem $list1 $map1 子女
 
 // 获取list1中序号为0的项
 // 结果放入变量map2中
+// Get the item with sequence number 0 in list1
+// Place the results in variable map2
 getItem $map2 $list1 #i0
 
 // 获取map2中键名为姓名的项
 // 结果压栈
+// Obtain items with key name in map2
+// Then push the result to the stack
 getMapItem $push $map2 姓名
 
 // 输出弹栈值
+// Output stack value
 pln 姓名： $pop
 
 
 ```
 
 运行后得到：
+
+The running result:
 
 ```shell
 类型是： map[string]interface {}
@@ -3555,6 +3579,8 @@ pln 姓名： $pop
 ```
 
 注意，typeOf指令可用于获取任意变量的数据类型名称，这在很多需要根据类型进行处理的场景下非常有用。typeOf获取到的值类型与宿主语言Go语言的一致，可参考Go语言的文档。
+
+Note that the typeOf instruction can be used to obtain the data type name of any variable, which is very useful in many scenarios that require processing based on type. The value type obtained by typeOf is consistent with the host language Golang, and can refer to the Golang documentation.
 
 &nbsp;
 
