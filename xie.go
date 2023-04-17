@@ -8198,6 +8198,14 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		codeT := p.GetVarValue(r, instrT.Params[v1p])
 
+		// if s1, ok := codeT.(string); ok {
+		// 	vs := p.ParamsToList(r, instrT, v1p+1)
+		// 	rs := RunCodePiece(NewVMQuick(), s1, "", vs, true)
+
+		// 	p.SetVar(r, pr, rs)
+		// 	return ""
+		// }
+
 		if r1, ok := codeT.(*RunningContext); ok {
 			vs := p.ParamsToList(r, instrT, v1p+1)
 			rs := RunCodePiece(NewVMQuick(), r1, "", vs, true)

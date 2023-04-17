@@ -1,30 +1,46 @@
 // 使用sealCall进行封装调用函数
 // 与runCall不同，入参和出参是通过inputG和outG变量进行的
-// prepare 2 values to be input paramaters of the function
+// 下面先准备两个用于调用函数的输入参数，其中第二个是采用堆栈存放
+// Using sealCall to sealed function calls
+// Unlike runCall, input and output parameters are carried out through inputG and outG variables
+// Next, prepare two input parameters for calling the function, the second of which is stored in the stack
 assign $a #f1.62
 push #f2.8
 
-// sealCall will start a new VM to run the code string or compiled code
-// any parameters can follow the first result variable and the second code/compiled object
+// 封装函数调用会启动一个新虚拟机来运行代码、编译后对象或运行上下文
+// 第一个参数是结果参数，不可省略，第二个参数为字符串形式的源代码或者编译后对象等
+// 如果需要传入参数则从第三个参数开始，可以传入多个，因此inputG中存放的将是一个数组/列表
+// Sealed function calls will start a new virtual machine to run code, compiled objects, or run context
+// The first parameter is the result parameter and cannot be omitted. The second parameter is the source code or compiled object in string form, etc
+// If parameters need to be passed in, starting from the third parameter, multiple can be passed in, so inputG will store an array/list
 sealCall $rs `
+    // inputG是一个数组/列表，其中包含所有输入参数
+    // 使用getArrayItem指令从其中按索引获取所需的参数
     // inputG is an array/list contains all the input parameters
+    // Use the getArrayItem instruction to retrieve the required parameters by index from it
     getArrayItem $num1 $inputG 0
     getArrayItem $num2 $inputG 1
 
+    // 输出两个参数作为参考
     // output 2 values for reference
     pln num1= $num1
     pln num2= $num2
 
+    // 将两个数相乘后将加过存入变量result
     // multiply 2 values and put the result to $result
     mul $result $num1 $num2
 
+    // 输出结果变量参考
     // print the result value for reference
     pln $result
 
+    // 封装函数将通过outG变量返回值
+    // 如果要返回多个变量，可以使用数组/列表
     // return values in the global variable $outG
     // if more than one result, use array/list
     assign $outG $result
 ` $a $pop
 
+// 输出函数返回值
 // print the result from the function
 pl "seal-function result: %v" $rs

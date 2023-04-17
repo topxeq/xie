@@ -57,10 +57,9 @@ Xielang is a free, open-source, cross-platform, cross-language, ASM/SHELL-like, 
   - [- **复杂数据类型-映射**（Complex Data Types - Map）](#--复杂数据类型-映射complex-data-types---map)
   - [- **嵌套的复杂数据结构及JSON编码**（Nested complex data structures and JSON encoding）](#--嵌套的复杂数据结构及json编码nested-complex-data-structures-and-json-encoding)
   - [- **JSON解码**（JSON decoding）](#--json解码json-decoding)
-  - [- **加载外部模块**](#--加载外部模块)
-  - [- **封装函数调用**](#--封装函数调用)
-  - [- **引用与解引用**](#--引用与解引用)
-  - [- **并发函数**](#--并发函数)
+  - [- **加载外部模块**（Loading external module）](#--加载外部模块loading-external-module)
+  - [- **封装函数调用**（Sealed Function Call）](#--封装函数调用sealed-function-call)
+  - [- **并发函数**（Concurrent function call）](#--并发函数concurrent-function-call)
   - [- **用线程锁处理并发共享冲突**](#--用线程锁处理并发共享冲突)
   - [- **对象机制**](#--对象机制)
   - [- **快速/宿主对象机制**](#--快速宿主对象机制)
@@ -3584,17 +3583,25 @@ Note that the typeOf instruction can be used to obtain the data type name of any
 
 &nbsp;
 
-##### - **加载外部模块**
+##### - **加载外部模块**（Loading external module）
 
 &nbsp;
 
 谢语言可以动态加载外部的代码文件并执行，这是一个很方便也很重要的功能。一般来说，我们可以把一些常用的、复用程度高的功能写成快速函数或一般函数放在单独的谢语言源代码文件中，然后在需要使用的代码中动态加载它们并使用其中的函数。可以构建自己的公共代码库，或者形成功能模块。
 
+Xielang can dynamically load external code files and execute them, which is a very convenient and important feature. Generally speaking, we can write some commonly used and highly reusable functions as fast or general functions in a separate Xielang source code file, and then dynamically load them and use the functions in the code that needs to be used. You can build your own public code library or form functional modules.
+
 下面的例子演示的是在一个代码文件中先后载入两个外部模块文件并调用其中的函数。
+
+The following example demonstrates loading two external module files in a code file and calling the functions within them.
 
 首先编写1个模块文件module1.xie，其中包含两个快速函数add1和sub1，功能很简单，就是两个数进行相加和相减。
 
+Firstly, write a module file module1.xie, which contains two fast functions add1 and sub1. The function is very simple, which is to add and subtract two numbers.
+
 *注意，由于快速函数与主函数共享全局变量空间，为避免冲突，建议变量名以大写的“L”结尾，以示只用于局部。另外还建议全局变量以大写的“G”结尾，一般的局部变量以大写的“T”结尾。这些不是强制要求，但也许能够起到一些避免混乱的效果。*
+
+*Note that since the fast function shares the global variable space with the main function, to avoid conflicts, it is recommended to end the variable name with an uppercase "L" to indicate that it is only used locally. Additionally, it is recommended that global variables end with an uppercase 'G' and general local variables end with an uppercase 'T'. These are not mandatory requirements, but they may have some effect on avoiding confusion*
 
 ```go
 :add1
@@ -3617,12 +3624,18 @@ Note that the typeOf instruction can be used to obtain the data type name of any
 
 然后再编写第二个模块文件module2.xie，其中包含一个普通函数mul1，作用是两个数相乘。
 
+Then write the second module file module2.xie, which contains a regular function mul1 to multiply two numbers.
+
 ```go
 :mul1
-    pop $v2L
-    pop $v1L
+    var $v1
+    var $v2
+    var $outL
 
-    mul $push $v1L $v2L
+    getArrayItem $v1 $inputL 0
+    getArrayItem $v2 $inputL 1
+
+    mul $outL $v1 $v2
 
     ret
 
@@ -3633,67 +3646,96 @@ Note that the typeOf instruction can be used to obtain the data type name of any
 
 ```go
 // 载入第1个代码文件module1.xie并压栈
-loadText $push `scripts/module1.xie`
+// load code string from module file 1
+// getCurDir $rs1
+// joinPath $path1 $rs1 `scripts` `module1.xie`
+
+loadText $code1 `scripts/module1.xie`
 
 // 输出代码文件内容查看
-pln 加载的代码： "\n" $peek "\n"
+// print the code string for reference
+pln "code loaded: " "\n" $code1 "\n"
 
-// 弹栈加载代码
+// 加载代码
 // 并将结果值返回，成功将返回加载代码的第1行行号（注意是字符串类型）
-// 失败将返回TXERROR:开头的错误信息
-loadCode $push $pop
+// 失败将返回error对象表示的错误信息
+// load the code to current VM
+loadCode $rs $code1
 
-// 查看加载结果
-plo $pop
+// 检查是否出错，是则停止代码运行
+// check if is error, terminate if true
+checkErrX $rs
 
 // 压栈两个整数
+// push 2 values before fast-calling function
 push #i11
 push #i12
 
 // 调用module1.xie文件中定义的快速函数add1
+// fast-call the "add1" function defined in the file "module1.xie"
 fastCall :add1
 
 // 查看函数返回结果（不弹栈）
+// print the result pushed into the stack from the function
+// unlike pop, peek only "look" but not get the value out of the stack
 plo $peek
 
-// 再压入一个整数5
+// 再压入堆栈一个整数5
+// push another value integer 5 into the stack
 push #i5
 
 // 调用module1.xie文件中定义的快速函数sub1
+// fast-call the "sub1" function defined in the file "module1.xie"
 fastCall :sub1
 
-// 查看函数返回结果（不弹栈）
+// 再次查看函数返回结果（不弹栈）
+// print the result again
 plo $peek
 
 // 载入第2个代码文件module2.xie并置于变量code1中
+// load text from another module file
 loadText $code1 `scripts/module2.xie`
 
-// 加载code1中的代码
-// 由于不需要loadCode指令返回的行号，因此用$drop变量将其丢弃
-loadCode $drop $code1
+// 编译这个代码以节约一些后面载入的时间
+// this time, compile it first(will save some time before running)
+compile $compiledT $code1
 
-// 再入栈一个整数99
+checkErrX $compiledT
+
+// 加载编译后的代码
+// 由于不需要loadCode指令返回的结果，因此用$drop变量将其丢弃
+// load the code and drop the result using the global variable $drop
+loadCode $drop $compiledT
+
+// there is a integer value 18 in the stack
 // 此时栈中还有一个整数18
-push #i99
 
-// 调用module2.xie文件中定义的一般函数mul1
-call :mul1
+// 调用module2.xie文件中定义的一般函数mul1，并传入两个参数（整数99和弹栈值18）
+// fast-call the "mul1" function defined in the file "module2.xie"
+call $rs :mul1 #i99 $pop
 
-// 查看函数返回结果（弹栈）
-plo $pop
+// 查看函数返回结果
+// print the result
+plo $rs
 
 // 退出程序执行
 // 注意：如果不加exit指令，程序会继续向下执行module1.xie和module2.xie中的代码
+// terminate the program
+// if without the "exit" instruction here, the program will continue to run the code loaded by module1.xie and module2.xie
 exit
 
 ```
 
 代码中的重点是loadText指令和loadCode指令。loadText从指定路径读取纯文本格式的模块代码文件内容。loadCode文件则从字符串变量中读取代码并加载到当前代码的后面，如果成功，会返回这段代码的起始位置（注意是字符串格式），有些情况下会用到这个返回值。对于以函数为主的模块，在动态加载包含这些函数的文件后，就可以用call或fastCall指令来调用相应的函数了。
 
+The focus in the code is on the loadText and loadCode instructions. The loadText instruction reads the content of the module code file in plain text format from the specified path. The loadCode instruction reads the code from a string variable and loads it after the current code. If successful, it returns the starting position of the code (note the string format), which may be used in some cases. For modules that primarily rely on functions, after dynamically loading the files containing these functions, the corresponding functions can be called using the call or fastCall instructions.
+
 代码运行的结果是：
 
+The running result is:
+
 ```shell
-加载的代码： 
+code loaded:  
  :add1
     pop $v2L
     pop $v1L
@@ -3707,10 +3749,9 @@ exit
     pop $v1L
 
     sub $push $v1L $v2L
+    
+    fastRet 
 
-    fastRet
-
-(string)17
 (int)23
 (int)18
 (int)1782
@@ -3719,73 +3760,94 @@ exit
 
 &nbsp;
 
-##### - **封装函数调用**
+##### - **封装函数调用**（Sealed Function Call）
 
 &nbsp;
 
 封装函数与一般函数与快速函数的区别是：封装函数直接采用源代码形式调用，实际上会新启动一个谢语言虚拟机去执行函数代码，封闭性更好（相当于沙盒执行），也更灵活，参数和返回值通过堆栈传递；缺点是性能稍慢（因为要启动虚拟机并解析代码）。下面是封装函数调用的例子（callFunc.xie）：
 
+The difference between sealed functions and general functions and fast functions is that sealed functions can be directly called in source code form, which actually launches a new Xielang virtual machine to execute the function code. It has better closure (equivalent to sandbox execution) and is more flexible, with parameters and return values passed through the stack; The disadvantage is that the performance is slightly slow (because the virtual machine needs to be started and the code needs to be compiled). The following is an example of sealed function calls (sealCall.xie):
+
 ```go
-# 压栈准备传入的两个函数参数
-push #f1.6
-push #f2.3
+// 使用sealCall进行封装调用函数
+// 与runCall不同，入参和出参是通过inputG和outG变量进行的
+// 下面先准备两个用于调用函数的输入参数，其中第二个是采用堆栈存放
+// Using sealCall to sealed function calls
+// Unlike runCall, input and output parameters are carried out through inputG and outG variables
+// Next, prepare two input parameters for calling the function, the second of which is stored in the stack
+assign $a #f1.62
+push #f2.8
 
-# callFunc指令将代码块看做封装函数进行调用
-# 第1个参数表示函数需要的参数，如果函数无须参数，第一个参数可以省略
-callFunc 2 `
-    # 依次弹栈两个参数，特别注意，这里弹出的顺序不是逆序，而是与压栈顺序相同
-    pop $arg1
-    pop $arg2
+// 封装函数调用会启动一个新虚拟机来运行代码、编译后对象或运行上下文
+// 第一个参数是结果参数，不可省略，第二个参数为字符串形式的源代码或者编译后对象等
+// 如果需要传入参数则从第三个参数开始，可以传入多个，因此inputG中存放的将是一个数组/列表
+// Sealed function calls will start a new virtual machine to run code, compiled objects, or run context
+// The first parameter is the result parameter and cannot be omitted. The second parameter is the source code or compiled object in string form, etc
+// If parameters need to be passed in, starting from the third parameter, multiple can be passed in, so inputG will store an array/list
+sealCall $rs `
+    // inputG是一个数组/列表，其中包含所有输入参数
+    // 使用getArrayItem指令从其中按索引获取所需的参数
+    // inputG is an array/list contains all the input parameters
+    // Use the getArrayItem instruction to retrieve the required parameters by index from it
+    getArrayItem $num1 $inputG 0
+    getArrayItem $num2 $inputG 1
 
-    # 输出两个参数检查
-    pln arg1= $arg1
-    pln arg2= $arg2
+    // 输出两个参数作为参考
+    // output 2 values for reference
+    pln num1= $num1
+    pln num2= $num2
 
-    // 将两个参数相加，结果压栈
-    add $push $arg1 $arg2
+    // 将两个数相乘后将加过存入变量result
+    // multiply 2 values and put the result to $result
+    mul $result $num1 $num2
 
-    // 输出栈顶值检查
-    pln $peek
+    // 输出结果变量参考
+    // print the result value for reference
+    pln $result
 
-    # 需要在全局变量outG中返回函数返回值（压栈的）的个数（字符串形式）
-    # 这里只有1个压栈值需要返回，即两个数相加的结果
-    assign $outG 1
-`
+    // 封装函数将通过outG变量返回值
+    // 如果要返回多个变量，可以使用数组/列表
+    // return values in the global variable $outG
+    // if more than one result, use array/list
+    assign $outG $result
+` $a $pop
 
-# 输出函数返回值（弹栈值）
-# 注意如果有多个返回值，也是按封装函数入栈顺序出栈的，不是顺序
-pln 函数返回值： $pop
+// 输出函数返回值
+// print the result from the function
+pl "seal-function result: %v" $rs
 
 ```
 
-代码中，封装函数直接用反引号扩起了多行的代码。callFunc指定需要一个参数指定要压入新虚拟机作为调用函数的参数，注意顺序不是逆序而是顺序压入栈中的。如果没有参数则可以省略这个参数。第二个参数是字符串类型的变量或值，这里传入了一个多行字符串，既是这个封装函数的代码，封装函数如果要返回值，需要在全局变量outG中返回一个字符串类型的数字，表示返回值的个数，这些返回值是以压栈的形式返回的，注意也是按封装函数入栈顺序返回而不是逆序。
+代码中，封装函数直接用反引号扩起了多行的代码。sealCall指令需要一个参数指定结果变量，不可省略。第二个参数是字符串类型的源代码，也可以是编译后的对象，或者运行上下文，本例中传入了一个多行字符串，既是这个封装函数的代码。封装函数如果要返回值，需要使用全局变量outG返回，如果需要返回多个值，可以使用数组/列表，或者映射也可以。
 
-注意，封装函数是以字符串形式的代码加载并执行的，这意味着封装函数也可以动态加载，例如从文件中读取代码后执行，这带来了很大的灵活性。另外，封装函数在单独的虚拟机中运行，和主函数的变量和堆栈空间都不冲突，因此可以编写更通用的函数。
+In the code, the sealed function directly wraps multiple lines of code with back quotes. The sealCall instruction requires a parameter to specify the result variable and cannot be omitted. The second parameter is the source code of the string type, which can also be the compiled object or the runtime context. In this example, a multi line string is passed in, which is the code that encapsulates the function. If the sealed function needs to return a value, it needs to use the global variable outG to return it. If multiple values need to be returned, an array/list, or a mapping can also be used.
+
+注意，封装函数可以以字符串形式的代码加载并执行的，这意味着封装函数也可以动态加载，例如从文件中读取代码后执行，这带来了很大的灵活性。另外，封装函数在单独的虚拟机中运行，和主函数的变量和堆栈空间都不冲突，因此可以编写更通用的函数。
+
+Note that sealed functions can be loaded and executed as strings of code, which means that sealed functions can also be dynamically loaded, such as reading code from a file and executing it, which brings great flexibility. In addition, the sealed function runs in a separate virtual machine and does not conflict with the variables and stack space of the main function, so more general functions can be written.
 
 上面代码的执行结果是：
 
+The running result:
+
 ```shell
-arg1= 1.6
-arg2= 2.3
-3.9
-函数返回值： 3.9
+num1= 1.62
+num2= 2.8
+4.536
+seal-function result: 4.536
 ```
 
-callFunc指令如果有第三个以上的参数，将从第三个开始合并为数组传入新虚拟机中的inputG全局变量。
+sealCall指令如果有第三个以上的参数，将从第三个开始合并为数组传入新虚拟机中的inputG全局变量。
+
+If the sealCall instruction has more than three parameters, it will be merged into an array starting from the third and passed into the inputG global variable in the new virtual machine.
 
 &nbsp;
 
-##### - **引用与解引用**
-
-谢语言中支持对变量取引用和对引用解引用以取值，具体用法参看下面并发函数的例子。
+##### - **并发函数**（Concurrent function call）
 
 &nbsp;
 
-##### - **并发函数**
-
-&nbsp;
-
-谢语言中的并发是用类似于封装函数的并发函数来实现的。下面是并发函数调用的例子（goFunc.xie）：
+谢语言中的并发常用类似于封装函数的并发函数来实现的，使用goCall/threadCall指令，这两个指令是等价的。下面是并发函数调用的例子（goCall.xie）：
 
 ```go
 // 给变量a赋值浮点数3.6
@@ -3806,7 +3868,7 @@ push `前缀`
 // 第一个参数表示需要压入并发函数所使用的堆栈中的值的数量
 // 如果不需要传递参数，第一个参数可以省略
 // 第二个参数是字符串形式的并发函数代码
-goFunc 2 `
+goCall $rs 2 `
     // 弹栈两个传入的参数，注意也不是逆序弹出的而是顺序弹出的
     pop $arg1
     pop $arg2
