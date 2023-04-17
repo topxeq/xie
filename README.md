@@ -3847,110 +3847,136 @@ If the sealCall instruction has more than three parameters, it will be merged in
 
 &nbsp;
 
-谢语言中的并发常用类似于封装函数的并发函数来实现的，使用goCall/threadCall指令，这两个指令是等价的。下面是并发函数调用的例子（goCall.xie）：
+谢语言中的并发常用类似于封装函数的并发函数来实现，使用goCall/threadCall指令，这两个指令是等价的。下面是并发函数调用的例子（goCall.xie）：
+
+Concurrency in Xielang is often implemented using concurrent functions similar to sealed functions, using the goCall/threadCall instruction, which is equivalent. The following is an example of concurrent function calls (goCall.xie):
 
 ```go
-// 给变量a赋值浮点数3.6
-// 变量a将在线程中运行的并发函数中被修改
-assign $a #f3.6
+// 将变量a定义为一个指向任意类型数值的引用变量，并将其初始值赋为浮点数3.6
+// 引用变量a指向的值将在线程中运行的并发函数内被修改
+// Define variable a as a reference variable pointing to any type of numerical value, and assign its initial value to floating point 3.6
+// The value pointed to by the reference variable a will be modified within the concurrent function running in the thread
+var $a "*any" #f3.6
 
-// 输出当前变量a的值作参考
-pln a= $a
+// 输出当前变量a本身及其指向的值作参考
+// Output the current variable a itself and the value it points to as a reference
+pl "a=%v, *a=%v" $a *$a
 
-// 获取变量a的引用，结果入栈
-// 将被传入并发函数中以修改a中的值
-ref $push $a
-
-// 再入栈一个准备传入并发函数中的值
-push `前缀`
-
-// 调用并发函数
-// 第一个参数表示需要压入并发函数所使用的堆栈中的值的数量
-// 如果不需要传递参数，第一个参数可以省略
-// 第二个参数是字符串形式的并发函数代码
-goCall $rs 2 `
-    // 弹栈两个传入的参数，注意也不是逆序弹出的而是顺序弹出的
-    pop $arg1
-    pop $arg2
+// 使用goCall指令调用并发函数
+// 第一个参数是结果值，不可省略，并发函数的返回值仅表示函数是否启动成功，不代表其真正的返回值
+// 第二个参数是字符串形式的并发函数代码，也可以是编译后对象或运行上下文
+// 如果需要传递参数，从第三个参数开始可以传入多个参数，这些参数在函数体内可以通过inputG变量访问
+// 由于可以有多个传入参数，inputG是一个数组/列表
+// Calling concurrent functions using the goCall instruction
+// The first parameter is the result value, which cannot be omitted. The return value of a concurrent function only indicates whether the function was started successfully and does not represent its true return value
+// The second parameter is the concurrent function code in string form, which can also be a compiled object or runtime context
+// If parameters need to be passed, multiple parameters can be passed in starting from the third parameter, which can be accessed within the function body through the inputG variable
+// Due to the possibility of multiple input parameters, inputG is an array/list
+goCall $rs `
+    // 从inputG按索引顺序获取两个传入的参数
+    // Obtain two incoming parameters in index order from inputG
+    getArrayItem $arg1 $inputG 0
+    getArrayItem $arg2 $inputG 1
 
     // 查看两个参数值
+    // View two parameter values
     pln arg1= $arg1
     pln arg2= $arg2
 
-    // 解引用第一个参数（即主函数中的变量a的应用）
+    // 解引用第一个参数（即获取主函数中的引用变量a指向的值）
+    // Dereference the first parameter (i.e. obtain the value pointed to by the reference variable a in the main function)
     unref $aNew $arg1
 
-    // 输出变量a的值以供参考
-    pln 外部的变量a的值为 $aNew
+    // 输出变量a指向的值以供参考
+    // Output the value pointed by variable a for reference
+    pln "value in $a is:" $aNew
 
     // 无限循环演示不停输出时间
     // loop1是用于循环的标号
+    // Infinite loop demonstration without stopping output time
+    // Loop1 is a label used for the loop
     :loop1
         // 输出sub和变量arg2中的值
+        // Output sub and the value in variable arg2
         pln sub $arg2
 
-        // 获取当前时间并存入tmp
-        now
+        // 获取当前时间并存入变量timeT
+        // Obtain the current time and store it in the variable timeT
+        now $timeT
 
-        // 将弹栈值（当前时间）赋值给变量arg1指向的变量
-        // assignRef的第一个参数必须是一个引用
-        assignRef $arg1 $tmp
+        // 将timeT中的时间值赋给变量arg1指向的值
+        // assignRef的第一个参数必须是一个引用变量
+        // Assign the time value in timeT to the value pointed to by variable arg1
+        // The first parameter of assignRef must be a reference variable
+        assignRef $arg1 $timeT
 
         // 休眠2秒
-        sleep #f2
+        // Sleep for 2 seconds
+        sleep #f2.0
 
         // 跳转到标号loop1（实现无限循环）
+        // Jump to label loop1 (implementing infinite loop)
         goto :loop1
-`
+` $a "prefix"
 
-// 主线程中输出变量a的值
+// 主线程中输出变量a的值及其指向的值
+// 变量名前加“*”表示取其指向的值，这时候一定是一个引用变量
 // 此时刚开始启动并发函数，变量a中的值有可能还未改变
-pln main $a
+// The value of output variable a in the main thread and the value it points to
+// Adding "*" before the variable name indicates taking the value it points to, which must be a reference variable
+// At this point, the concurrent function has just started, and the value in variable a may not have changed yet
+pln main $a *$a
 
 // 注意，这里的标号loop1虽然与并发函数中的同名，但由于运行在不同的虚拟机中，因此不会冲突，可以看做是两个标号
+// Note that although the label loop1 here has the same name as the concurrent function, it does not conflict as it runs on different virtual machines and can be considered as two labels
 :loop1
 
     // 休眠1秒
+    // Sleep for 1 second
     sleep #f1.0
 
-    // 输出变量a中的值查看
+    // 输出变量a中的值及其指向的值查看
     // 每隔一秒应该会变成新的时间
-    pln a= $a
+    // View the values in output variable a and the values it points to
+    // Every second should become a new time
+    pln a: $a *$a
 
-    // 跳转到标号loop1（实现无限循环）
+    // 跳转到标号loop1（无限循环，可以用Ctrl+C键中止程序运行）
+    // Jump to label loop1 (infinite loop, you can use Ctrl+C to abort program execution)
     goto :loop1
-
 ```
 
 代码中有详细的注释，主线程中启动了一个子线程，也就是调用了并发函数，看看运行效果：
 
+There are detailed comments in the code. A sub thread has been started in the main thread, which means calling a concurrent function. Let's see the running effect:
+
 ```shell
-a= 3.6
-main 3.6
-arg1= 0xc00017e350   
-arg2= 前缀
-外部的变量a的值为 3.6
-sub 前缀
-a= 2022-04-28 14:58:50.6204045 +0800 CST m=+0.014610101
-sub 前缀
-a= 2022-04-28 14:58:52.6308323 +0800 CST m=+2.025024001
-a= 2022-04-28 14:58:52.6308323 +0800 CST m=+2.025024001
-sub 前缀
-a= 2022-04-28 14:58:54.6329674 +0800 CST m=+4.027145301
-a= 2022-04-28 14:58:54.6329674 +0800 CST m=+4.027145301
-sub 前缀
-a= 2022-04-28 14:58:56.636559 +0800 CST m=+6.030723101
-a= 2022-04-28 14:58:56.636559 +0800 CST m=+6.030723101
-sub 前缀
-a= 2022-04-28 14:58:58.6391475 +0800 CST m=+8.033297801
-a= 2022-04-28 14:58:58.6391475 +0800 CST m=+8.033297801
-exit status 0xc000013a
+a=0xc000465250, *a=3.6
+main 0xc000465250 3.6
+arg1= 0xc000465250
+arg2= prefix
+value in $a is: 3.6
+sub prefix
+a: 0xc000465250 2023-04-17 10:14:21.46951 +0800 CST m=+0.025359501
+sub prefix
+a: 0xc000465250 2023-04-17 10:14:23.4820764 +0800 CST m=+2.037911601
+a: 0xc000465250 2023-04-17 10:14:23.4820764 +0800 CST m=+2.037911601
+sub prefix
+a: 0xc000465250 2023-04-17 10:14:25.4853758 +0800 CST m=+4.041196801
+a: 0xc000465250 2023-04-17 10:14:25.4853758 +0800 CST m=+4.041196801
+sub prefix
+a: 0xc000465250 2023-04-17 10:14:27.4892531 +0800 CST m=+6.045059801
+^C
 
 ```
 
 仔细观察程序的输出，可以看出并发函数中的输出每两秒1次，主线程中的输出每2秒一次，变量a中的值确实从最初的浮点数3.6到后来被并发函数变成了当前时间。
 
+By carefully observing the output of the program, it can be seen that the output in the concurrent function is once every two seconds, and the output in the main thread is once every two seconds. The value in variable a has indeed changed from the initial floating point number of 3.6 to the current time by the concurrent function.
+
 这个例子中也演示了对变量取引用与对引用解引用后取变量值的方法。
+
+This example also demonstrates the methods of taking a reference to a variable and taking a variable value after removing the reference.
 
 &nbsp;
 
