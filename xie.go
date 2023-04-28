@@ -134,11 +134,17 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"ref": 210, //-> 获取变量的引用（取地址）
 
+	"refVar": 211, //-> 获取谢语言变量的引用（用于局部变量或全局变量）
+
 	// "refNative": 211,
 
 	"unref": 215, // 对引用进行解引用
 
+	"unrefVar": 216, // 对引用进行解引用（用于局部变量或全局变量）
+
 	"assignRef": 218, // 根据引用进行赋值（将引用指向的变量赋值）
+
+	"assignRefVar": 219, // 根据引用进行赋值（用于局部变量或全局变量）
 
 	// push/peek/pop stack related
 
@@ -395,6 +401,8 @@ var InstrNameSet map[string]int = map[string]int{
 	"strSplit":      1530, // 按指定分割字符串分割字符串，结果参数不可省略，用法示例：strSplit $result $str1 "," 3，其中第3个参数可选（即可省略），表示结果列表最多的项数（例如为3时，将只按逗号分割成3个字符串的列表，后面的逗号将忽略；省略或为-1时将分割出全部）
 	"strSplitByLen": 1533, // 按长度拆分一个字符串为数组，注意由于是rune，可能不是按字节长度，例： strSplitByLen $listT $strT 10，可以加第三个参数表示字节数不能超过多少，加第四个参数表示分隔符（遇上分隔符从分隔符后重新计算长度，也就是说分割长度可以超过指定的个数，一般用于有回车的情况）
 
+	"strJoin": 1535, // 连接一个字符串数组，中间以指定分隔符分隔
+
 	"strReplace":   1540, // 字符串替换，用法示例：strReplace $result $str1 $find $replacement
 	"strReplaceIn": 1543, // 字符串替换，可同时替换多个子串，用法示例：strReplace $result $str1 $find1 $replacement1 $find2 $replacement2
 
@@ -640,7 +648,10 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"appendText": 21111, // 追加文本到指定文件末尾
 
-	"writeStr": 21201, // 写入字符串，可以向文件、字节数组、字符串等写入
+	"writeStr":  21201, // 写入字符串，可以向文件、字节数组、字符串等写入
+	"writeStrf": 21202, // 写入字符串，可以向文件、字节数组、字符串等写入，类似printf后的可变参数
+
+	"readStr": 21203, // 读出字符串，可以从文件、字节数组、字符串等读取，读取所有能读取的
 
 	"createFile": 21501, // 新建文件，如果带-return参数，将在成功时返回FILE对象，失败时返回error对象，否则返回error对象，成功为nil，-overwrite有重复文件不会提示。如果需要指定文件标志位等，用openFile指令
 
@@ -668,9 +679,10 @@ var InstrNameSet map[string]int = map[string]int{
 	"getFileSize":  21703, // 获取文件大小
 	"getFileInfo":  21705, // 获取文件信息，返回映射对象，参看genFileList命令
 
-	"removeFile": 21801, // 删除文件，用法：remove $rs $fileNameT -dry
-	"renameFile": 21803, // 重命名文件
-	"copyFile":   21805, // 复制文件，用法 copyFile $result $fileName1 $fileName2，可带参数-force和-bufferSize=100000等
+	"removeFile":    21801, // 删除文件，用法：remove $rs $fileNameT -dry
+	"removeAllFile": 21802, // 删除所有文件（如果是目录名，将递归删除子目录下所有目录和文件），用法：removeAllFile $rs $fileNameT -dry
+	"renameFile":    21803, // 重命名文件
+	"copyFile":      21805, // 复制文件，用法 copyFile $result $fileName1 $fileName2，可带参数-force和-bufferSize=100000等
 
 	// path related
 
@@ -708,6 +720,8 @@ var InstrNameSet map[string]int = map[string]int{
 	// xml related XML相关
 	"toXml": 22201, // 将对象编码为XML字符串
 	"toXML": 22201,
+
+	"getAllNodesTextFromXML": 22301, // 从XML文本中获取所有文本节点形成文本数组
 
 	// random related 随机数相关
 
@@ -896,8 +910,8 @@ var InstrNameSet map[string]int = map[string]int{
 	"excelWrite": 210009, // 将excel文件内容写入到可写入源（io.Writer），例如文件、标准输出、网页输出http的response excelWrite $result $excelFileT $writer
 
 	"excelReadSheet": 210101, // 读取已打开的excel文件某一个sheet的内容，返回格式是二维数组，用法：excelReadSheet $result $excelFileT sheet1，最后一个参数可以是字符串类型表示按sheet名称读取，或者是一个整数表示按序号读取
-	"excelReadCell":  210103, // 读取指定单元格的内容，返回字符串或错误信息，用法：excelReadCell $result $excelFileT "A1"
-	"excelWriteCell": 210105, // 将内容写入到指定单元格，用法：excelWriteCell $result $excelFileT "A1" "abc123"
+	"excelReadCell":  210103, // 读取指定单元格的内容，返回字符串或错误信息，用法：excelReadCell $result $excelFileT "sheet1" "A1"
+	"excelWriteCell": 210105, // 将内容写入到指定单元格，用法：excelWriteCell $result $excelFileT "sheet1" "A1" "abc123"
 	"excelSetCell":   210105,
 
 	"excelGetSheetList": 210201, // 获取sheet名字列表，结果是字符串数组
@@ -4354,6 +4368,40 @@ func GoCall(codeA interface{}, inputA ...interface{}) error {
 // 	return tk.Undefined
 // }
 
+func (p *XieVM) GetVarRef(runA *RunningContext, vA VarRef) interface{} {
+	idxT := vA.Ref
+
+	if idxT != 3 {
+		return tk.Undefined
+	}
+
+	if idxT == 3 { // normal variables
+		lenT := runA.FuncStack.Size()
+
+		for idxT := lenT - 1; idxT >= 0; idxT-- {
+			loopFunc := runA.FuncStack.PeekLayer(idxT).(*FuncContext)
+			_, ok := loopFunc.Vars[vA.Value.(string)]
+
+			if ok {
+				return tk.GetFlexRef(loopFunc.Vars, "map", vA.Value.(string), 0)
+				// return &loopFunc.Vars[vA.Value.(string)]
+			}
+		}
+
+		_, ok := p.RootFunc.Vars[vA.Value.(string)]
+
+		if ok {
+			return tk.GetFlexRef(p.RootFunc.Vars, "map", vA.Value.(string), 0)
+			// return nv
+		}
+
+		return tk.Undefined
+
+	}
+
+	return tk.Undefined
+}
+
 func QuickRunPiece(vmA *XieVM, runA *RunningContext, codeA interface{}) (rst interface{}) {
 	if runA == nil {
 		runA = NewRunningContext().(*RunningContext)
@@ -6021,7 +6069,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		v1 := p.GetVarValue(r, instrT.Params[v1p])
 
-		tk.Plo(v1)
+		// tk.Plo(v1)
 
 		valueT := reflect.ValueOf(v1)
 
@@ -6031,6 +6079,22 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		}
 
 		p.SetVar(r, pr, valueT.Addr().Interface())
+		return ""
+
+	case 211: // refVar
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		p.SetVar(r, pr, p.GetVarRef(r, instrT.Params[v1p]))
 		return ""
 
 	case 215: // unref
@@ -6052,6 +6116,57 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		}
 
 		switch nv := v2.(type) {
+		case *tk.FlexRef:
+			p.SetVar(r, pr, nv.GetValue())
+		case *interface{}:
+			p.SetVar(r, pr, *nv)
+		case *byte:
+			p.SetVar(r, pr, *nv)
+		case *int:
+			p.SetVar(r, pr, *nv)
+		case *uint64:
+			p.SetVar(r, pr, *nv)
+		case *rune:
+			p.SetVar(r, pr, *nv)
+		case *bool:
+			p.SetVar(r, pr, *nv)
+		case *string:
+			p.SetVar(r, pr, *nv)
+		case *strings.Builder:
+			p.SetVar(r, pr, *nv)
+		default:
+			valueT := reflect.ValueOf(v2)
+			kindT := valueT.Kind()
+
+			if kindT == reflect.Pointer {
+				p.SetVar(r, pr, valueT.Elem().Interface())
+				return ""
+			}
+
+			return p.Errf(r, "unsupport type(无法处理的类型): %T", v2)
+		}
+
+		return ""
+
+	case 216: // unrefVar
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+
+		var v2 interface{}
+
+		if instrT.ParamLen < 2 {
+			v2 = p.GetVarValue(r, instrT.Params[0])
+		} else {
+			pr = instrT.Params[0]
+			v2 = p.GetVarValue(r, instrT.Params[1])
+		}
+
+		switch nv := v2.(type) {
+		case *tk.FlexRef:
+			p.SetVar(r, pr, nv.GetValue())
 		case *interface{}:
 			p.SetVar(r, pr, *nv)
 		case *byte:
@@ -6165,37 +6280,113 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 			return p.Errf(r, "not enough parameters(参数不够)")
 		}
 
-		// nameT := instrT.Params[0].Ref
-		p1a := p.GetVarValue(r, instrT.Params[0])
+		var pr interface{} = -5
+		v1p := 0
 
-		// p1, ok := p1a.(*interface{})
+		if instrT.ParamLen > 2 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
 
-		// var p1 *interface{}
-		v1p := 1
-		v1 := p.GetVarValue(r, instrT.Params[v1p])
+		var rs interface{} = nil
+
+		p1a := p.GetVarValue(r, instrT.Params[v1p])
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p+1])
 
 		switch nv := p1a.(type) {
+		case *tk.FlexRef:
+			rs = nv.SetValue(v1)
+			p.SetVar(r, pr, rs)
+			return ""
+			// p1 = nv
+			// break
 		case *interface{}:
 			*nv = v1
+			p.SetVar(r, pr, rs)
 			return ""
 			// p1 = nv
 			// break
 		case *byte:
 			*nv = tk.ToByte(v1)
+			p.SetVar(r, pr, rs)
 			return ""
 		case *rune:
 			*nv = tk.ToRune(v1)
+			p.SetVar(r, pr, rs)
 			return ""
 		case *int:
 			*nv = tk.ToInt(v1)
+			p.SetVar(r, pr, rs)
 			return ""
 		default:
 			errT := tk.SetByRef(p1a, v1)
 
 			if errT != nil {
-				return p.Errf(r, "failed to set value by ref(按引用赋值失败): %v -> %T(%v)", errT, p1a, p1a)
+				p.SetVar(r, pr, fmt.Errorf("failed to set value by ref(按引用赋值失败): %v -> %T(%v)", errT, p1a, p1a))
+				return ""
 			}
 
+			p.SetVar(r, pr, rs)
+			return ""
+		}
+
+	case 219: // assignRefVar
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 2 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		var rs interface{} = nil
+
+		p1a := p.GetVarValue(r, instrT.Params[v1p])
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p+1])
+
+		// tk.Plo(p1a)
+		// tk.Plo(v1)
+
+		switch nv := p1a.(type) {
+		case *tk.FlexRef:
+			rs = nv.SetValue(v1)
+			p.SetVar(r, pr, rs)
+			return ""
+			// p1 = nv
+			// break
+		case *interface{}:
+			*nv = v1
+			p.SetVar(r, pr, rs)
+			return ""
+			// p1 = nv
+			// break
+		case *byte:
+			*nv = tk.ToByte(v1)
+			p.SetVar(r, pr, rs)
+			return ""
+		case *rune:
+			*nv = tk.ToRune(v1)
+			p.SetVar(r, pr, rs)
+			return ""
+		case *int:
+			*nv = tk.ToInt(v1)
+			p.SetVar(r, pr, rs)
+			return ""
+		default:
+			errT := tk.SetByRef(p1a, v1)
+
+			if errT != nil {
+				p.SetVar(r, pr, fmt.Errorf("failed to set value by ref(按引用赋值失败): %v -> %T(%v)", errT, p1a, p1a))
+				return ""
+			}
+
+			p.SetVar(r, pr, rs)
 			return ""
 		}
 
@@ -8622,7 +8813,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		iteratorT := tk.NewCompactIterator(v1, vs...)
 
 		if iteratorT == nil {
-			return p.Errf(r, "failed to create iterator: %v(%v)", v1, instrT.Params[0])
+			return p.Errf(r, "failed to create iterator: %#v(%#v)", v1, instrT.Params[0])
 		}
 		// tk.Plv(iteratorT)
 
@@ -8986,6 +9177,10 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 			p.SetVar(r, pr, append(nv, (v2.([]float64))...))
 		case []string:
 			p.SetVar(r, pr, append(nv, (v2.([]string))...))
+		case []map[string]string:
+			p.SetVar(r, pr, append(nv, (v2.([]map[string]string))...))
+		case []map[string]interface{}:
+			p.SetVar(r, pr, append(nv, (v2.([]map[string]interface{}))...))
 		default:
 			valueT := reflect.ValueOf(v1)
 			value2T := reflect.ValueOf(v2)
@@ -9003,7 +9198,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 					return p.Errf(r, "操作失败，类型错误：%T(%v) -> %T(%v)", v1, v1, v2, v2)
 				}
 				p.SetVar(r, pr, vrs)
-				return
+				return ""
 			}
 
 			return p.Errf(r, "参数类型错误：%T(%v) -> %T(%v)", v1, v1, v2, v2)
@@ -10932,6 +11127,25 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		listT := tk.SplitByLen(s1, c2, vs...)
 
 		p.SetVar(r, pr, listT)
+
+		return ""
+
+	case 1535: // strJoin
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		pr := instrT.Params[0]
+
+		v1 := p.GetVarValue(r, instrT.Params[1])
+
+		sepT := ""
+
+		if instrT.ParamLen > 2 {
+			sepT = tk.ToStr(p.GetVarValue(r, instrT.Params[2]))
+		}
+
+		p.SetVar(r, pr, tk.JoinList(v1, sepT))
 
 		return ""
 
@@ -14035,6 +14249,70 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		return ""
 
+	case 21202: // writeStrf
+		if instrT.ParamLen < 3 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		pr := instrT.Params[0]
+		v1p := 1
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		v2 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p+1]))
+
+		vs := p.ParamsToList(r, instrT, v1p+2)
+
+		switch nv := v1.(type) {
+		case string:
+			p.SetVar(r, pr, nv+fmt.Sprintf(v2, vs...))
+			return ""
+		case io.StringWriter:
+			n, err := nv.WriteString(fmt.Sprintf(v2, vs...))
+
+			if err != nil {
+				p.SetVar(r, pr, err)
+				return ""
+			}
+
+			p.SetVar(r, pr, n)
+			return ""
+		default:
+			p.SetVar(r, pr, fmt.Errorf("无法处理的类型：%T(%v)", v1, v1))
+			return ""
+
+		}
+
+		return ""
+
+	case 21203: // readStr
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		pr := instrT.Params[0]
+		v1p := 1
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		switch nv := v1.(type) {
+		case string:
+			p.SetVar(r, pr, nv)
+			return ""
+		case strings.Builder:
+			p.SetVar(r, pr, nv.String())
+			return ""
+		case *strings.Builder:
+			p.SetVar(r, pr, nv.String())
+			return ""
+		default:
+			p.SetVar(r, pr, fmt.Errorf("无法处理的类型：%T(%v)", v1, v1))
+			return ""
+
+		}
+
+		return ""
+
 	case 21501: // createFile
 		if instrT.ParamLen < 2 {
 			return p.Errf(r, "not enough parameters(参数不够)")
@@ -14658,6 +14936,39 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		return ""
 
+	case 21802: // removeAllFile
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+
+		if instrT.ParamLen > 2 {
+			optsA := p.ParamsToStrs(r, instrT, 2)
+
+			if tk.IfSwitchExistsWhole(optsA, "-dry") {
+				tk.Pl("模拟删除 %v", v1)
+
+				p.SetVar(r, pr, nil)
+
+				return ""
+			}
+		}
+
+		rsT := os.RemoveAll(v1)
+
+		p.SetVar(r, pr, rsT)
+
+		return ""
+
 	case 21803: // renameFile
 		if instrT.ParamLen < 3 {
 			return p.Errf(r, "not enough parameters(参数不够)")
@@ -15002,6 +15313,26 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		vT := tk.ToXML(p.GetVarValue(r, instrT.Params[1]), argsT...)
 
 		p.SetVar(r, p1, vT)
+
+		return ""
+
+	case 22301: // getAllNodesTextFromXML
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 2 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+		v2 := p.GetVarValue(r, instrT.Params[v1p+1])
+
+		p.SetVar(r, pr, tk.GetNodesStringFromXML(tk.ToStr(v1), tk.ToStr(v2)))
 
 		return ""
 

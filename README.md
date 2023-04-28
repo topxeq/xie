@@ -60,7 +60,7 @@ Xielang is a free, open-source, cross-platform, cross-language, ASM/SHELL-like, 
   - [- **加载外部模块**（Loading external module）](#--加载外部模块loading-external-module)
   - [- **封装函数调用**（Sealed Function Call）](#--封装函数调用sealed-function-call)
   - [- **并发函数**（Concurrent function call）](#--并发函数concurrent-function-call)
-  - [- **用线程锁处理并发共享冲突**](#--用线程锁处理并发共享冲突)
+  - [- **用线程锁处理并发共享冲突**（Using Thread Locks to Handle Concurrent Sharing Conflicts）](#--用线程锁处理并发共享冲突using-thread-locks-to-handle-concurrent-sharing-conflicts)
   - [- **对象机制**](#--对象机制)
   - [- **快速/宿主对象机制**](#--快速宿主对象机制)
   - [- **时间处理**](#--时间处理)
@@ -3644,6 +3644,8 @@ Then write the second module file module2.xie, which contains a regular function
 
 最后编写动态加载上面两个模块的例子代码（loadModule.xie）：
 
+Finally, write example code for dynamically loading the above two modules (loadModule.xie):
+
 ```go
 // 载入第1个代码文件module1.xie并压栈
 // load code string from module file 1
@@ -3980,7 +3982,7 @@ This example also demonstrates the methods of taking a reference to a variable a
 
 &nbsp;
 
-##### - **用线程锁处理并发共享冲突**
+##### - **用线程锁处理并发共享冲突**（Using Thread Locks to Handle Concurrent Sharing Conflicts）
 
 &nbsp;
 

@@ -1,0 +1,28 @@
+= $a #M`{"key1":1,"key2":"2"}`
+
+pl "[1] a=%#v" $a
+
+refVar $p1 $a
+
+pl "p1=%#v" $p1
+
+mt $v1 $p1 GetValue
+
+pl "v1=%#v" $v1
+
+setMapItem $v1 key1 #i9
+
+pl "*p1=%#v" *$p1
+pl "[2] a=%#v" $a
+
+mt $rs1 $p1 SetValue #f3.6
+
+pl "[3] a=%#v" $a
+
+unrefVar $rs2 $p1 
+
+pl "rs2=%v" $rs2
+
+assignRefVar $p1 #btrue
+
+pl "[4] a=%#v" $a
