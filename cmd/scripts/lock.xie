@@ -1,98 +1,153 @@
 // 给变量a赋值整数0
 // 变量a将在线程中运行的并发函数中被修改
+// Assign integer 0 to variable a
+// Variable a will be modified in the concurrent function running in the thread
 assign $a #i0
 
 // 创建一个线程锁对象放入变量lock1中
 // 指令new用于创建谢语言中一些基础数据类型或宿主语言支持的对象
 // 除结果变量外第一个参数为字符串类型的对象名称
+// lock对象是共享锁对象
+// Create a thread lock object and place it in the variable lock1
+// The instruction 'new' is used to create some basic data types or objects supported by the host language in Xielang
+// The first parameter, except for the result variable, is an object type name of string type
+// The lock object is a shared lock object
 new $lock1 lock
 
 // 定义一个并发函数体func1（用字符串形式定义）
-// 并发函数使用新的虚拟机运行，因此其中的变量名称不会与主程序冲突
-// 双方只能通过堆栈进行交互，例如可以传入某变量的引用
-// 以便在并发函数中对其进行修改
+// 并发函数如果使用goRunCall指令启动，会在新的运行上下文中运行
+// 除了全局变量外，其中的变量名称不会与主线程冲突
+// 因此可以传入变量引用或普通引用以便在并发函数中对其进行修改
+// Define a concurrent function body func1 (defined in string form)
+// If the concurrent function is started using the goRunCall instruction, it will run in a new running context
+// Except for global variables, their names will not conflict with those in the main thread
+// Therefore, variable contains a reference/pointer value or regular Xielang variable references can be passed in to modify them in concurrent functions
 assign $func1 `
-    // 弹栈两个传入的参数，注意不是逆序弹出的而是顺序弹出的
-    pop $arg1
-    pop $arg2
+    // 获取两个传入的参数，参数是通过inputL变量传入的
+    // 并发调用的函数体一般不需要返回参数
+    // “[]”指令是getArrayItem指令的简写形式
+    // Obtain two incoming parameters, which are passed in through the inputL variable
+    // Function bodies that are called concurrently generally do not need to return parameters
+    // The '[]' instruction is a shortened form of the getArrayItem instruction
+    [] $arg1 $inputL 0
+    [] $arg2 $inputL 1
 
     // 创建一个循环变量i并赋以初值0
+    // Create a loop variable i and assign it an initial value of 0
     assign $i #i0
 
     // 无限循环演示不停将外部传入的变量a值加1
     // loop1是用于循环的标号
+    // Infinite loop demonstration continuously increasing the value of variable a passed in externally by 1
+    // Loop1 is a label used for loops
     :loop1
         // 调用传入的线程锁变量的加锁方法（lock）
-        // 此处变量arg2即为外部压栈传入的线程锁对象
+        // 此处变量arg2即为外部传入的线程锁对象
         // 由于lock方法没有有意义的返回值，因此用内置变量drop将其丢弃
+        // Call the lock method of the incoming thread lock variable
+        // The variable arg2 here refers to the thread lock object passed in externally
+        // Due to the lack of meaningful return values for the lock method, it is discarded using the built-in variable $drop
         method $drop $arg2 lock
 
         // 解引用变量a的引用，以便取得a中当前的值
-        unref $aNew $arg1
+        // Dereference the variable arg1 in order to obtain the current value in a
+        unrefVar $aNew $arg1
     
         // 将其加1，结果放入变量result中
+        // Add 1 to it and place the result in the variable result
         add $result $aNew #i1
 
         // 将变量arg1指向的变量（即a）中的值赋为result中的值
-        // assignRef的第一个参数必须是一个引用
-        assignRef $arg1 $result
+        // assignRefVar的第一个参数必须是一个引用
+        // Assign the value in the variable (i.e. a) pointed to by variable arg1 to the value in result
+        // The first parameter of assignRefVar must be a reference
+        assignRefVar $arg1 $result
 
         // 调用线程锁的unlock方法将其解锁，以便其他线程可以访问
+        // Call the unlock method of the thread lock to unlock it so that other threads can access it
         method $drop $arg2 unlock
 
         // 循环变量加1
+        // Increase the loop variable by 1
         inc $i
 
-        // 判断循环变量i的值是否大于或等于5000
+        // 判断循环变量i的值是否大于或等于30
         // 即循环5000次
         // 判断结果值（布尔类型）放入变量r中
-        >= $r $i #i5000        
+        // Determine whether the value of loop variable i is greater than or equal to 30
+        // That is, 5000 cycles
+        // Put the judgment result value (Boolean type) into the variable r
+        >= $r $i #i30        
 
 
         // 如果r值为真（true），则转到标号beforeReturn处
+        // If the value of r is true, go to the label beforeReturn
         if $r :beforeReturn
 
+        // 休眠1秒钟
+        // Sleep for 1 second
+        sleep #f1.0
+
         // 跳转到标号loop1（实现无限循环）
+        // Jump to label loop1 (implementing infinite loop)
         goto :loop1
 
     :beforeReturn
         // pass指令不进行任何操作，由于标号处必须至少有一条指令
         // 因此放置一条pass指令，实际上beforeReturn这里作用是结束线程的运行
         // 因为没有后续指令了
+        // The pass instruction does not perform any operations as there must be at least one instruction at the label
+        // Therefore, by placing a pass instruction, in fact, beforeReturn is used to end the thread's operation
+        // Because there are no further instructions left
         pass
 `
 
-// 获取变量a的引用，结果入栈
+// 获取变量a的引用，存入变量p1中
 // 将被传入并发函数中以修改a中的值
-ref $push $a
+// Obtain a reference to variable a and store it in variable p1
+// Will be passed into the concurrent function to modify the value in a
+refVar $p1 $a
 
-// 再入栈线程锁对象，以便线程中用于控制并发冲突
-push $lock1
-
-// 调用并发函数
-// 第一个参数表示需要压入并发函数所使用的堆栈中的值的数量（可以是用字符串表示的数字）
-// 如果不需要传递参数，第一个参数可以省略
-// 第二个参数是字符串形式的并发函数代码
-goFunc 2 $func1
+// 用goRunCall指令调用并发函数，结果参数意义不大，因此用$drop丢弃
+// 第一个参数是字符串类型的函数体
+// 后面跟随传入的两个参数
+// 第一个传入参数是p1，即变量a的引用
+// 第二个参数是线程锁对象，因为本身就是引用，因此可以直接传入
+// Calling a concurrent function with the goRunCall instruction resulted in insignificant parameters, so $drop was used to discard them
+// The first parameter is the function body of string type
+// Following the two parameters passed in
+// The first incoming parameter is p1, which is a reference to variable a
+// The second parameter is the thread lock object, which is itself a reference and can be directly passed in
+goRunCall $drop $func1 $p1 $lock1
 
 // 再启动一个相同的线程
-ref $push $a
-push $lock1
-goFunc 2 $func1
+// Start another identical thread
+goRunCall $drop $func1 $p1 $lock1
 
 // 主线程中输出变量a的值
 // 此时刚开始启动并发函数，变量a中的值有可能还未改变
-pln main $a
+// The value of output variable a in the main thread
+// At this point, the concurrent function has just started, and the value in variable a may not have changed yet
+pln main a= $a
 
-// 注意，这里的标号loop1虽然与并发函数中的同名，但由于运行在不同的虚拟机中，因此不会冲突，可以看做是两个标号
+// 注意，这里的标号loop1虽然与并发函数中的同名，但由于运行在不同的运行上下文中，因此不会冲突，可以看做是两个标号
+// Note that although the label loop1 here has the same name as the concurrent function, it does not conflict as it runs in different running contexts and can be considered as two labels
 :loop1
 
     // 休眠1秒
+    // Sleep for 1 second
     sleep #f1.0
 
     // 输出变量a中的值查看
-    // 每隔一秒应该会变成新的时间
+    // 由于同时启动了两个线程，并且都是每隔1秒将a中值加1
+    // 因此每隔一秒输出的值会加2，最终达到60
+    // 由于1秒时间点的细微差异，有时候也会是加3或加1
+    // View the value in output variable a
+    // Due to the simultaneous start of two threads, both of which increase the value of a by 1 every 1 second
+    // Therefore, the output value will increase by 2 every second, ultimately reaching 60
+    // Due to subtle differences in time points of 1 second, sometimes it can also be increased by 3 or 1
     pln main a= $a
 
     // 跳转到标号loop1（实现无限循环）
+    // Jump to label loop1 (implementing infinite loop)
     goto :loop1

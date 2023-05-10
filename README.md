@@ -53,6 +53,7 @@ Xielang is a free, open-source, cross-platform, cross-language, ASM/SHELL-like, 
   - [- **谢语言的基础设施**（Infrastructure provided by Xielang）](#--谢语言的基础设施infrastructure-provided-by-xielang)
   - [- **用runCall指令在不同运行上下文中执行代码**（Executing code in different running contexts using the runCall instruction）](#--用runcall指令在不同运行上下文中执行代码executing-code-in-different-running-contexts-using-the-runcall-instruction)
   - [- **取变量引用及取引用对应变量的实际值**（Reference and Dereference）](#--取变量引用及取引用对应变量的实际值reference-and-dereference)
+  - [- **取谢语言变量的引用及其解引用**（Reference variable in Xielang and Dereference it）](#--取谢语言变量的引用及其解引用reference-variable-in-xielang-and-dereference-it)
   - [- **复杂数据类型-列表**（Complex Data Types - List）](#--复杂数据类型-列表complex-data-types---list)
   - [- **复杂数据类型-映射**（Complex Data Types - Map）](#--复杂数据类型-映射complex-data-types---map)
   - [- **嵌套的复杂数据结构及JSON编码**（Nested complex data structures and JSON encoding）](#--嵌套的复杂数据结构及json编码nested-complex-data-structures-and-json-encoding)
@@ -3011,9 +3012,9 @@ Later, when appropriate, we will also introduce the use of the concurrent call i
 
 &nbsp;
 
-这里的“引用”可以理解成一般语言中的取变量地址的操作。使用引用的目的是为了直接修改其中的值，尤其是对一些复杂数据类型来说。这里先给出一个对基础数据类型的取引用与解引用操作的例子（ref.xie）：
+这里的“引用”可以理解成一般语言中的取变量地址的操作。使用引用的目的是为了直接修改其中的值，尤其是对一些复杂数据类型来说。这里先给出一个对基础数据类型的取引用与解引用操作的例子（refUnref.xie）：
 
-The 'reference' here can be understood as the operation of taking variable addresses in general language. The purpose of using references is to directly modify the values, especially for some complex data types. Here is an example of reference and dereference operations for basic data types (ref.xie):
+The 'reference' here can be understood as the operation of taking variable addresses in general language. The purpose of using references is to directly modify the values, especially for some complex data types. Here is an example of reference and dereference operations for basic data types (refUnref.xie):
 
 ```go
 // 新建一个整数类型的引用变量$ref1
@@ -3113,6 +3114,84 @@ Among them, the ref instruction is used to obtain the reference of a variable, t
 另外，new \$ref1 int也可以用var \$ref1 "\*int"来达到同样的效果，还可以用var \$ref1 "\*int" \#i23来进行初始化赋值（注意赋的是引用指向的数值而非指针地址）。
 
 In addition, new \$ref1 int can also be used with var \$ref1 "\*int" to achieve the same effect, and var \$ref1 "\*int" \#i23 can also be used for initialization assignment (note that the assignment is to the numerical value pointed to by the reference rather than the pointer address).
+
+&nbsp;
+
+##### - **取谢语言变量的引用及其解引用**（Reference variable in Xielang and Dereference it）
+
+&nbsp;
+
+上一节介绍的变量引用与解引用指的是当变量中保存的是一个引用（指针）变量时，如何取引用与解引用。如果变量中保存的是一个普通的数值，我们想对变量本身进行取引用以便在别处使用（例如在不同线程中共享），那么需要使用refVar指令，相应地还有unrefVar指令用于解引用变量，以及assignRefVar指令用于根据引用进行复制。我们来看下面这个例子（refUnref2.xie）：
+
+The variable reference and dereference introduced in the previous section refer to how to take a reference and dereference when a reference (pointer) variable is stored in the variable. If a variable holds a regular value in Xielang and we want to take a reference to the variable itself for use elsewhere (such as sharing in different threads), then we need to use the refVar instruction, correspondingly, the unrefVar instruction for dereferencing the variable, and the assignRefVar instruction for copying based on the reference. Let's take a look at the following example (refUnref2.xie):
+
+```go
+// 将变量a赋值为一个映射类型的数据
+// Assign variable a as data of a mapping type
+= $a #M`{"key1":1,"key2":"2"}`
+
+// 输出a中的值作为参考
+// output value in a for reference
+pl "[1] a=%#v" $a
+
+// 获取变量a的引用，放在变量p1中
+// Obtain a reference to variable a and place it in variable p1
+refVar $p1 $a
+
+pl "p1=%#v" $p1
+
+// 调用p1的成员方法GetValue来获取其中保存的值放在v1中
+// 此时v1应该与a中的值是一样的
+// Call the member method GetValue of p1 to obtain the saved value and place it in v1
+// At this point, v1 should be the same as the value in a
+mt $v1 $p1 GetValue
+
+pl "v1=%#v" $v1
+
+// 将v1中键名为key1的键值置为整数9
+// Set the key value with key1 in v1 to the integer 9
+setMapItem $v1 key1 #i9
+
+pl "*p1=%#v" *$p1
+pl "[2] a=%#v" $a
+
+// 调用引用变量p1的成员方法SetValue将其重新赋值为浮点数3.6
+// Call the member method SetValue of reference variable p1 to reassign it to floating point 3.6
+mt $rs1 $p1 SetValue #f3.6
+
+pl "[3] a=%#v" $a
+
+// 解引用p1，将其放于变量rs2中
+// 此时rs2中的值就是浮点数3.6
+// Dereference p1 and place it in variable rs2
+// At this time, the value in rs2 is floating point 3.6
+unrefVar $rs2 $p1 
+
+pl "rs2=%v" $rs2
+
+// 用assignRefVar指令给引用变量指向的变量赋值
+// Assign a value to the variable pointed to by the reference variable using the assignRefVar instruction
+assignRefVar $p1 #btrue
+
+pl "[4] a=%#v" $a
+
+```
+
+运行结果如下：
+
+The running result will be:
+
+```shell
+[1] a=map[string]interface {}{"key1":1, "key2":"2"}
+p1=&tk.FlexRef{Type:"map", Data:map[string]interface {}{"a":map[string]interface {}{"key1":1, "key2":"2"}, "argsG":[]string{"xie", "-gopath", "refUnref2.xie"}, "backQuoteG":"`", "guiG":(tk.TXDelegate)(0xfec300), "newLineG":"\n", "nilG":interface {}(nil), "p1":(*tk.FlexRef)(0xc00009e5c0), "scriptPathG":"D:\\goprjs\\src\\github.com\\topxeq\\xie\\cmd\\scripts\\refUnref2.xie", "undefinedG":tk.UndefinedStruct{int:0}}, Key:"a", Index:0}
+v1=map[string]interface {}{"key1":1, "key2":"2"}
+*p1=map[string]interface {}{"key1":9, "key2":"2"}
+[2] a=map[string]interface {}{"key1":9, "key2":"2"}
+[3] a=3.6
+rs2=3.6
+[4] a=true
+
+```
 
 &nbsp;
 
@@ -3988,120 +4067,216 @@ This example also demonstrates the methods of taking a reference to a variable a
 
 谢语言中，对于同时运行的几个线程间共享某个变量，对其进行读取和修改时可能产生的并发冲突问题，可以使用线程锁来控制解决。参看下面的例子（lock.xie）：
 
+In Xielang, thread locks can be used to control and resolve concurrency conflicts that may arise when reading and modifying a variable shared between multiple threads running simultaneously. Please refer to the following example (lock.xie):
+
 ```go
+
 // 给变量a赋值整数0
 // 变量a将在线程中运行的并发函数中被修改
+// Assign integer 0 to variable a
+// Variable a will be modified in the concurrent function running in the thread
 assign $a #i0
 
 // 创建一个线程锁对象放入变量lock1中
 // 指令new用于创建谢语言中一些基础数据类型或宿主语言支持的对象
 // 除结果变量外第一个参数为字符串类型的对象名称
+// lock对象是共享锁对象
+// Create a thread lock object and place it in the variable lock1
+// The instruction 'new' is used to create some basic data types or objects supported by the host language in Xielang
+// The first parameter, except for the result variable, is an object type name of string type
+// The lock object is a shared lock object
 new $lock1 lock
 
 // 定义一个并发函数体func1（用字符串形式定义）
-// 并发函数使用新的虚拟机运行，因此其中的变量名称不会与主程序冲突
-// 双方只能通过堆栈进行交互，例如可以传入某变量的引用
-// 以便在并发函数中对其进行修改
+// 并发函数如果使用goRunCall指令启动，会在新的运行上下文中运行
+// 除了全局变量外，其中的变量名称不会与主线程冲突
+// 因此可以传入变量引用或普通引用以便在并发函数中对其进行修改
+// Define a concurrent function body func1 (defined in string form)
+// If the concurrent function is started using the goRunCall instruction, it will run in a new running context
+// Except for global variables, their names will not conflict with those in the main thread
+// Therefore, variable contains a reference/pointer value or regular Xielang variable references can be passed in to modify them in concurrent functions
 assign $func1 `
-    // 弹栈两个传入的参数，注意不是逆序弹出的而是顺序弹出的
-    pop $arg1
-    pop $arg2
+    // 获取两个传入的参数，参数是通过inputL变量传入的
+    // 并发调用的函数体一般不需要返回参数
+    // “[]”指令是getArrayItem指令的简写形式
+    // Obtain two incoming parameters, which are passed in through the inputL variable
+    // Function bodies that are called concurrently generally do not need to return parameters
+    // The '[]' instruction is a shortened form of the getArrayItem instruction
+    [] $arg1 $inputL 0
+    [] $arg2 $inputL 1
 
     // 创建一个循环变量i并赋以初值0
+    // Create a loop variable i and assign it an initial value of 0
     assign $i #i0
 
     // 无限循环演示不停将外部传入的变量a值加1
     // loop1是用于循环的标号
+    // Infinite loop demonstration continuously increasing the value of variable a passed in externally by 1
+    // Loop1 is a label used for loops
     :loop1
         // 调用传入的线程锁变量的加锁方法（lock）
-        // 此处变量arg2即为外部压栈传入的线程锁对象
+        // 此处变量arg2即为外部传入的线程锁对象
         // 由于lock方法没有有意义的返回值，因此用内置变量drop将其丢弃
+        // Call the lock method of the incoming thread lock variable
+        // The variable arg2 here refers to the thread lock object passed in externally
+        // Due to the lack of meaningful return values for the lock method, it is discarded using the built-in variable $drop
         method $drop $arg2 lock
 
         // 解引用变量a的引用，以便取得a中当前的值
-        unref $aNew $arg1
+        // Dereference the variable arg1 in order to obtain the current value in a
+        unrefVar $aNew $arg1
     
         // 将其加1，结果放入变量result中
+        // Add 1 to it and place the result in the variable result
         add $result $aNew #i1
 
         // 将变量arg1指向的变量（即a）中的值赋为result中的值
-        // assignRef的第一个参数必须是一个引用
-        assignRef $arg1 $result
+        // assignRefVar的第一个参数必须是一个引用
+        // Assign the value in the variable (i.e. a) pointed to by variable arg1 to the value in result
+        // The first parameter of assignRefVar must be a reference
+        assignRefVar $arg1 $result
 
         // 调用线程锁的unlock方法将其解锁，以便其他线程可以访问
+        // Call the unlock method of the thread lock to unlock it so that other threads can access it
         method $drop $arg2 unlock
 
         // 循环变量加1
+        // Increase the loop variable by 1
         inc $i
 
-        // 判断循环变量i的值是否大于或等于5000
+        // 判断循环变量i的值是否大于或等于30
         // 即循环5000次
         // 判断结果值（布尔类型）放入变量r中
-        >= $r $i #i5000        
+        // Determine whether the value of loop variable i is greater than or equal to 30
+        // That is, 5000 cycles
+        // Put the judgment result value (Boolean type) into the variable r
+        >= $r $i #i30        
 
 
         // 如果r值为真（true），则转到标号beforeReturn处
+        // If the value of r is true, go to the label beforeReturn
         if $r :beforeReturn
 
+        // 休眠1秒钟
+        // Sleep for 1 second
+        sleep #f1.0
+
         // 跳转到标号loop1（实现无限循环）
+        // Jump to label loop1 (implementing infinite loop)
         goto :loop1
 
     :beforeReturn
         // pass指令不进行任何操作，由于标号处必须至少有一条指令
         // 因此放置一条pass指令，实际上beforeReturn这里作用是结束线程的运行
         // 因为没有后续指令了
+        // The pass instruction does not perform any operations as there must be at least one instruction at the label
+        // Therefore, by placing a pass instruction, in fact, beforeReturn is used to end the thread's operation
+        // Because there are no further instructions left
         pass
 `
 
-// 获取变量a的引用，结果入栈
+// 获取变量a的引用，存入变量p1中
 // 将被传入并发函数中以修改a中的值
-ref $push $a
+// Obtain a reference to variable a and store it in variable p1
+// Will be passed into the concurrent function to modify the value in a
+refVar $p1 $a
 
-// 再入栈线程锁对象，以便线程中用于控制并发冲突
-push $lock1
-
-// 调用并发函数
-// 第一个参数表示需要压入并发函数所使用的堆栈中的值的数量（可以是用字符串表示的数字）
-// 如果不需要传递参数，第一个参数可以省略
-// 第二个参数是字符串形式的并发函数代码
-goFunc 2 $func1
+// 用goRunCall指令调用并发函数，结果参数意义不大，因此用$drop丢弃
+// 第一个参数是字符串类型的函数体
+// 后面跟随传入的两个参数
+// 第一个传入参数是p1，即变量a的引用
+// 第二个参数是线程锁对象，因为本身就是引用，因此可以直接传入
+// Calling a concurrent function with the goRunCall instruction resulted in insignificant parameters, so $drop was used to discard them
+// The first parameter is the function body of string type
+// Following the two parameters passed in
+// The first incoming parameter is p1, which is a reference to variable a
+// The second parameter is the thread lock object, which is itself a reference and can be directly passed in
+goRunCall $drop $func1 $p1 $lock1
 
 // 再启动一个相同的线程
-ref $push $a
-push $lock1
-goFunc 2 $func1
+// Start another identical thread
+goRunCall $drop $func1 $p1 $lock1
 
 // 主线程中输出变量a的值
 // 此时刚开始启动并发函数，变量a中的值有可能还未改变
-pln main $a
+// The value of output variable a in the main thread
+// At this point, the concurrent function has just started, and the value in variable a may not have changed yet
+pln main a= $a
 
-// 注意，这里的标号loop1虽然与并发函数中的同名，但由于运行在不同的虚拟机中，因此不会冲突，可以看做是两个标号
+// 注意，这里的标号loop1虽然与并发函数中的同名，但由于运行在不同的运行上下文中，因此不会冲突，可以看做是两个标号
+// Note that although the label loop1 here has the same name as the concurrent function, it does not conflict as it runs in different running contexts and can be considered as two labels
 :loop1
 
     // 休眠1秒
+    // Sleep for 1 second
     sleep #f1.0
 
     // 输出变量a中的值查看
-    // 每隔一秒应该会变成新的时间
+    // 由于同时启动了两个线程，并且都是每隔1秒将a中值加1
+    // 因此每隔一秒输出的值会加2，最终达到60
+    // 由于1秒时间点的细微差异，有时候也会是加3或加1
+    // View the value in output variable a
+    // Due to the simultaneous start of two threads, both of which increase the value of a by 1 every 1 second
+    // Therefore, the output value will increase by 2 every second, ultimately reaching 60
+    // Due to subtle differences in time points of 1 second, sometimes it can also be increased by 3 or 1
     pln main a= $a
 
     // 跳转到标号loop1（实现无限循环）
+    // Jump to label loop1 (implementing infinite loop)
     goto :loop1
+
 ```
 
 method指令用于调用对象的某个方法，这里是调用了线程锁的lock和unlock方法。method指令可以简写为mt。
 
-如果没有对线程锁对象加锁、解锁的操作（可以注释上其中method $drop $arg2 lock与unlock这两条语句尝试），程序运行的结果将是不确定的数字，每次都有可能结果不同，这是因为两个线程各自存取变量a中的值产生的冲突所致。例如，当第一个线程取到了a的值为10，在将其加1但还没有来得及把值（11）赋回给a的时候，第二个线程获取了当时的a值10，也将其加1后赋回给a，然后线程1再把11赋给a，这样虽然两个线程各执行了一个a=a+1的操作，但其实效果相当于只执行了1次。这样，最后程序结果应该是a的值小于理论值10000。
+The method instruction is used to call a method of an object, where the lock and unlock methods of the thread lock are called. The method instruction can be abbreviated as mt.
 
-加上线程锁后，结果每次都将是准确的10000，如下所示。
+如果没有对线程锁对象加锁、解锁的操作（可以注释上其中method $drop $arg2 lock与unlock这两条语句尝试），程序运行的结果将是不确定的数字，每次都有可能结果不同，这是因为两个线程各自存取变量a中的值产生的冲突所致。例如，当第一个线程取到了a的值为10，在将其加1但还没有来得及把值（11）赋回给a的时候，第二个线程获取了当时的a值10，也将其加1后赋回给a，然后线程1再把11赋给a，这样虽然两个线程各执行了一个a=a+1的操作，但其实效果相当于只执行了1次。这样，我们如果再把线程中的休眠指令去掉，并增大结束条件到5000次，以便更好地显示出效果，最后程序结果应该是a的值小于理论值10000，还有一种可能是两个线程同时操作映射对象时使得程序崩溃。
+
+If there is no lock or unlock operation on the thread lock object (you can comment on the two statements' method $drop $arg2 lock and unlock ' to try), the result of program execution will be an uncertain number, and the result may be different each time. This is due to conflicts between the values in variable a accessed by two threads. For example, when the first thread takes the value of a as 10 and adds it to 1 before it can assign the value (11) back to a, the second thread takes the value of a as 10 and adds it back to a, then thread 1 assigns 11 to a. Although each thread performs an operation with a=a+1, the effect is equivalent to only executing it once. In this way, if we remove the sleep instructions from the thread and increase the end condition to 5000 times to better display the effect, the final program result should be that the value of a is less than the theoretical value of 10000. Another possibility is that two threads operating on the mapped object simultaneously can cause the program to crash.
+
+加上线程锁后，每次最终结果都将是准确的60（或5000次的话结果是10000），如下所示。
+
+After adding thread locks, each final result will be an accurate 60 (or 10000 if 5000 times), as shown below.
 
 ```shell
-main 0
-main a= 10000
-main a= 10000
-main a= 10000
-main a= 10000
-main a= 10000
+main a= 0
+main a= 2
+main a= 4
+main a= 6
+main a= 8
+main a= 10
+main a= 12
+main a= 14
+main a= 16
+main a= 18
+main a= 20
+main a= 22
+main a= 24
+main a= 26
+main a= 28
+main a= 30
+main a= 32
+main a= 34
+main a= 36
+main a= 40
+main a= 40
+main a= 42
+main a= 44
+main a= 47
+main a= 48
+main a= 50
+main a= 52
+main a= 54
+main a= 56
+main a= 58
+main a= 60
+main a= 60
+main a= 60
+main a= 60
+main a= 60
+main a= 60
+
 
 ```
 

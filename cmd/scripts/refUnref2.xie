@@ -1,28 +1,48 @@
+// 将变量a赋值为一个映射类型的数据
+// Assign variable a as data of a mapping type
 = $a #M`{"key1":1,"key2":"2"}`
 
+// 输出a中的值作为参考
+// output value in a for reference
 pl "[1] a=%#v" $a
 
+// 获取变量a的引用，放在变量p1中
+// Obtain a reference to variable a and place it in variable p1
 refVar $p1 $a
 
 pl "p1=%#v" $p1
 
+// 调用p1的成员方法GetValue来获取其中保存的值放在v1中
+// 此时v1应该与a中的值是一样的
+// Call the member method GetValue of p1 to obtain the saved value and place it in v1
+// At this point, v1 should be the same as the value in a
 mt $v1 $p1 GetValue
 
 pl "v1=%#v" $v1
 
+// 将v1中键名为key1的键值置为整数9
+// Set the key value with key1 in v1 to the integer 9
 setMapItem $v1 key1 #i9
 
 pl "*p1=%#v" *$p1
 pl "[2] a=%#v" $a
 
+// 调用引用变量p1的成员方法SetValue将其重新赋值为浮点数3.6
+// Call the member method SetValue of reference variable p1 to reassign it to floating point 3.6
 mt $rs1 $p1 SetValue #f3.6
 
 pl "[3] a=%#v" $a
 
+// 解引用p1，将其放于变量rs2中
+// 此时rs2中的值就是浮点数3.6
+// Dereference p1 and place it in variable rs2
+// At this time, the value in rs2 is floating point 3.6
 unrefVar $rs2 $p1 
 
 pl "rs2=%v" $rs2
 
+// 用assignRefVar指令给引用变量指向的变量赋值
+// Assign a value to the variable pointed to by the reference variable using the assignRefVar instruction
 assignRefVar $p1 #btrue
 
 pl "[4] a=%#v" $a
