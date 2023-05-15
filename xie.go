@@ -49,7 +49,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var VersionG string = "1.2.0"
+var VersionG string = "1.2.1"
 
 func Test() {
 	tk.Pl("test")
@@ -918,9 +918,14 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"excelGetSheetList": 210201, // 获取sheet名字列表，结果是字符串数组
 
-	// mail related
+	// mail related 邮件相关
 
 	// "mailNewSender": 220001, // 新建一个邮件发送对象，与 new $result "mailSender" 指令效果类似
+
+	// pinyin related 拼音相关
+
+	"toPinYin": 220001, // 字符串转换为拼音，结果参数不可省略，用法：toPinyin $result "我们都是nice的。"，结果是所有汉字转为的拼音和所有无法转为拼音的字符的原字符；可以加-sep=-表示将各个拼音和字符间以指定分隔符分隔，加-pinYinOnly开关参数表示只包含能够转换为拼音的字符，加-ascOnly表示只包含ASCII字符，加-first表示拼音只取首字母，-tone表示加音调，-digitTone表示音调以数字表示，-digitTone2表示音调以数字表示且加在韵母（元音）后，加-raw表示结果为二维字符串数组，加参数用法类似：toPinyin $pln "我们都是nice的。" -digitTone -sep=-
+	"toPinyin": 220001,
 
 	// misc related 杂项相关
 
@@ -18146,6 +18151,71 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		}
 
 		p.SetVar(r, pr, f1.GetSheetList())
+		return ""
+
+	case 220001: // toPinYin/toPinyin
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = instrT.Params[0]
+		v1p := 1
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		vs := p.ParamsToStrs(r, instrT, v1p+1)
+
+		// pinyin1 := pinyin.NewArgs()
+
+		// if tk.IfSwitchExistsWhole(vs, "-first") {
+		// 	pinyin1.Style = pinyin.FirstLetter
+		// }
+
+		// if tk.IfSwitchExistsWhole(vs, "-tone") {
+		// 	pinyin1.Style = pinyin.Tone
+		// }
+
+		// if tk.IfSwitchExistsWhole(vs, "-digitTone") {
+		// 	pinyin1.Style = pinyin.Tone3
+		// }
+
+		// if tk.IfSwitchExistsWhole(vs, "-digitTone2") {
+		// 	pinyin1.Style = pinyin.Tone2
+		// }
+
+		// if tk.IfSwitchExistsWhole(vs, "-ascOnly") {
+		// 	pinyin1.Fallback = func(r rune, a pinyin.Args) []string {
+		// 		if r > 255 {
+		// 			return []string{}
+		// 		}
+
+		// 		return []string{string(r)}
+		// 	}
+		// } else if tk.IfSwitchExistsWhole(vs, "-pinYinOnly") {
+		// } else {
+		// 	pinyin1.Fallback = func(r rune, a pinyin.Args) []string {
+		// 		return []string{string(r)}
+		// 	}
+		// }
+
+		// var rs [][]string = pinyin.Pinyin(tk.ToStr(v1), pinyin1)
+
+		// sepT := p.GetSwitchVarValue(r, vs, "-sep=", "")
+
+		// if tk.IfSwitchExistsWhole(vs, "-raw") {
+		// 	p.SetVar(r, pr, rs)
+		// } else {
+		// 	sary1 := make([]string, 0, len(rs))
+
+		// 	for _, v := range rs {
+		// 		lineStrT := strings.Join(v, sepT)
+		// 		sary1 = append(sary1, lineStrT)
+		// 	}
+
+		// 	p.SetVar(r, pr, strings.Join(sary1, sepT))
+		// }
+
+		p.SetVar(r, pr, tk.ToPinYin(tk.ToStr(v1), vs...))
 		return ""
 
 	case 300101: // awsSign
