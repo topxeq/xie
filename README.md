@@ -62,7 +62,7 @@ Xielang is a free, open-source, cross-platform, cross-language, ASM/SHELL-like, 
   - [- **封装函数调用**（Sealed Function Call）](#--封装函数调用sealed-function-call)
   - [- **并发函数**（Concurrent function call）](#--并发函数concurrent-function-call)
   - [- **用线程锁处理并发共享冲突**（Using Thread Locks to Handle Concurrent Sharing Conflicts）](#--用线程锁处理并发共享冲突using-thread-locks-to-handle-concurrent-sharing-conflicts)
-  - [- **对象机制**](#--对象机制)
+  - [- **对象机制**(Object Model)](#--对象机制object-model)
   - [- **快速/宿主对象机制**](#--快速宿主对象机制)
   - [- **时间处理**](#--时间处理)
   - [- **错误处理**](#--错误处理)
@@ -4282,54 +4282,75 @@ main a= 60
 
 &nbsp;
 
-##### - **对象机制**
+##### - **对象机制**(Object Model)
 
 &nbsp;
 
 谢语言提供一个通用的可扩展的对象机制，来提供集成宿主语言基本能力和库函数优势的方法，对象可以自行编写，可以使用宿主语言也可以使用谢语言本身编写（建设中），同时，谢语言也已经提供了一些内置的对象供直接使用。
 
-下面是使用内部对象string的一个例子(object.xie)，这个对象非常简单，仅仅封装了一个字符串，但提供了一些成员方法来对其进行操作。
+Xielang provides a universal and extensible object mechanism to provide a method of integrating the basic capabilities of the host language and the advantages of library functions. Objects can be written on their own, either using the host language or using Xielanguage itself (under construction). At the same time, Xielang has also provided some built-in objects for direct use.
+
+下面是使用内部对象string的一个例子(object.xie)，这个对象非常简单，仅仅封装了一个字符串，但提供了一些成员方法来对其进行操作，具体实现可以参考谢语言的源代码。
+
+The following is an example of using an internal object string (object.xie). This object is very simple, only encapsulating a string, but providing some member methods to operate on it. For specific implementation, please refer to the source code of Xielang.
 
 *注意，谢语言的对象一般包含本体值（例如string对象就是其包含的字符串）及可以调用的成员方法，还可能包含成员变量。*
 
+*Note that Xielang objects generally contain inner values (such as string objects being the strings they contain), member methods that can be called, and may also contain member variables*
+
 ```go
 // 新建一个string对象，赋以初值字符串“abc 123”，放入变量s中
+// Create a new string object, assign the initial string 'abc 123', and place it in the variable 's'
 newObj $s string `abc 123`
 
 // 获取对象本体值，结果压栈
+// Obtain the object's inner value and push the results into the stack
 getObjValue $push $s
 
 // 将弹栈值加上字符串“天气很好”，结果存入tmp
+// Add the stack pop value with the string '天气很好' and store the result in $tmp
 add $pop "天气很好"
 
 // 输出tmp值供参考
+// Output the value in $tmp for reference
 pln $tmp
 
 // 设置变量s中string对象的本体值为字符串“very”
+// Set the inner value of the string object in variable s to the string 'very'
 setObjValue $s "very"
 
 // 输出对象值供参考
+// Output the value in $tmp for reference
 pln $s
 
 // 调用该对象的add方法，并传入参数字符串“ nice”
 // 该方法将把该string对象的本体值加上传入的字符串
+// Call the add method of the object and pass in the parameter string ' nice'
+// This method will add the inner value of the string object with the incoming string
 callObj $s add " nice"
 
 // 再次输出对象值供参考
+// Output the value again
 pln $s
 
 // 调用该对象的trimSet方法，并传入参数字符串“ve”
 // 该方法将把该string对象的本体值去掉头尾的字符v和e
 // 直至头尾不是这两个字符任意之一
+// Call the trimSet method of the object and pass in the parameter string 've'
+// This method will remove the first and last characters v and e from the inner value of the string object
+// Until the beginning and end are not either of these two characters
 callObj $s trimSet "ve"
 
 // 再次输出对象值供参考
+// Output the value again
 pln $s
 
 
 ```
 
 代码运行的结果是：
+
+The running result will be:
 
 ```shell
 abc 123天气很好

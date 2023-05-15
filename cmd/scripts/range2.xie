@@ -1,0 +1,26 @@
+= $s1 `
+abc
+123
+#$!
+`
+
+range $s1 :+1 :rangeEnd1
+    getIter $i $v
+
+    pl "[%v] %v" $i $v
+
+    continue
+
+:rangeEnd1
+
+strSplitLines $list1 $s1
+
+range $list1 :+1 :rangeEnd2
+    getIter $j $jv
+
+    pl "[%v] %v" $j $jv
+
+    continue
+
+:rangeEnd2
+pass

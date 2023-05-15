@@ -1,34 +1,47 @@
 // 新建一个string对象，赋以初值字符串“abc 123”，放入变量s中
+// Create a new string object, assign the initial string 'abc 123', and place it in the variable 's'
 newObj $s string `abc 123`
 
 // 获取对象本体值，结果压栈
+// Obtain the object's inner value and push the results into the stack
 getObjValue $push $s
 
 // 将弹栈值加上字符串“天气很好”，结果存入tmp
+// Add the stack pop value with the string '天气很好' and store the result in $tmp
 add $pop "天气很好"
 
 // 输出tmp值供参考
+// Output the value in $tmp for reference
 pln $tmp
 
 // 设置变量s中string对象的本体值为字符串“very”
+// Set the inner value of the string object in variable s to the string 'very'
 setObjValue $s "very"
 
 // 输出对象值供参考
+// Output the value in $tmp for reference
 pln $s
 
 // 调用该对象的add方法，并传入参数字符串“ nice”
 // 该方法将把该string对象的本体值加上传入的字符串
+// Call the add method of the object and pass in the parameter string ' nice'
+// This method will add the inner value of the string object with the incoming string
 callObj $s add " nice"
 
 // 再次输出对象值供参考
+// Output the value again
 pln $s
 
 // 调用该对象的trimSet方法，并传入参数字符串“ve”
 // 该方法将把该string对象的本体值去掉头尾的字符v和e
 // 直至头尾不是这两个字符任意之一
+// Call the trimSet method of the object and pass in the parameter string 've'
+// This method will remove the first and last characters v and e from the inner value of the string object
+// Until the beginning and end are not either of these two characters
 callObj $s trimSet "ve"
 
 // 再次输出对象值供参考
+// Output the value again
 pln $s
 
 
