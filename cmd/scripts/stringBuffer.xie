@@ -1,30 +1,47 @@
+// 本例演示快速/宿主对象机制
+// 以及method/mt方法的使用、双引号与反引号是否转义等
+// This example demonstrates the fast/host object mechanism
+// And the use of method/mt methods, whether double and back quotes are escaped, etc
+
 // strBuf即Go语言中的strings.Builder
-// 是一个可以动态向其中添加字符串的缓冲区
-// 最后可以一次性获取所有写入的字符串为一个大字符串
+// 是一个可以动态多次向其中添加字符串的缓冲区
+// 最后可以一次性获取其中的所有内容为一个字符串
+// StrBuf is the string. Builder in Go language
+// It is a buffer that can dynamically add strings multiple times to it
+// Finally, all the contents can be obtained as a string at once
 new $bufT strBuf
 
 // 调用bufT的append方法往其中写入字符串abc
 // method（可以简写为mt）指令是调用对象的某个方法
 // append/writeString/write方法实际上是一样的，都是向其中追加写入字符串
-// 结果参数是$drop，因为一般用不到
+// 这里结果参数使用了$drop，因为一般用不到返回值
+// Calling the append method of bufT to write the string abc to it
+// The method (which can be abbreviated as mt) instruction is a method that calls an object's member function
+// The append/writeString/write method is actually the same, appending and writing a string to the string buffer
+// The result parameter here uses $drop, as the return value is generally not used
 method $drop $bufT append abc
 
 
 // 使用双引号括起的字符串中间的转义符会被转义
+// The escape character in the middle of a string enclosed in double quotation marks will be escaped
 method $drop $bufT writeString "\n"
 
 mt $drop $bufT write 123
 
 // 使用反引号括起的字符串中的转义符不会被转义
+// Escape characters in strings enclosed in back quotes will not be escaped
 mt $drop $bufT append `\n`
 
 // 用两种方式输出bufT中的内容供参考
+// Output the content in bufT in two ways for reference
 
 // 调用bufT的str方法（也可以写作string、getStr等）获取其中的字符串
+// Call the str method of bufT (which can also be written as string, getStr, etc.) to obtain the string in it
 mt $rsT $bufT str
 
 plo $rsT
 
 // 直接用表达式来输出
-pln ?`(?mt $tmp $bufT str)`
+// Directly using expressions to output
+pln @`{mt $tmp $bufT str}`
 

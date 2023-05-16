@@ -174,4 +174,7 @@ systemCmd $rs "xie" "-gopath" "refUnref.xie"
 
 testByReg $rs `\(int\)9\n\(int\)9\n\(\*int\)\(\*int\)\([^\)]+\)\n\(int\)9\n\(\*int\)\(\*int\)\([^\)]+\)\n\(int\)1\n` $seq "refUnref.xie"
 
+systemCmd $rs "xie" "-gopath" "stringBuffer.xie"
+
+test $rs "(string)\"abc\\n123\\\\n\"\nabc\n123\\n\n" $seq "stringBuffer.xie"
 
