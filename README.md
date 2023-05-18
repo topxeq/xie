@@ -56,6 +56,7 @@ Xielang is a free, open-source, cross-platform, cross-language, ASM/SHELL-like, 
   - [- **取谢语言变量的引用及其解引用**（Reference variable in Xielang and Dereference it）](#--取谢语言变量的引用及其解引用reference-variable-in-xielang-and-dereference-it)
   - [- **复杂数据类型-列表**（Complex Data Types - List）](#--复杂数据类型-列表complex-data-types---list)
   - [- **复杂数据类型-映射**（Complex Data Types - Map）](#--复杂数据类型-映射complex-data-types---map)
+  - [- **取列表项、映射项和列表切片的快捷写法**（Shortcut for taking list items, mapping items, and list slices）](#--取列表项映射项和列表切片的快捷写法shortcut-for-taking-list-items-mapping-items-and-list-slices)
   - [- **嵌套的复杂数据结构及JSON编码**（Nested complex data structures and JSON encoding）](#--嵌套的复杂数据结构及json编码nested-complex-data-structures-and-json-encoding)
   - [- **JSON解码**（JSON decoding）](#--json解码json-decoding)
   - [- **加载外部模块**（Loading external module）](#--加载外部模块loading-external-module)
@@ -63,9 +64,9 @@ Xielang is a free, open-source, cross-platform, cross-language, ASM/SHELL-like, 
   - [- **并发函数**（Concurrent function call）](#--并发函数concurrent-function-call)
   - [- **用线程锁处理并发共享冲突**（Using Thread Locks to Handle Concurrent Sharing Conflicts）](#--用线程锁处理并发共享冲突using-thread-locks-to-handle-concurrent-sharing-conflicts)
   - [- **对象机制**(Object Model)](#--对象机制object-model)
-  - [- **快速/宿主对象机制**](#--快速宿主对象机制)
-  - [- **时间处理**](#--时间处理)
-  - [- **错误处理**](#--错误处理)
+  - [- **快速/宿主对象机制**(Fast/Host Object Mechanism)](#--快速宿主对象机制fasthost-object-mechanism)
+  - [- **时间处理**(Time processing)](#--时间处理time-processing)
+  - [- **错误处理**(Error Handling)](#--错误处理error-handling)
   - [- **延迟执行指令 defer**](#--延迟执行指令-defer)
   - [- **关系数据库访问**](#--关系数据库访问)
   - [- **微服务/应用服务器**](#--微服务应用服务器)
@@ -94,6 +95,7 @@ Xielang is a free, open-source, cross-platform, cross-language, ASM/SHELL-like, 
   - [- **行末注释**（Comment at the end of the line）](#--行末注释comment-at-the-end-of-the-line)
   - [- **自动执行**（Auto-run scripts）](#--自动执行auto-run-scripts)
   - [- **从剪贴板执行代码**（Run Xielang code from clipboard）](#--从剪贴板执行代码run-xielang-code-from-clipboard)
+  - [- **指令参数中引号的位置**（The position of quotation marks in instruction parameters）](#--指令参数中引号的位置the-position-of-quotation-marks-in-instruction-parameters)
   - [- **fastCall指令调用的快速函数代码中使用+1等虚拟标号**（The "+1" virtual label used in the fast function code called by the fastCall instruction）](#--fastcall指令调用的快速函数代码中使用1等虚拟标号the-1-virtual-label-used-in-the-fast-function-code-called-by-the-fastcall-instruction)
 - [性能方面的考虑（Performance considerations）](#性能方面的考虑performance-considerations)
 - [嵌入式使用谢语言（以虚拟机的方式在其他语言中调用）（Embedded Xielang in other languages）](#嵌入式使用谢语言以虚拟机的方式在其他语言中调用embedded-xielang-in-other-languages)
@@ -3516,6 +3518,63 @@ length= 3
 
 &nbsp;
 
+##### - **取列表项、映射项和列表切片的快捷写法**（Shortcut for taking list items, mapping items, and list slices）
+
+&nbsp;
+
+谢语言中，取列表项除了使用getArrayItem指令外，可以用下述写法来直接作为参数在指令中使用：
+
+In Xielang, in addition to using the getArrayItem instruction, taking a list item can be directly used as a parameter in the instruction using the following notation:
+
+```go
+assign $list2 #L`["abc", 2, 1.3, true]`
+
+plo [$list2,2]
+```
+
+将取到列表的第三项（序号为2），输出：
+
+Take the third item in the list (with a sequence number of 2) and output:
+
+```shell
+(float64)1.3
+```
+
+相应地，取映射项可以写作：
+
+Correspondingly, taking the map item can be written as:
+
+```go
+assign $map2 #M`{"Date": "2022.4.23","Temperature": 23.3, "Air": "Good"}`
+
+pln {$map2,Air}
+
+```
+
+会输出Good。
+
+Will output 'Good'.
+
+列表切片的写法类似：
+
+The way of list slicing is similar to:
+
+```go
+assign $list2 #L`["abc", 2, 1.3, true]`
+
+plo [$list2,1,3]
+```
+
+会输出：
+
+Will output:
+
+```shell
+([]interface {})[]interface {}{2, 1.3}
+```
+
+&nbsp;
+
 ##### - **嵌套的复杂数据结构及JSON编码**（Nested complex data structures and JSON encoding）
 
 &nbsp;
@@ -4361,136 +4420,175 @@ ry nic
 
 &nbsp;
 
-##### - **快速/宿主对象机制**
+##### - **快速/宿主对象机制**(Fast/Host Object Mechanism)
 
 &nbsp;
 
 谢语言也提供另一个new指令来实现快速的对象机制，也可以提供集成宿主语言基本能力和库函数优势的方法，对象使用上更简单。下面是一个例子（stringBuffer.xie），封装了一般语言中的可动态增长的字符串的功能。
 
+Xielang also provides another new instruction to implement fast object mechanisms, as well as a method to integrate the basic capabilities of the host language and the advantages of library functions, making object usage simpler. Here is an example (stringBuffer.xie) that encapsulates the functionality of dynamically growing strings in other languages.
+
 ```go
+// 本例演示快速/宿主对象机制
+// 以及method/mt方法的使用、双引号与反引号是否转义等
+// This example demonstrates the fast/host object mechanism
+// And the use of method/mt methods, whether double and back quotes are escaped, etc
+
 // strBuf即Go语言中的strings.Builder
-// 是一个可以动态向其中添加字符串的缓冲区
-// 最后可以一次性获取所有写入的字符串为一个大字符串
+// 是一个可以动态多次向其中添加字符串的缓冲区
+// 最后可以一次性获取其中的所有内容为一个字符串
+// StrBuf is the string. Builder in Go language
+// It is a buffer that can dynamically add strings multiple times to it
+// Finally, all the contents can be obtained as a string at once
 new $bufT strBuf
 
 // 调用bufT的append方法往其中写入字符串abc
 // method（可以简写为mt）指令是调用对象的某个方法
 // append/writeString/write方法实际上是一样的，都是向其中追加写入字符串
-// 结果参数是$drop，因为一般用不到
+// 这里结果参数使用了$drop，因为一般用不到返回值
+// Calling the append method of bufT to write the string abc to it
+// The method (which can be abbreviated as mt) instruction is a method that calls an object's member function
+// The append/writeString/write method is actually the same, appending and writing a string to the string buffer
+// The result parameter here uses $drop, as the return value is generally not used
 method $drop $bufT append abc
 
 
 // 使用双引号括起的字符串中间的转义符会被转义
+// The escape character in the middle of a string enclosed in double quotation marks will be escaped
 method $drop $bufT writeString "\n"
 
 mt $drop $bufT write 123
 
 // 使用反引号括起的字符串中的转义符不会被转义
+// Escape characters in strings enclosed in back quotes will not be escaped
 mt $drop $bufT append `\n`
 
 // 用两种方式输出bufT中的内容供参考
+// Output the content in bufT in two ways for reference
 
 // 调用bufT的str方法（也可以写作string、getStr等）获取其中的字符串
+// Call the str method of bufT (which can also be written as string, getStr, etc.) to obtain the string in it
 mt $rsT $bufT str
 
 plo $rsT
 
 // 直接用表达式来输出
-pln ?`(?mt $tmp $bufT str)`
-
+// Directly using expressions to output
+pln @`{mt $tmp $bufT str}`
 
 ```
 
 运行输出：
 
+The output is:
+
 ```shell
-(string)abc
-123\n
+(string)"abc\n123\\n"
 abc
 123\n
 ```
 
 &nbsp;
 
-##### - **时间处理**
+##### - **时间处理**(Time processing)
 
 &nbsp;
 
 谢语言中的时间处理的主要方式，直接参看下面的代码（time.xie）：
 
+The main method of time processing in Xielang can be directly seen in the following code (time.xie):
+
 ```go
 // 将变量t1赋值为当前时间
 // #t后带空字符串或now都表示当前时间值
+// Assign variable t1 to the current time
+// Either an empty string or 'now' after # t indicates the current time value
 assign $t1 #t
 
 // 输出t1中的值查看
+// View the value in output t1
 plo $t1
 
 // 用字符串表示时间
 // “=”是指令assign的简写写法
+// Using a string to represent time
+// '=' is the abbreviation for the instruction 'assign'
 = $t2 #t`2022-08-06 11:22:00`
 
 pln t2= $t2
 
 // 简化的字符串表示形式
+// Simplified string representation
 = $t3 #t`20220807112200`
 
 pl t3=%v $t3
 
 // 带毫秒时间的表示方法
+// Representation method with millisecond time
 = $t4 #t`2022-08-06 11:22:00.019`
 
 pl t4=%v $t4
 
 // 时间的加减操作
 // 与时间的计算，如果有数字参与运算（除了除法之外），一般都是以毫秒为单位
-pl t2-3000毫秒=%v ?`$t2 - 3000`
+// Addition and subtraction of time
+// The calculation of time, if there are numbers involved in the operation (except for division), is generally in milliseconds
+pl t2-3000毫秒=%v @`$t2 - 3000`
 
-pl t2+50000毫秒=%v ?`$t2 + 50000`
+pl t2+50000毫秒=%v @`$t2 + 50000`
 
-pl 当前时间+50000毫秒=%v ?`(?now) + 50000`
+pl 当前时间+50000毫秒=%v @`{now} + 50000`
 
-pl t3-t2=%v(毫秒) ?`$t3 - $t2`
+pl t3-t2=%v(毫秒) @`$t3 - $t2`
 
 // 注意，如果不用括号，表达式计算将严格从左到右，没有运算符的优先级
-pl t3-t2=%v(小时) ?`$t3 - $t2 / #i1000 / #i60 / #i60`
+// Note that if parentheses are not used, the expression will be evaluated strictly from left to right, without operator priority
+pl t3-t2=%v(小时) @`($t3 - $t2) / #i1000 / #i60 / #i60`
 
 // 时间的比较
-pl `t2 < t3 ? %v` ?`$t2 < $t3`
+// Comparison of time
+pl `t2 < t3 ? %v` @`$t2 < $t3`
 
-pl `t2 >= t3 ? %v` ?`$t2 >= $t3`
+pl `t2 >= t3 ? %v` @`$t2 >= $t3`
 
-pl `t4 == t3 ? %v` ?`$t4 == $t3`
+pl `t4 == t3 ? %v` @`$t4 == $t3`
 
-pl `t1 != t3 ? %v` ?`$t1 != $t3`
+pl `t1 != t3 ? %v` @`$t1 != $t3`
 
 // 用convert指令转换时间
+// Convert time using the convert instruction
 convert $tr `2021-08-06 11:22:00` time
 
 pln tr= $tr
 
 // 用convert指令将时间转换为普通字符串
+// Convert time to a regular string using the convert instruction
 convert $s1 $tr str
 
 pln s1= $s1
 
 // 用convert指令将时间转换为特定格式的时间字符串
+// Convert time to a specific format time string using the convert instruction
 convert $s2 $tr timeStr `2006/01/02_15.04.05`
 
 pln s2= $s2
 
 // 用convert指令将时间转换为UNIX时间戳格式
+// Convert time to UNIX timestamp format using the convert instruction
 convert $s3 $tr tick
 
 pln s3= $s3
 
 // 用convert指令将UNIX格式时间戳转换为时间
+// Convert UNIX format timestamp to time using the convert instruction
 convert $t5 `1628220120000` time
 
 pln t5= $t5
 
 // UTC相关
 // 用convert指令转换时间为UTC时区
+// UTC related
+// Convert time to UTC time zone using the convert instruction
 convert $trUTC `2021-08-06 11:22:00` time -global
 
 pln trUTC= $trUTC
@@ -4509,24 +4607,33 @@ pln t8= $t8
 
 // 用var指令也可以定义一个时间类型变量
 // 默认值是当前时间
+// Using the var instruction can also define a time type variable
+// The default value is the current time
 var $t9 time
 
 // 调用时间类型变量的addDate方法将其加上1个月
 // 三个参数分别表示要加的年、月、日，可以是负数
 // 结果还放回t9
+// Call the addDate method of a time type variable to add 1 month to it
+// The three parameters represent the year, month, and day to be added, which can be negative numbers
+// Return the result to t9
 mt $t9 $t9 addDate 0 1 0
 
 // 调用时间类型变量的format函数将其格式化为字符串
 // 格式参数参考[这里](https://pkg.go.dev/time#pkg-constants)
+// Call the format function of a time type variable to format it as a string
+// Format parameter reference [here]（ https://pkg.go.dev/time#pkg -constants)
 mt $result $t9 format "20060102"
 
 // 应输出 t9: 20220825
+// Will output t9: 20220825
 pl "t9: %v" $result
-
 
 ```
 
 运行后输出为：
+
+Output is like:
 
 ```shell
 (time.Time)2022-07-25 09:22:03.918723645 +0800 CST m=+0.014649799
@@ -4556,57 +4663,76 @@ t9: 20220825
 
 &nbsp;
 
-##### - **错误处理**
+##### - **错误处理**(Error Handling)
 
 &nbsp;
 
-谢语言使用一个简化的错误处理模式，参看下面的代码（onError.xie）：
+谢语言一般使用一个简化的错误处理模式，参看下面的代码（onError.xie）：
+
+Xielang generally uses a simplified error handling mode, as shown in the following code (onError.xie):
 
 ```go
 
-
 // 设置错误处理代码块为标号handler1处开始的代码块
 // onError指令后如果不带参数，表示清空错误处理代码块
+// set error handler to the code block at label :handler1
+// onError instruction with no parameters will clear the defined error handlers
 onError :handler1
 
-// 故意计算1除以0的结果，将产生运行时异常
-div #i1 #i0
+// 故意获取一个超出数组长度索引的结果，将产生运行时异常
+// trigger an error on purpose
+var $array1 array
+getArrayItem $item $array1 1
 
 // 此处代码正常情况应执行不到
 // 但错误处理代码块将演示如何返回此处继续执行
+// the code below will not run normally
+// but the error handler will redirect to this label
 :next1
 
 // 输出一个提示信息
-pln 计算完毕(错误处理完毕)
+// output a piece of message for reference
+pln "calculation completed(and the error handler)"
 
 // 退出程序
+// terminate the program
 exit
 
 // 错误处理代码块
+// error handler
 :handler1
-    // 发生异常时，谢语言将会依次入栈出错时详细代码运行栈信息、错误提示信息和出错代码的行号
-    // 错误处理代码块应该将这几个值弹栈后处理（或丢弃），注意顺序
-    pop $lastLine
-    pop $errMsg
-    pop $detailG
+    // 发生异常时，谢语言将会将出错时出错代码的行号、错误提示信息和详细代码运行栈信息分别存入全局变量$lastLineG, $errorMessageG, $errorDetailG
+    // 错误处理代码块可以根据这几个值进行相应显示或其他处理
+    // the error info will in 3 global variables: $lastLineG, $errorMessageG, $errorDetailG
+    // error handler can handle them
 
-    // 输出错误信息
-    pl "代码运行到第%v行时发现错误：%v，详细信息：%v" $lastLine $errMsg $detailG
+   // 输出错误信息
+    // output the message
+    pl "error occurred while running to line %v: %v, detail: %v" $lastLineG $errorMessageG $errorDetailG
 
     // 跳转到指定代码位置继续执行
+    // jump to the specific position(label)
     goto :next1
 
 ```
 
-关键点是使用onError指令，它带有一个参数，一般是如果代码运行发生异常时将要跳转到的错误处理代码块的标号。onError指令既是指定代码运行错误时，用于处理错误的代码块。这样，如果代码运行发生任何运行时错误，谢语言将会依次将出错时详细代码运行栈信息、错误提示信息和出错代码的行号压入堆栈，然后从该标号处开始执行。错误处理代码块一般需要先将几个压栈值出栈（注意要反序），然后进行相应的错误处理，最后可以选择跳转到指定位置执行，或者终止程序运行等操作。还有一种常用的处理方式是跳转到出错行号的下一个行号处继续执行。
+关键点是使用onError指令，它带有一个参数，一般是如果代码运行发生异常时将要跳转到的错误处理代码块的标号。onError指令既是指定代码运行错误时，用于处理错误的代码块。这样，如果代码运行发生任何运行时错误，谢语言将会将出错时出错代码的行号、错误提示信息和详细代码运行栈信息分别存入全局变量$lastLineG, $errorMessageG, $errorDetailG，然后从该标号处开始执行。错误处理代码块一般需要根据几个出错信息进行提示或其他相应处理，最后可以选择跳转到指定位置执行，或者终止程序运行等操作。还有一种常用的处理方式是跳转到出错行号的下一个行号处继续执行。
+
+
+The key point is to use the onError instruction, which takes a parameter and is usually the label of the error handling code block to jump to if an exception occurs during code execution. The onError instruction is both a code block used to handle errors when specifying code execution errors. In this way, if any runtime errors occur during code execution, Xielang will store the line number, error prompt information, and detailed code runtime stack information of the error code into the global variables \$lastLineG, \$errorMessageG, and \$errorDetailG, respectively, and then execute from that label. Error handling code blocks generally require prompts or other corresponding processing based on several error messages. Finally, you can choose to jump to the specified location for execution, or terminate program execution and other operations. Another commonly used processing method is to jump to the next line number where the error occurred and continue execution.
 
 本段代码的运行结果是：
 
+The running result will be:
+
 ```shell
-代码运行到第1行时发现错误：runtime error: integer divide by zero
-计算完毕(错误处理完毕)
+error occurred while running to line 10: runtime error, detail: (Line 10: getArrayItem $item $array1 1) index out of range: 1/0
+calculation completed(and the error handler)
 ```
 
+谢语言中的错误处理也可以使用类似Go语言异常处理的defer指令来处理，主要用于确保打开的文件、网络连接、数据库连接等最终会被关闭，具体参见下面一节。
+
+Error handling in Xielang can also be handled using the defer instruction similar to Go language exception handling, mainly used to ensure that open files, network connections, database connections, etc. will eventually be closed. Please refer to the following section for details.
 
 &nbsp;
 
@@ -4616,42 +4742,76 @@ exit
 
 与Go语言类似，谢语言也支持用defer指令延迟执行另一条指令，即如果在一条指令前加上defer指令，则该条指令不会立即执行，执行的时机是主程序退出前或函数执行退出前，参看下面的代码（defer.xie）：
 
+Similar to Golang, Xielang also supports using the defer instruction to delay the execution of another instruction. If a defer instruction is added before an instruction, the instruction will not execute immediately, and the execution time is before the main program exits or the function exits. Please refer to the following code (defer.xie):
+
 ```go
 // 延迟执行指令1
-defer pl "main defer: %v" test1
+// defer指令可以后接一个字符串表示的指令
+// defer instruction 1
+// The defer instruction can be followed by an instruction represented by a string
+defer `pl "main defer: %v" test1`
 
 // 延迟执行指令2
 // defer指令遵循“后进先出”的规则，即后指定的defer指令将先被执行
+// defer指令后也可以直接跟一条指令而不是字符串
+// defer instruction 2
+// the deferred instructions will be running by order(first in last out) when the function returns or the program exits, or error occurrs
+// The defer instruction can also be directly followed by an instruction instead of a string
 defer pl "main defer: %v" test2
+
+// deferStack $pln
+// exit
+
+// defer指令也可以后接一个编译好的代码
+// The defer instruction can also be followed by a compiled code
+compile $code1 `
+pln main defer 3 in compiled code piece
+pln "..."
+`
+
+defer $code1
+
+// 百分号引导的参数表示将代码编译
+// The parameter guided by the percentage sign means to compile the code
+defer %`
+pln main defer 4 in compiled code piece
+pln "___"
+`
 
 pln 1
 
 // 函数中的延迟执行
-call :func1
+// call a function to test defer instruction in functions
+call $rs :func1
 
-pln func1 return
+pln func1 returns $rs
 
 exit
 
 :func1
-    defer pl "sub defer: %v" test1
+    defer `pl "sub defer: %v" test1`
 
     pln sub1
 
     // 故意做一个会出现错误的指令，这里是除零操作
-    quickEval $r1 `#i10 / #i0`
+    // trigger an error on purpose
+    eval $r1 `#i10 / #i0`
 
     // 检查出错则中断程序，此时应执行本函数内的defer和主函数内的defer
+    // check if error occurred, and since it is, the deferred instructions defined in this function and up to root function of the VM will be run
     checkErrX $r1
 
+    // 下面的代码不会被执行到
+    // code below will never be reached
     pln "10/0=" $r1
 
-    ret
-
+    ret $r1
 
 ```
 
 可以看出，defer指令也可以被用在异常/错误处理的场景下。
+
+It can be seen that the defer instruction can also be used in exception/error handling scenarios.
 
 &nbsp;
 
@@ -4661,15 +4821,26 @@ exit
 
 谢语言主程序支持常见的关系型数据库的访问与操作，直接参看下面访问SQLite3数据库的代码例子（sqlite.xie）：
 
+The main program of Xielang supports the access and operation of common relational database. Please refer to the following code example for accessing SQLite3 database (sqlite.xie):
+
 ```go
-// 判断是否存在该库（SQLite库是放在单一的文件中的）
+// 本例演示谢语言对SQLite 3库的创建与增删改查
+//This example demonstrates the creation, addition, deletion, and modification of SQLite 3 library by Xielang
+
+// 判断是否已存在该库（SQLite库是放在单一的文件中的）
 // 注意请确保c:\tmp文件夹已存在
 // 结果放入变量b中
+// Determine if the library already exists (SQLite library is placed in a single file)
+// Please ensure that the c:\tmp folder already exists
+// Place the results in variable b
 fileExists $b `c:\tmpx\test.db`
 
 // 如果否则跳到下一步继续执行
 // 如果存在则删除该文件
 // removeFile指令的运行结果将被丢弃（因为使用了内置全局变量drop）
+// If not, skip to the next step to continue execution
+// If present, delete the file
+// The result of the removeFile instruction will be discarded (due to the use of the built-in global variable drop)
 ifNot $b :next
 	removeFile $drop `c:\tmpx\test.db`
 
@@ -4680,14 +4851,24 @@ ifNot $b :next
 // 第二个参数是连接字符串，类似 server=129.0.3.99;port=1433;portNumber=1433;user id=sa;password=pass123;database=hr 或 user/pass@129.0.9.11:1521/testdb 等
 // SQLite3的驱动将基于文件创建或连接数据库
 // 所以第二个参数直接给出数据库文件路径即可
+// Create a new library
+// dbConnect is used to connect to a database
+// The first parameter besides the result parameter is the database driver name, which supports sqlite3, mysql, godror (i.e. Oracle), msql (i.e. MS SQLServer), etc
+// The second parameter is the connection string, similar to server=129.0.3.99; port=1433; portNumber=1433; user id=sa; password=pass123; Database=hr or user/ pass@129.0.9.11 : 1521/testdb et al
+// The driver of SQLite3 will create or connect databases based on files
+// So the second parameter directly provides the database file path
 dbConnect $db "sqlite3" `c:\tmpx\test.db`
 
 // 判断创建（或连接）数据库是否失败
 // rs中是布尔类型表示变量db是否是错误对象
 // 如果是错误对象，errMsg中将是错误原因描述字符串
+// Determine if the creation (or connection) of the database has failed
+// Is the Boolean type in rs indicating whether the variable db is the wrong object
+// If it is an error object, errMsg will contain the error reason description string
 isErr $rs $db $errMsg
 
 // 如果为否则继续执行，否则输出错误信息并退出
+// If not, continue executing, otherwise output an error message and exit
 ifNot $rs :next2
 	pl "创建数据库文件时发生错误：%v" $errMsg
 	exit
@@ -4695,18 +4876,22 @@ ifNot $rs :next2
 :next2
 
 // 将变量sqlStmt中放入要执行的建表SQL语句
+// Place the variable sqlStmt into the table building SQL statement to be executed
 assign $sqlStmt = `create table TEST (ID integer not null primary key, CODE text);`
 
 // 执行SQL语句，dbExec用于执行insert、delete、update等SQL语句
+// Execute SQL statements, dbExec is used to execute SQL statements such as insert, delete, update, etc
 dbExec $rs $db $sqlStmt
 
 // 判断是否SQL执行出错，方式与前面连接数据库时类似
+// Determine if there was an SQL execution error, similar to when connecting to the database earlier
 isErr $errStatus $rs $errMsg
 
 ifNot $errStatus :next3
 	pl "执行SQL语句建表时发生错误：%v" $errMsg
 
 	// 出现错误时，因为数据库连接已打开，因此需要关闭
+	// When an error occurs, it needs to be closed because the database connection is already open
 	dbClose $drop $db
 
 	exit
@@ -4715,12 +4900,15 @@ ifNot $errStatus :next3
 
 // 进行循环，在库中插入5条记录
 // i是循环变量
+// Loop and insert 5 records into the library
+// I is a cyclic variable
 assign $i #i0
 
 :loop1
 assign $sql `insert into TEST(ID, CODE) values(?, ?)`
 
 // genRandomStr指令用于产生随机字符串
+// The genRandomStr instruction is used to generate random strings
 genRandomStr $str1
 
 dbExec $rs $db $sql $i $str1
@@ -4739,19 +4927,25 @@ inc $i
 if $tmp :loop1
 
 // 进行数据库查询，验证查看刚刚新增的记录
+// Perform database queries, verify and view the newly added records
 assign $sql `select ID, CODE from TEST`
 
 // dbQuery指令用于执行一条查询（select）语句
 // 结果将是一个数组，数组中每一项代表查询结果集中的一条记录
 // 每条记录是一个映射，键名对应于数据库中的字段名，键值是相应的字段值，但均转换成字符串类型
+// The dbQuery instruction is used to execute a select statement
+// The result will be an array, where each item represents a record in the query result set
+// Each record is a mapping, and the key name corresponds to the field name in the database. The key value is the corresponding field value, but it is converted to a string type
 dbQuery $rs $db $sql
 
 // dbClose指令用于关闭数据库连接
+// The dbClose directive is used to close a database connection
 dbClose $drop $db
 
 pln $rs
 
 // 用toJson指令将结果集转换为JSON格式以便输出查看
+// Convert the result set to JSON format using the toJson directive for output viewing
 toJson $jsonStr $rs -indent -sort
 
 pln $jsonStr
@@ -4760,6 +4954,8 @@ pln $jsonStr
 ```
 
 执行结果是（确保c:\tmpx目录已经存在）：
+
+The running result is (ensuring that the c:\tmpx directory already exists):
 
 ```shell
 [map[CODE:YRKOEt ID:0] map[CODE:moODkc ID:1] map[CODE:we7Ey9 ID:2] map[CODE:fF7dRd ID:3] map[CODE:9X6KAu ID:4]]
@@ -4788,6 +4984,27 @@ pln $jsonStr
 ```
 
 可以看到，数据库中被新增了5条记录，并查询成功。
+
+It can be seen that 5 new records have been added to the database and successfully queried.
+
+常见类型的数据库连接字符串组合如下：
+
+The common types of database connection string combinations are as follows:
+
+- SQLite： 
+  ``` dbConnect $db "sqlite3" `c:\tmpx\test.db` ```
+
+- MySQL： 
+  ``` dbConnect $db "mysql" `user:pass@tcp(192.168.1.27:3306)/dbname` ```
+
+- MSSQL/SQL Server： 
+  ``` dbConnect $db "sqlserver" "server=192.168.100.10;port=1433;portNumber=1433;user id=userName;password=userPass;database=DB1;encrypt=disable" ```
+
+- Oracle： 
+  ``` dbConnect $db "godror", "user/pass@db.somedomain.com:1521/ORCL" ```
+
+- Oracle（另一种驱动 another driver）： 
+  ``` dbConnect $db "oracle", "oracle://user:pass@db.somedomain.com:1521/ORCL" ```
 
 &nbsp;
 
@@ -6820,6 +7037,26 @@ When the main program of Xielang(i.e. xie.exe in Windows, or xie in Linux) is ru
 谢语言主程序执行时，如果加上-clip参数，将从剪贴板读取代码然后执行。
 
 When the main program of Xielang is executed, if the "-clip" parameter is added, the code will be read from the clipboard and then executed.
+
+&nbsp;
+
+##### - **指令参数中引号的位置**（The position of quotation marks in instruction parameters）
+
+谢语言的指令中，可以使用双引号、单引号或反引号括起内容，包括字符串、表达式等，注意，一个参数中的引号就算从中间开始也会进行匹配，因此，下面几种引号内的情况都被认为是一个参数而非多个：
+
+In Xielang instructions, double quotation marks, single quotation marks, or back quotation marks can be used to enclose content, including strings, expressions, etc. Note that the quotation marks in a parameter will match even from the middle. Therefore, the following situations within quotation marks are considered as one parameter rather than multiple:
+
+```go
+= $t4 #t`2022-08-06 11:22:00.019`
+
+adds $s1 "This is a pie."
+
+excelSetCell $drop $excelT "sheet1" @`{spr $tmp "B%d" $y}` {$objT,姓名}
+
+excelSaveAs $result $excelT @`clresExport + {nowStrCompact} + .xlsx`
+
+...
+```
 
 &nbsp;
 

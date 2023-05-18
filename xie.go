@@ -1109,6 +1109,7 @@ func ParseLine(commandA string) ([]string, string, error) {
 		}
 
 		// tk.Pln(string(c), c, c == '`', '`')
+		// if state == 1 && (c == '"' || c == '\'' || c == '`') {
 		if c == '"' || c == '\'' || c == '`' {
 			state = 2
 			quote = string(c)
@@ -1720,6 +1721,8 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 				}
 			}
 
+			// tk.Pl("itemKeyT: %v", itemKeyT)
+
 			return VarRef{-22, []interface{}{vT, ParseVar(itemKeyT)}}
 		}
 	}
@@ -1801,6 +1804,8 @@ func Compile(codeA string) interface{} {
 		if errT != nil {
 			return fmt.Errorf("参数解析失败：%v", errT)
 		}
+
+		// tk.Pl("parseLine result: %#v", listT)
 
 		lenT := len(listT)
 

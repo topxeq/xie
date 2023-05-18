@@ -1,0 +1,27 @@
+// 定义一个映射变量map1
+// Define a map variable map1
+var $map1 map
+
+// 查看映射对象，此时应为空的映射
+// View the map object, which should be an empty map at this time
+plo $map1
+
+// 给映射map1中添加一个键值对 “"Name": "李白"”
+// setItem也可用于修改
+// Add a key value pair 'Name' to map1: '李白'
+// SetItem can also be used to modify values in map
+setMapItem $map1 Name "李白"
+
+// 再给映射map1中添加一个键值对 “"Age": 23”
+// 此处23为整数
+// Add a key value pair "Age": 23" to map1
+// Here 23 is an integer
+setMapItem $map1 Age #i23
+
+// 再次查看映射map1中内容，此时应有两个键值对
+// Looking at the content in map1 again, there should be two key value pairs at this point
+plo $map1
+
+// pln Name= {$map1,Name}
+
+pln Name= {$map1,"Name"}
