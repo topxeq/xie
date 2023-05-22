@@ -68,7 +68,7 @@ Xielang is a free, open-source, cross-platform, cross-language, ASM/SHELL-like, 
   - [- **时间处理**(Time processing)](#--时间处理time-processing)
   - [- **错误处理**(Error Handling)](#--错误处理error-handling)
   - [- **延迟执行指令 defer**](#--延迟执行指令-defer)
-  - [- **关系数据库访问**](#--关系数据库访问)
+  - [- **关系数据库访问**（Relational Database Access）](#--关系数据库访问relational-database-access)
   - [- **微服务/应用服务器**](#--微服务应用服务器)
   - [- **网络（HTTP）客户端**](#--网络http客户端)
   - [- **手动编写Api服务器**](#--手动编写api服务器)
@@ -4821,7 +4821,7 @@ It can be seen that the defer instruction can also be used in exception/error ha
 
 &nbsp;
 
-##### - **关系数据库访问**
+##### - **关系数据库访问**（Relational Database Access）
 
 &nbsp;
 
@@ -5032,7 +5032,7 @@ D:\tmp>xie -server -dir=scripts
 
 输出信息中的错误是因为没有提供SSL整数，SSL服务将启动不了，加上证书就可以了。
 
-此时，用浏览器访问本机的http://127.0.0.1:80就可以访问一个谢语言编写的网页服务了。
+此时，用浏览器访问本机的 http://127.0.0.1:80 就可以访问一个谢语言编写的网页服务了。
 
 假设在指定的目录下包含xmsIndex.xie、xmsTmpl.html、xmsApi.xie三个文件，可以展示出谢语言建立的应用服务器支持的各种模式。
 
