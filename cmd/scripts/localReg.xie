@@ -1,0 +1,42 @@
+// 本例演示使用局部寄存器来计算10的阶乘
+// 谢语言中，每个函数上下文中也提供一组寄存器（30个）供使用
+// This example demonstrates using local registers to calculate the factorial of 10
+// In Xielang, each function context also provide a set of registers(30) for use
+
+// 将编号为0的寄存器中存入整数1
+// 与全局寄存器使用$#加数字来使用不同，局部寄存器使用$~加数字来使用
+// Unlike global registers that use $# with numbers, local registers use $~ with numbers to use
+// Store integer 1 in register number 0
+= $~0 #i1
+
+// 将编号为1的寄存器中存入整数1
+// Store integer 1 in register number 1
+= $~1 #i1
+
+// 开始循环，loop1是循环开始的标号
+// Start loop, loop1 is the label for the beginning of the loop
+:loop1
+    // 将寄存器1中的数值加1
+    // Add 1 to the value in register 1
+    inc $~1
+
+    // 输出寄存器0和寄存器1中的数值作为参考
+    // Output the values in register 0 and register 1 as references
+    pln $~0 $~1
+    
+    // 将寄存器0中的数值与寄存器1中的数值相乘，结果存入寄存器0
+    // Multiply the value in register 0 by the value in register 1, and store the result in register 0
+    * $~0 $~0 $~1
+
+    // 如果寄存器1中的数值大于等于10，则跳出循环
+    // If the value in register 1 is greater than or equal to 10, jump out the loop
+    if @"$~1 >= #i10" :end
+
+    // 继续循环
+    // Continue the loop
+    goto loop1
+
+:end
+    // 中止程序运行
+    // Exit the program
+    exit

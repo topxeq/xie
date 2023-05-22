@@ -2839,7 +2839,13 @@ The running result of the code is as below:
 
 ```
 
-顺利计算出了10的阶乘。
+顺利地计算出了10的阶乘。
+
+Successfully calculated the factorial of 10.
+
+谢语言中，除了全局寄存器之外，每个函数上下文（函数上下文的详细概念请参见下一节）中，也提供一组局部寄存器（30个）供使用，仅在函数内有效。全局寄存器使用\$#加数字来引用，而局部寄存器使用\$~加数字来引用，例子可参见localReg.xie。
+
+In Xielang, in addition to global registers, each function context (see the next section for detailed concepts of function context) also provides a set of local registers (30) for use, which are only valid within the function. Global registers are referenced using \$# plus numbers, while local registers are referenced using \$~ plus numbers. For example, see localReg.xie.
 
 &nbsp;
 

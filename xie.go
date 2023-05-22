@@ -49,7 +49,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var VersionG string = "1.2.1"
+var VersionG string = "1.2.2"
 
 func Test() {
 	tk.Pl("test")
@@ -970,7 +970,7 @@ var InstrNameSet map[string]int = map[string]int{
 // }
 
 type VarRef struct {
-	Ref   int // -99 - invalid, -23 - slice of array/slice, -22 - map item, -21 - array/slice item, -17 - reg, -16 - label, -15 - ref, -12 - unref, -11 - seq, -10 - quickEval, -9 - eval, -8 - pop, -7 - peek, -6 - push, -5 - tmp, -4 - pln, -3 - value only, -2 - drop, -1 - debug, 3 normal vars
+	Ref   int // -99 - invalid, -23 - slice of array/slice, -22 - map item, -21 - array/slice item, -18 - local reg, -17 - reg, -16 - label, -15 - ref, -12 - unref, -11 - seq, -10 - quickEval, -9 - eval, -8 - pop, -7 - peek, -6 - push, -5 - tmp, -4 - pln, -3 - value only, -2 - drop, -1 - debug, 3 normal vars
 	Value interface{}
 }
 
@@ -1007,6 +1007,8 @@ type FuncContext struct {
 
 	Tmp interface{}
 
+	Regs []interface{}
+
 	// ReturnPointer int
 
 	DeferStack *tk.SimpleStack
@@ -1020,6 +1022,8 @@ func NewFuncContext() *FuncContext {
 	rs := &FuncContext{}
 
 	rs.Vars = make(map[string]interface{})
+
+	rs.Regs = make([]interface{}, 30)
 
 	rs.DeferStack = tk.NewSimpleStack(10, tk.Undefined)
 
@@ -1202,9 +1206,35 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 				return VarRef{-5, vv}
 			} else if s1T == "$seq" {
 				return VarRef{-11, nil}
-			} else {
-				return VarRef{3, s1T[1:]}
 			}
+
+			typeT := byte(0)
+
+			if len(s1T) > 1 {
+				typeT = s1T[1]
+			}
+
+			if typeT == '#' { // regs
+
+				s1DT := s1T[2:] // tk.UrlDecode(s1T[2:])
+
+				if len(s1DT) < 1 {
+					return VarRef{-3, s1T}
+				}
+
+				return VarRef{-17, tk.ToInt(s1DT, 0)}
+			} else if typeT == '~' { // regs
+
+				s1DT := s1T[2:] // tk.UrlDecode(s1T[2:])
+
+				if len(s1DT) < 1 {
+					return VarRef{-3, s1T}
+				}
+
+				return VarRef{-18, tk.ToInt(s1DT, 0)}
+			}
+
+			return VarRef{3, s1T[1:]}
 		} else if strings.HasPrefix(s1T, "&") { // ref
 			vNameT := s1T[1:]
 
@@ -1535,15 +1565,6 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 
 				// tk.Plv(listT)
 				return VarRef{-3, mapT}
-			} else if typeT == '#' { // regs
-
-				s1DT := s1T[2:] // tk.UrlDecode(s1T[2:])
-
-				if len(s1DT) < 1 {
-					return VarRef{-3, s1T}
-				}
-
-				return VarRef{-17, tk.ToInt(s1T, 0)}
 			}
 
 			return VarRef{-3, s1T}
@@ -2645,7 +2666,18 @@ func (p *XieVM) GetVarValue(runA *RunningContext, vA VarRef) interface{} {
 	}
 
 	if idxT == -17 { // regs
-		return p.Regs[tk.ToInt(vA.Value, 0)]
+		return p.Regs[vA.Value.(int)]
+	}
+
+	if idxT == -18 { // local regs
+		lenT := runA.FuncStack.Size()
+
+		if lenT > 0 {
+			funcT := runA.FuncStack.PeekLayer(lenT - 1).(*FuncContext)
+			return funcT.Regs[vA.Value.(int)]
+		}
+
+		return p.RootFunc.Regs[vA.Value.(int)]
 	}
 
 	if idxT == -21 { // array/slice item
@@ -2752,8 +2784,11 @@ func (p *XieVM) GetVarValueGlobal(runA *RunningContext, vA VarRef) interface{} {
 	}
 
 	if idxT == -17 { // regs
-		return p.Regs[tk.ToInt(vA.Value, 0)]
-		return nil
+		return p.Regs[vA.Value.(int)]
+	}
+
+	if idxT == -18 { // local regs
+		return p.RootFunc.Regs[vA.Value.(int)]
 	}
 
 	if idxT == -21 { // array/slice item
@@ -2939,6 +2974,19 @@ func (p *XieVM) SetVar(runA *RunningContext, refA interface{}, setValueA interfa
 		return nil
 	}
 
+	if refIntT == -18 { // local regs
+		lenT := runA.FuncStack.Size()
+
+		if lenT > 0 {
+			funcT := runA.FuncStack.PeekLayer(lenT - 1).(*FuncContext)
+			funcT.Regs[refT.Value.(int)] = setValueA
+			return nil
+		}
+
+		p.RootFunc.Regs[refT.Value.(int)] = setValueA
+		return nil
+	}
+
 	if refIntT == -12 { // unref
 		return nil
 	}
@@ -3054,6 +3102,19 @@ func (p *XieVM) SetVarLocal(runA *RunningContext, refA interface{}, setValueA in
 		return nil
 	}
 
+	if refIntT == -18 { // local regs
+		lenT := runA.FuncStack.Size()
+
+		if lenT > 0 {
+			funcT := runA.FuncStack.PeekLayer(lenT - 1).(*FuncContext)
+			funcT.Regs[refT.Value.(int)] = setValueA
+			return nil
+		}
+
+		p.RootFunc.Regs[refT.Value.(int)] = setValueA
+		return nil
+	}
+
 	if refIntT == -12 { // unref
 		return nil
 	}
@@ -3142,6 +3203,11 @@ func (p *XieVM) SetVarGlobal(refA interface{}, setValueA interface{}) error {
 
 	if refIntT == -17 { // regs
 		p.Regs[refT.Value.(int)] = setValueA
+		return nil
+	}
+
+	if refIntT == -18 { // local regs
+		p.RootFunc.Regs[refT.Value.(int)] = setValueA
 		return nil
 	}
 
