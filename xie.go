@@ -594,6 +594,8 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"downloadFile": 20220, // 下载文件
 
+	"isHttps": 20231, // 判断一个网络请求是否是https的
+
 	"getResource":     20291, // 获取JQuery等常用的脚本或其他内置文本资源，一般用于服务器端提供内置的jquery等脚本嵌入，避免从互联网即时加载，第一个的参数是jquery.min.js等js文件的名称，内置资源中如果含有反引号，将被替换成~~~存储，使用getResource时将被自动替换回反引号
 	"getResourceRaw":  20292, // 与getResource作用类似，唯一区别是不将~~~替换回反引号
 	"getResourceList": 20293, // 获取可获取的资源名称列表
@@ -13736,6 +13738,27 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		return ""
 
+	case 20231: // isHttps
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v2, ok := p.GetVarValue(r, instrT.Params[v1p]).(*http.Request)
+
+		if !ok {
+			return p.Errf(r, "not a http request(不是一个http.Request对象)")
+		}
+
+		p.SetVar(r, pr, tk.IsHttps(v2))
+		return ""
 	case 20291: // getResource
 		if instrT.ParamLen < 1 {
 			return p.Errf(r, "not enough parameters(参数不够)")
