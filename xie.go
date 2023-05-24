@@ -607,10 +607,11 @@ var InstrNameSet map[string]int = map[string]int{
 	"regReplace":       20411,
 	"regReplaceAllStr": 20411,
 
-	"regFindAll":   20421, // 获取正则表达式的所有匹配，用法示例：regFindAll $result $str1 $regex1 $group
-	"regFind":      20423, // 获取正则表达式的第一个匹配，用法示例：regFind $result $str1 $regex1 $group
-	"regFindFirst": 20423,
-	"regFindIndex": 20425, // 获取正则表达式的第一个匹配的位置，返回一个整数数组，任意值为-1表示没有找到匹配，用法示例：regFindIndex $result $str1 $regex1
+	"regFindAll":       20421, // 获取正则表达式的所有匹配，结果参数不可省略，匹配组号默认为0，即完整匹配，用法示例：regFindAll $result $str1 $regex1 $group
+	"regFindAllGroups": 20422, // 获取正则表达式的所有匹配，结果参数不可省略，结果是二维字符串数组，包含各个组，其中第0组是完整匹配，1开始是各个括号中的匹配组，用法示例：regFindAllGroups $result $str1 $regex1
+	"regFind":          20423, // 获取正则表达式的第一个匹配，用法示例：regFind $result $str1 $regex1 $group
+	"regFindFirst":     20423,
+	"regFindIndex":     20425, // 获取正则表达式的第一个匹配的位置，返回一个整数数组，任意值为-1表示没有找到匹配，用法示例：regFindIndex $result $str1 $regex1
 
 	"regMatch": 20431, // 判断字符串是否完全符合正则表达式，用法示例：regMatch $result "abcab" `a.*b`
 
@@ -13875,21 +13876,47 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 			return p.Errf(r, "not enough parameters(参数不够)")
 		}
 
-		var pr interface{} = -5
-		v1p := 0
+		// var pr interface{} = -5
+		// v1p := 0
 
-		if instrT.ParamLen > 3 {
-			pr = instrT.Params[0]
-			v1p = 1
-		}
+		// if instrT.ParamLen > 3 {
+		var pr interface{} = instrT.Params[0]
+		v1p := 1
+		// }
 
 		v1 := p.GetVarValue(r, instrT.Params[v1p])
 
 		v2 := p.GetVarValue(r, instrT.Params[v1p+1])
 
-		v3 := p.GetVarValue(r, instrT.Params[v1p+2])
+		v3 := 0
+		if instrT.ParamLen > 3 {
+			v3 = tk.ToInt(p.GetVarValue(r, instrT.Params[v1p+2]), 0)
+		}
 
-		rs := tk.RegFindAllX(tk.ToStr(v1), tk.ToStr(v2), tk.ToInt(v3, 0))
+		rs := tk.RegFindAllX(tk.ToStr(v1), tk.ToStr(v2), v3)
+
+		p.SetVar(r, pr, rs)
+
+		return ""
+
+	case 20422: // regFindAllGroups
+		if instrT.ParamLen < 3 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		// var pr interface{} = -5
+		// v1p := 0
+
+		// if instrT.ParamLen > 3 {
+		var pr interface{} = instrT.Params[0]
+		v1p := 1
+		// }
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		v2 := p.GetVarValue(r, instrT.Params[v1p+1])
+
+		rs := tk.RegFindAllGroups(tk.ToStr(v1), tk.ToStr(v2))
 
 		p.SetVar(r, pr, rs)
 
