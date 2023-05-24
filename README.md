@@ -69,7 +69,7 @@ Xielang is a free, open-source, cross-platform, cross-language, ASM/SHELL-like, 
   - [- **错误处理**(Error Handling)](#--错误处理error-handling)
   - [- **延迟执行指令 defer**](#--延迟执行指令-defer)
   - [- **关系数据库访问**（Relational Database Access）](#--关系数据库访问relational-database-access)
-  - [- **微服务/应用服务器**](#--微服务应用服务器)
+  - [- **微服务/应用服务器**（Microservices/Application Server）](#--微服务应用服务器microservicesapplication-server)
   - [- **网络（HTTP）客户端**](#--网络http客户端)
   - [- **手动编写Api服务器**](#--手动编写api服务器)
   - [- **静态WEB服务器**](#--静态web服务器)
@@ -5014,33 +5014,47 @@ The common types of database connection string combinations are as follows:
 
 &nbsp;
 
-##### - **微服务/应用服务器**
+##### - **微服务/应用服务器**（Microservices/Application Server）
 
 &nbsp;
 
 谢语言主程序自带一个服务器模式，支持一个轻量级的WEB/应用/API三合一服务器。可以用下面的命令行启动：
 
+Xielang main program comes with a server mode that supports a lightweight WEB/Application/API 3 in 1 server. You can start it using the following command line:
+
 ```shell
 D:\tmp>xie -server -dir=scripts
-[2022/04/30 17:18:11] 谢语言微服务框架 版本0.0.6 -port=:80 -sslPort=:443 -dir=scripts -webDir=scripts -certDir=.
-[2022/04/30 17:18:11] 在端口:443上启动https服务...
-在端口:80上启动http服务 ...
-[2022/04/30 17:18:11] 启动https服务失败：open server.crt: The system cannot find the file specified.
+[2023/05/24 08:40:35] Xie micro-service framework V1.2.2 -port=:80 -sslPort=:443 -dir=scripts -webDir=scripts -certDir=.
+[2023/05/24 08:40:35] starting https service on port :443...
+starting http service on port :80...
+[2023/05/24 08:40:35] failed to start https service: open server.crt: The system cannot find the file specified.
 ```
 
 可以看到，谢语言的服务器模式可以用-server参数启动，并可以用-port参数指定HTTP服务端口（注意加冒号），用-sslPort指定SSL端口，-certDir用于指定SSL服务的证书文件目录（应为server.crt和server.key两个文件），用-dir指定服务的根目录，-webDir用于指定静态页面和资源的WEB服务。这些参数均有默认值，不输入任何参数可以看到。
 
-输出信息中的错误是因为没有提供SSL整数，SSL服务将启动不了，加上证书就可以了。
+As can be seen, the server mode of Xielang can be started with the '-server' parameter, and the '-port' parameter can be used to specify the HTTP service port (please add a colon), '-sslPort' can be used to specify the SSL port, '-certDir' can be used to specify the certificate file directory of the SSL service (which should be two files: server.crt and server.key), '-dir' can be used to specify the root directory of the service, and '-webDir' can be used to specify the web service for static pages and resources. These parameters have default values and can be seen without entering any parameters.
+
+输出信息中的错误是因为没有提供SSL证书，SSL服务将启动不了，加上证书就可以了。
+
+The error in the output information is because the SSL certificate was not provided, and the SSL service will not be able to start. Adding the certificate files will suffice.
 
 此时，用浏览器访问本机的 http://127.0.0.1:80 就可以访问一个谢语言编写的网页服务了。
 
-假设在指定的目录下包含xmsIndex.xie、xmsTmpl.html、xmsApi.xie三个文件，可以展示出谢语言建立的应用服务器支持的各种模式。
+At this point, access the local http://127.0.0.1:80 You can access a web service written in Xielang.
 
-首先浏览器访问 http://127.0.0.1/xmsTmpl.html ，这将是访问一般的WEB服务，因为WEB目录默认与服务器根目录相同，所以将展示根目录下的xmsTmpl.html这个静态文件，也就是一个例子网页。
+假设在指定的目录下包含 xmsIndex.xie、xmsTmpl.html、xmsApi.xie三个文件，可以展示出谢语言建立的应用服务器支持的各种模式。
+
+Assuming that the specified directory contains three files: xmsIndex.xie, xmsTmpl.html, and xmsApi.xie, various modes supported by the application server established by Xielang can be displayed.
+
+首先用浏览器访问 http://127.0.0.1/xmsTmpl.html ，这将是访问一般的WEB服务，因为WEB目录默认与服务器根目录相同，所以将展示根目录下的xmsTmpl.html这个静态文件，也就是一个例子网页。
+
+First, access it with a browser http://127.0.0.1/xmsTmpl.html This will be accessing general web services, as the web directory defaults to the same as the server root directory. Therefore, the static file xmsTmpl.html under the root directory will be displayed, which is an example web page.
 
 ![截图](http://xie.topget.org/example/xie/snap/snap1.jpg)
 
 可以看到，该网页文件中文字“请按按钮”后的“{{text1}}”标记，这是我们后面展示动态网页功能时所需要替换的标记。xmsTmpl.html文件的内容如下：
+
+You can see that the "{{text1}}" tag after the text "请按按钮（Please press the button）" in the webpage file is the tag that we need to replace when displaying the dynamic webpage function later. The content of the xmsTmpl.html file is as follows:
 
 ```html
 <html>
@@ -5071,81 +5085,120 @@ D:\tmp>xie -server -dir=scripts
 
 然后我们尝试进行动态网页输出，也就是类似PHP、ASP或其他类似的架构支持的后台动态渲染网页的方式。访问 http://127.0.0.1/xms/xmsIndex ，URL中加上xms路径，这是一个虚拟路径，表示服务器将去根目录下寻找xmsIndex.xie文件来执行，该代码将输出网页内容。我们来看下xmsIndex.xie文件的内部。
 
+Then we try to perform dynamic web page output, which is a way of dynamically rendering web pages in the background supported by PHP, ASP, or other similar architectures. visit http://127.0.0.1/xms/xmsIndex Add the xms path to the URL, which is a virtual path indicating that the server will search for the xmsIndex.xie file in the root directory to execute. This code will output the webpage content. Let's take a look inside the xmsIndex.xie file.
+
 ```go
 // 设定默认的全局返回值变量outG为字符串TX_END_RESPONSE_XT
 // 默认谢语言服务器如果收到处理请求的函数返回结果是TX_END_RESPONSE_XT
 // 将会终止处理，否则将把返回值作为字符串输出到网页上
+// Set the default global return value variable outG to the string TX_END_RESPONSE_XT
+// If the default Xie language server receives a function to process a request, the return result is TX_END_RESPONSE_XT
+// Processing will be terminated, otherwise the return value will be output as a string to the webpage
 assign $outG "TX_END_RESPONSE_XT"
 
 // 获得相应的网页模板
 // joinPath指令将把多个文件路径合并成一个完整的文件路径
 // 第一个参数表示结果将要放入的变量，这里的$push表示压栈
 // basePathG是内置全局变量，表示服务的根目录
+// Obtain the corresponding webpage template
+// The joinPath directive will merge multiple file paths into one complete file path
+// The first parameter represents the variable to be placed in the result, where $push represents stack pushing
+// basePathG is a built-in global variable that represents the root directory of the service
 joinPath $push $basePathG `xmsTmpl.html`
 
 pln $basePathG
 pln $peek
 
 // 将该文件作为文本字符串载入，结果压栈
+// Load the file as a text string and stack the results
 loadText $push $pop
 
 // 替换其中的{{text1}}标记为字母A
+// Replace the {{text1}} marked with the letter A
 strReplace $push $pop "{{text1}}" "A"
 
 // 将弹栈值写网页输出
 // responseG也是内置的全局变量，表示要写入的网页输出对象
+// Write the stack value to the webpage output
+// ResponseG is also a built-in global variable that represents the webpage output object to be written to
 writeResp $responseG $pop
 
 // 终止请求响应处理微服务
+// Terminate Request Response Processing Microservice
 exit
 
 ```
 
 谢语言服务器模式中，每一个http请求都将单开一个虚拟机进行处理，可以看做一个微服务的概念。例子中的微服务仅仅是将载入的网页模板中的指定标记替换掉然后输出到网页，虽然简单，但已经展现出了动态网页的基本原理，即能够在输出网页前进行必要的、可控的渲染。
 
+In Xielang server model, each HTTP request will be processed by a separate virtual machine, which can be seen as a microservice concept. The microservice in the example only replaces the specified tags in the loaded webpage template and outputs them to the webpage. Although it is simple, it has already demonstrated the basic principle of dynamic webpage, that is, it can perform necessary and controllable rendering before outputting the webpage.
+
 我们访问 http://127.0.0.1/xms/xmsIndex 这个网址（或者叫URL路径），将会看到如下结果：
+
+We visited http://127.0.0.1/xms/xmsIndex This website address (or URL path) will result in the following results:
 
 ![截图](http://xie.topget.org/example/xie/snap/snap2.jpg)
 
 可以发现原来的标记确实被替换成了大写的字母A，验证了动态网页的效果。
 
+It can be found that the original tag has indeed been replaced with the uppercase letter A, verifying the effect of dynamic web pages.
+
 再看上面的网页模板文件xmsTmpl.html，其中的按钮点击后将执行JavaScript函数test，其中进行了一个AJAX请求，然后将请求的结果用alert函数输出出来。这是一个典型的客户端访问后台API服务的例子，我们来看看如何实现这个后台API服务。下面是也在服务器根目录下的xmsApi.xie文件中的内容：
+
+Looking at the webpage template file xmsTmpl. html above, once the button is clicked, the JavaScript function test will be executed, where an AJAX request is made and the result of the request will be output using the alert function. This is a typical example of a client accessing a backend API service. Let's take a look at how to implement this backend API service. The following is the content of the xmsApi.xie file also located in the server root directory:
 
 ```go
 // 获取当前时间放入变量t
+// Get the current time and put it into variable t
 nowStr $t
 
 // 输出参考信息
 // 其中reqNameG是内置全局变量，表示服务名，也就是访问URL中最后的部分
-// argsG也是全局变量，表示HTTP请求包含的URL参数或Form参数（可以是GET请求或POST请求中的）
-pl `[%v] %v args: %v` $t $reqNameG $argsG
+// paraMapG也是全局变量，表示HTTP请求包含的URL参数或Form参数（可以是GET请求或POST请求中的）
+// Output reference information
+// Where reqNameG is a built-in global variable that represents the service name, which is the last part of the access URL
+// paraMapG is also a global variable that represents the URL or Form parameters contained in HTTP requests (which can be in GET or POST requests)
+pl `[%v] %v args: %v` $t $reqNameG $paraMapG
 
 // 设置输出响应头信息（JSON格式）
+// Set output response header information (JSON format)
 setRespHeader $responseG "Content-Type" "text/json; charset=utf-8"
 
 // 写响应状态为整数200（HTTP_OK），表示是成功的请求响应
+// The write response status is an integer of 200 (HTTP_oK), indicating a successful request response
 writeRespHeader $responseG #i200
 
 // 用spr指令拼装响应字符串
-spr $push "请求是：%v，参数是：%v" $reqNameG $argsG
+// Assembling response strings using spr instructions
+spr $str1 "请求是：%v，参数是：%v" $reqNameG $paraMapG
 
 // 用genJsonResp生成封装的JSON响应，也可以自行输出其他格式的字符串
-genJsonResp $push $requestG "success" $pop
+// Generate encapsulated JSON responses using genJsonResp, or output strings in other formats on your own
+genJsonResp $respStr $requestG "success" $str1
 
 // 将响应字符串写输出（到网页）
-writeResp $responseG $pop
+// Write and output the response string (to a webpage)
+writeResp $responseG $respStr
 
 // 结束处理函数，并返回TX_END_RESPONSE_XT以终止响应流的继续输出
+// End processing function and return TX_END_RESPONSE_XT to terminate the continued output of the response stream
 exit TX_END_RESPONSE_XT
+
 ```
 
 这样，我们如果点击网页中的按钮1，会得到如下的alert弹框：
+
+In this way, if we click button 1 on the webpage, we will get the following alert pop-up:
 
 ![截图](http://xie.topget.org/example/xie/snap/snap4.jpg)
 
 这是因为网页xmsTmpl.html中，通过AJAX访问了 http://127.0.0.1:80/xms/xmsApi 这个服务，而我们的谢语言服务器会寻找到xmsApi.xie（自动加上了.xie文件名后缀）并执行，因此会输出我们希望的内容。
 
+This is because the webpage xmsTmpl. html is accessed through AJAX http://127.0.0.1:80/xms/xmsApi This service, and our Xielang server will find xmsApi.xie (automatically added with the .xie file name suffix) and execute it, so it will output the content we want.
+
 至此，一个麻雀虽小五脏俱全的WEB/应用/API多合一服务器的例子就完整展现出来了，已经足够一般小型的应用服务，并且基本无外部依赖，部署也很方便，只需一个主程序以及拷贝相应目录即可。
+
+At this point, an example of a sparrow's small and versatile WEB/application/API multi in one server has been fully demonstrated. It is already sufficient for a general and small application service, and has almost no external dependencies. Deployment is also very convenient, only requiring a main program and copying the corresponding directory.
 
 &nbsp;
 

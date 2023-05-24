@@ -1,25 +1,35 @@
 // 获取当前时间放入变量t
+// Get the current time and put it into variable t
 nowStr $t
 
 // 输出参考信息
 // 其中reqNameG是内置全局变量，表示服务名，也就是访问URL中最后的部分
-// argsG也是全局变量，表示HTTP请求包含的URL参数或Form参数（可以是GET请求或POST请求中的）
-pl `[%v] %v args: %v` $t $reqNameG $argsG
+// paraMapG也是全局变量，表示HTTP请求包含的URL参数或Form参数（可以是GET请求或POST请求中的）
+// Output reference information
+// Where reqNameG is a built-in global variable that represents the service name, which is the last part of the access URL
+// paraMapG is also a global variable that represents the URL or Form parameters contained in HTTP requests (which can be in GET or POST requests)
+pl `[%v] %v args: %v` $t $reqNameG $paraMapG
 
 // 设置输出响应头信息（JSON格式）
+// Set output response header information (JSON format)
 setRespHeader $responseG "Content-Type" "text/json; charset=utf-8"
 
 // 写响应状态为整数200（HTTP_OK），表示是成功的请求响应
+// The write response status is an integer of 200 (HTTP_oK), indicating a successful request response
 writeRespHeader $responseG #i200
 
 // 用spr指令拼装响应字符串
-spr $push "请求是：%v，参数是：%v" $reqNameG $argsG
+// Assembling response strings using spr instructions
+spr $str1 "请求是：%v，参数是：%v" $reqNameG $paraMapG
 
 // 用genJsonResp生成封装的JSON响应，也可以自行输出其他格式的字符串
-genJsonResp $push $requestG "success" $pop
+// Generate encapsulated JSON responses using genJsonResp, or output strings in other formats on your own
+genJsonResp $respStr $requestG "success" $str1
 
 // 将响应字符串写输出（到网页）
-writeResp $responseG $pop
+// Write and output the response string (to a webpage)
+writeResp $responseG $respStr
 
 // 结束处理函数，并返回TX_END_RESPONSE_XT以终止响应流的继续输出
+// End processing function and return TX_END_RESPONSE_XT to terminate the continued output of the response stream
 exit TX_END_RESPONSE_XT
