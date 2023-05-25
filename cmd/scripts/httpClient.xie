@@ -2,20 +2,29 @@
 // 此处是获取某URL处的网页内容
 // 第一个参数pageT用于存放访问的结果内容
 // -timeout参数用于指定超时时间，单位是秒
+// The getWeb directive can be used for various HTTP based network requests,
+// This is to obtain the webpage content at a certain URL
+// The first parameter pageT is used to store the accessed result content
+// The - timeout parameter is used to specify the timeout time, in seconds
 getWeb $pageT "http://127.0.0.1/xms/xmsIndex" -timeout=15
 
 // 输出获取到的内容参考
+// Output obtained content for reference
 pln $pageT
 
 // 定义一个映射类型的变量mapT
 // 用于存放准备POST的参数
+// Define a variable of mapping type mapT
+// Used to store parameters for preparing for POST
 var $mapT map
 
 // 设置示例的POST参数
+// Set POST parameters for the example
 setMapItem $mapT param1 value1
 setMapItem $mapT param2 value2
 
 // 输出映射内容参考
+// Output the map object for reference
 pln $mapT
 
 // 以POST的方式来访问WEB API
@@ -25,8 +34,16 @@ pln $mapT
 // encoding用于指定返回信息的编码形式，例如GB2312、GBK、UTF-8等
 // headers是一个JSON格式的字符串，表示需要加上的自定义的请求头内容键值对
 // 参数中可以有一个映射类型的变量或值，表示需要POST到服务器的参数
+// Accessing WEB APIs through POST
+// The getWeb instruction must be a variable that returns the result, except for the first parameter,
+// The second parameter is the URL to access, all other parameters are optional
+// The method can also be GET, etc
+// Encoding is used to specify the encoding format of the returned information, such as GB2312, GBK, UTF-8, etc
+// Headers is a JSON formatted string that represents the custom request header content key value pairs that need to be added
+// There can be a mapping type variable or value in the parameter that represents the parameter that needs to be POST to the server
 getWeb $resultT "http://127.0.0.1:80/xms/xmsApi" -method=POST -encoding=UTF-8 -timeout=15 -headers=`{"Content-Type": "application/json"}` $mapT
 
 // 查看结果
+// View the result
 pln $resultT
 

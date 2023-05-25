@@ -70,7 +70,7 @@ Xielang is a free, open-source, cross-platform, cross-language, ASM/SHELL-like, 
   - [- **延迟执行指令 defer**](#--延迟执行指令-defer)
   - [- **关系数据库访问**（Relational Database Access）](#--关系数据库访问relational-database-access)
   - [- **微服务/应用服务器**（Microservices/Application Server）](#--微服务应用服务器microservicesapplication-server)
-  - [- **网络（HTTP）客户端**](#--网络http客户端)
+  - [- **网络（HTTP）客户端**（Network(HTTP) Client）](#--网络http客户端networkhttp-client)
   - [- **手动编写Api服务器**](#--手动编写api服务器)
   - [- **静态WEB服务器**](#--静态web服务器)
   - [- **动态网页服务器**](#--动态网页服务器)
@@ -5202,31 +5202,42 @@ At this point, an example of a sparrow's small and versatile WEB/application/API
 
 &nbsp;
 
-##### - **网络（HTTP）客户端**
+##### - **网络（HTTP）客户端**（Network(HTTP) Client）
 
 &nbsp;
 
 用谢语言实现一个网络客户端也非常容易，以上面的网络服务端为例，访问这些服务的客户端代码（httpClient.xie）如下：
+
+It is also very easy to implement a network client using Xielang. Taking the network server as an example, the client code (httpClient.xie) for accessing these services is as follows:
 
 ```go
 // getWeb指令可以用于各种基于HTTP的网络请求，
 // 此处是获取某URL处的网页内容
 // 第一个参数pageT用于存放访问的结果内容
 // -timeout参数用于指定超时时间，单位是秒
+// The getWeb directive can be used for various HTTP based network requests,
+// This is to obtain the webpage content at a certain URL
+// The first parameter pageT is used to store the accessed result content
+// The - timeout parameter is used to specify the timeout time, in seconds
 getWeb $pageT "http://127.0.0.1/xms/xmsIndex" -timeout=15
 
 // 输出获取到的内容参考
+// Output obtained content for reference
 pln $pageT
 
 // 定义一个映射类型的变量mapT
 // 用于存放准备POST的参数
+// Define a variable of mapping type mapT
+// Used to store parameters for preparing for POST
 var $mapT map
 
 // 设置示例的POST参数
+// Set POST parameters for the example
 setMapItem $mapT param1 value1
 setMapItem $mapT param2 value2
 
 // 输出映射内容参考
+// Output the map object for reference
 pln $mapT
 
 // 以POST的方式来访问WEB API
@@ -5236,15 +5247,24 @@ pln $mapT
 // encoding用于指定返回信息的编码形式，例如GB2312、GBK、UTF-8等
 // headers是一个JSON格式的字符串，表示需要加上的自定义的请求头内容键值对
 // 参数中可以有一个映射类型的变量或值，表示需要POST到服务器的参数
+// Accessing WEB APIs through POST
+// The getWeb instruction must be a variable that returns the result, except for the first parameter,
+// The second parameter is the URL to access, all other parameters are optional
+// The method can also be GET, etc
+// Encoding is used to specify the encoding format of the returned information, such as GB2312, GBK, UTF-8, etc
+// Headers is a JSON formatted string that represents the custom request header content key value pairs that need to be added
+// There can be a mapping type variable or value in the parameter that represents the parameter that needs to be POST to the server
 getWeb $resultT "http://127.0.0.1:80/xms/xmsApi" -method=POST -encoding=UTF-8 -timeout=15 -headers=`{"Content-Type": "application/json"}` $mapT
 
 // 查看结果
+// View the result
 pln $resultT
-
 
 ```
 
 示例中演示了直接获取网页和用POST形式访问API服务的方法，运行效果如下：
+
+The example demonstrates the method of directly obtaining web pages and accessing API services through POST, and the running effect is as follows:
 
 ```shell
 <html>
@@ -5276,6 +5296,8 @@ map[param1:value1 param2:value2]
 ```
 
 可以看到，程序顺利获得到了所需的服务器响应。
+
+You can see that the program successfully obtained the required server response.
 
 &nbsp;
 
