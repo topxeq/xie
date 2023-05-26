@@ -1,20 +1,32 @@
 // 新建一个路由处理器
+// Create a new routing processor
 newMux $muxT
 
 // 设置处理路由“/static/”后的URL为静态资源服务
 // 第3个参数是对应的本地文件路径
 // 例如：访问 http://127.0.0.1:8080/static/basic.xie
 // 而当前目录是c:\tmp，那么实际上将获得c:\tmp\scripts\basic.xie
+// Set the URL after processing route '/static/' as a static resource service
+// The third parameter is the corresponding local file path
+// For example: accessing http://127.0.0.1:8080/static/basic.xie
+// And the current directory is c:\tmp, so in reality, you will get c:\tmp scripts basic.xie
 setMuxStaticDir $muxT "/static/" "./scripts" 
 
 setMuxStaticDir $muxT "/" "." 
 
 pln 启动服务器……
+// pln "Starting the server..."
+
 
 // 在端口8080上启动http服务器
 // 指定路由处理器为muxT
 // 结果放入变量resultT中
 // 由于startHttpServer如果执行成功是阻塞的
 // 因此resultT只有失败或被Ctrl-C中断时才会有值
+// Start the HTTP server on port 8080
+// Specify the routing processor as muxT
+// Place the results in the variable resultT
+// Due to the fact that startHttpServer is blocked if executed successfully
+// Therefore, resultT only has a value when it fails or is interrupted by Ctrl-C
 startHttpServer $resultT ":8080" $muxT
 

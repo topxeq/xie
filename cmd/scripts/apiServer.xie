@@ -1,4 +1,5 @@
 // 新建一个路由处理器
+// Create a new routing processor
 newMux $muxT
 
 // 设置处理路由“/test”的处理函数
@@ -9,45 +10,69 @@ newMux $muxT
 // responseG 表示http响应对象
 // paraMapG 表示http请求传入的query参数或post参数
 // inputG 是调用setMuxHandler指令传入的第3个参数的值
+// Set the processing function for processing route '/test'
+// The 4th parameter is the code for the string type processing function
+// Will run as a new virtual machine
+// There will be 4 global variables by default within the virtual machine:
+// requestG represents the HTTP request object
+// responseG represents the HTTP response object
+// paraMapG represents the query or post parameters passed in by HTTP requests
+// inputG is the value of the third parameter passed in by calling the setMuxHandler instruction
 setMuxHandler $muxT "/test" #i123 `
 
 // 输出参考信息
+// Output reference information
 pln "/test" $paraMapG
 
 // 拼装输出的信息字符串
 // spr类似于其他语言中的sprintf函数
-spr $strT "[%v] 请求名: test，请求参数： %v，inputG：%v" ?(?nowStr) $paraMapG $inputG
+// Assembly output information string
+// Spr is similar to the sprintf function in other languages
+spr $strT "[%v] 请求名: test，请求参数： %v，inputG：%v" @'{nowStr}' $paraMapG $inputG
 
 // 设置输出的http响应头中的键值对
+// Set the key value pairs in the output HTTP response header
 setRespHeader $responseG "Content-Type" "text/json; charset=utf-8"
 
 // 设置输出http响应的状态值为200（表示成功，即HTTP_OK）
+// Set the status value of the output HTTP response to 200 (indicating success, i.e. HTTP_oK)
 writeRespHeader $responseG 200
 
 // 准备一个映射对象用于拼装返回结果的JSON字符串
+// Prepare a mapping object for assembling JSON strings that return results
 var $resMapT map
 
 setMapItem $resMapT "Status" "success"
 setMapItem $resMapT "Value" $strT
 
 // 转换为JSON
+// Convert to JSON
 toJson $jsonStrT $resMapT
 
 // 写http响应内容，即前面拼装并转换的变量jsonStrT中的JSON字符串
+// Write the HTTP response content, which is the JSON string in the variable jsonStrT that was previously assembled and converted
 writeResp $responseG $jsonStrT
 
 // 设置函数返回值为TX_END_RESPONSE_XT
 // 此时响应将中止输出，否则将会把该返回值输出到响应中
+// Set the function return value to TX_ END_ RESPONSE_ XT
+// At this point, the response will stop any output, otherwise the return value will be output to the response
 assign $outG  "TX_END_RESPONSE_XT"
 
 `
 
 pl "启动服务器……(请用浏览器访问 http://127.0.0.1:8080/test 查看运行效果)"
+// pl "Start the server... (Please use a browser to access http://127.0.0.1:8080/test to view the running effect)"
 
 // 在端口8080上启动http服务器
 // 指定路由处理器为muxT
 // 结果放入变量resultT中
 // 由于startHttpServer如果执行成功是阻塞的
 // 因此resultT只有失败或被Ctrl-C中断时才会有值
+// Start the HTTP server on port 8080
+// Specify the routing processor as muxT
+// Place the results in the variable resultT
+// Due to the fact that startHttpServer is blocked if executed successfully
+// Therefore, resultT only has a value when it fails or is interrupted by Ctrl-C
 startHttpServer $resultT ":8080" $muxT
 

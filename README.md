@@ -71,10 +71,10 @@ Xielang is a free, open-source, cross-platform, cross-language, ASM/SHELL-like, 
   - [- **关系数据库访问**（Relational Database Access）](#--关系数据库访问relational-database-access)
   - [- **微服务/应用服务器**（Microservices/Application Server）](#--微服务应用服务器microservicesapplication-server)
   - [- **网络（HTTP）客户端**（Network(HTTP) Client）](#--网络http客户端networkhttp-client)
-  - [- **手动编写Api服务器**](#--手动编写api服务器)
-  - [- **静态WEB服务器**](#--静态web服务器)
-  - [- **动态网页服务器**](#--动态网页服务器)
-  - [- **博客系统**](#--博客系统)
+  - [- **手动编写Api服务器**（Manually writing Api servers）](#--手动编写api服务器manually-writing-api-servers)
+  - [- **静态WEB服务器**（Static WEB server）](#--静态web服务器static-web-server)
+  - [- **动态网页服务器**（Dynamic Web Server）](#--动态网页服务器dynamic-web-server)
+  - [- **博客系统**（Implementing a tiny blog system）](#--博客系统implementing-a-tiny-blog-system)
   - [- **嵌套运行谢语言代码**](#--嵌套运行谢语言代码)
 - [谢语言做系统服务](#谢语言做系统服务)
 - [图形界面（GUI）编程](#图形界面gui编程)
@@ -5301,14 +5301,17 @@ You can see that the program successfully obtained the required server response.
 
 &nbsp;
 
-##### - **手动编写Api服务器**
+##### - **手动编写Api服务器**（Manually writing Api servers）
 
 &nbsp;
 
 谢语言也支持自己手动编写各种基于HTTP的服务器，下面是一个API服务器的例子（apiServer.xie）：
 
+Xielang also supports manually writing various HTTP based servers. Below is an example of an API server (apiServer.xie):
+
 ```go
 // 新建一个路由处理器
+// Create a new routing processor
 newMux $muxT
 
 // 设置处理路由“/test”的处理函数
@@ -5319,57 +5322,85 @@ newMux $muxT
 // responseG 表示http响应对象
 // paraMapG 表示http请求传入的query参数或post参数
 // inputG 是调用setMuxHandler指令传入的第3个参数的值
+// Set the processing function for processing route '/test'
+// The 4th parameter is the code for the string type processing function
+// Will run as a new virtual machine
+// There will be 4 global variables by default within the virtual machine:
+// requestG represents the HTTP request object
+// responseG represents the HTTP response object
+// paraMapG represents the query or post parameters passed in by HTTP requests
+// inputG is the value of the third parameter passed in by calling the setMuxHandler instruction
 setMuxHandler $muxT "/test" #i123 `
 
 // 输出参考信息
+// Output reference information
 pln "/test" $paraMapG
 
 // 拼装输出的信息字符串
 // spr类似于其他语言中的sprintf函数
-spr $strT "[%v] 请求名: test，请求参数： %v，inputG：%v" ?(?nowStr) $paraMapG $inputG
+// Assembly output information string
+// Spr is similar to the sprintf function in other languages
+spr $strT "[%v] 请求名: test，请求参数： %v，inputG：%v" @'{nowStr}' $paraMapG $inputG
 
 // 设置输出的http响应头中的键值对
+// Set the key value pairs in the output HTTP response header
 setRespHeader $responseG "Content-Type" "text/json; charset=utf-8"
 
 // 设置输出http响应的状态值为200（表示成功，即HTTP_OK）
+// Set the status value of the output HTTP response to 200 (indicating success, i.e. HTTP_oK)
 writeRespHeader $responseG 200
 
 // 准备一个映射对象用于拼装返回结果的JSON字符串
+// Prepare a mapping object for assembling JSON strings that return results
 var $resMapT map
 
 setMapItem $resMapT "Status" "success"
 setMapItem $resMapT "Value" $strT
 
+// 转换为JSON
+// Convert to JSON
 toJson $jsonStrT $resMapT
 
 // 写http响应内容，即前面拼装并转换的变量jsonStrT中的JSON字符串
+// Write the HTTP response content, which is the JSON string in the variable jsonStrT that was previously assembled and converted
 writeResp $responseG $jsonStrT
 
 // 设置函数返回值为TX_END_RESPONSE_XT
 // 此时响应将中止输出，否则将会把该返回值输出到响应中
+// Set the function return value to TX_ END_ RESPONSE_ XT
+// At this point, the response will stop any output, otherwise the return value will be output to the response
 assign $outG  "TX_END_RESPONSE_XT"
 
 `
 
-pln 启动服务器……
+pl "启动服务器……(请用浏览器访问 http://127.0.0.1:8080/test 查看运行效果)"
+// pl "Start the server... (Please use a browser to access http://127.0.0.1:8080/test to view the running effect)"
 
 // 在端口8080上启动http服务器
 // 指定路由处理器为muxT
 // 结果放入变量resultT中
 // 由于startHttpServer如果执行成功是阻塞的
 // 因此resultT只有失败或被Ctrl-C中断时才会有值
+// Start the HTTP server on port 8080
+// Specify the routing processor as muxT
+// Place the results in the variable resultT
+// Due to the fact that startHttpServer is blocked if executed successfully
+// Therefore, resultT only has a value when it fails or is interrupted by Ctrl-C
 startHttpServer $resultT ":8080" $muxT
-
 
 ```
 
 运行后，用浏览器访问下面的网址进行测试：
+
+After running, use a browser to access the following website for testing:
 
 ```
 http://127.0.0.1:8080/test?param1=abc&param2=123
 ```
 
 可以看到网页中会显示类似下面的JSON格式的输出：
+
+You can see that the webpage will display output in JSON format similar to the following:
 
 ```
 {
@@ -5380,72 +5411,110 @@ http://127.0.0.1:8080/test?param1=abc&param2=123
 
 当然，一般API服务都是用编程的形式而非浏览器访问，用浏览器比较适合做简单的测试。
 
+Of course, most API services are accessed through programming rather than a browser, browsers are more suitable for simple testing.
+
 &nbsp;
 
-##### - **静态WEB服务器**
+##### - **静态WEB服务器**（Static WEB server）
 
 &nbsp;
 
 谢语言实现静态WEB服务器则更为简单，见下例（webServer.xie）：
 
+Implementing a static WEB server using Xielang is simpler, as shown in the following example (webServer.xie):
+
 ```go
 // 新建一个路由处理器
+// Create a new routing processor
 newMux $muxT
 
 // 设置处理路由“/static/”后的URL为静态资源服务
 // 第3个参数是对应的本地文件路径
 // 例如：访问 http://127.0.0.1:8080/static/basic.xie
-// 而当前目录是c:\tmp，那么实际上将获得c:\scripts\basic.xie
+// 而当前目录是c:\tmp，那么实际上将获得c:\tmp\scripts\basic.xie
+// Set the URL after processing route '/static/' as a static resource service
+// The third parameter is the corresponding local file path
+// For example: accessing http://127.0.0.1:8080/static/basic.xie
+// And the current directory is c:\tmp, so in reality, you will get c:\tmp scripts basic.xie
 setMuxStaticDir $muxT "/static/" "./scripts" 
 
+setMuxStaticDir $muxT "/" "." 
+
 pln 启动服务器……
+// pln "Starting the server..."
+
 
 // 在端口8080上启动http服务器
 // 指定路由处理器为muxT
 // 结果放入变量resultT中
 // 由于startHttpServer如果执行成功是阻塞的
 // 因此resultT只有失败或被Ctrl-C中断时才会有值
+// Start the HTTP server on port 8080
+// Specify the routing processor as muxT
+// Place the results in the variable resultT
+// Due to the fact that startHttpServer is blocked if executed successfully
+// Therefore, resultT only has a value when it fails or is interrupted by Ctrl-C
 startHttpServer $resultT ":8080" $muxT
 
 ```
 
 运行后，访问http://127.0.0.1:8080/static/basic.xie，将获得类似下面的结果：
 
+After running, access http://127.0.0.1:8080/static/basic.xie , results similar to the following will be obtained:
+
 ```
 // 本例演示做简单的加法操作
+// This example demonstrates performing a simple addition operation
 
 // 将变量x赋值为浮点数1.8
+// Assign variable x to floating point 1.8
 assign $x #f1.8
 
 // 将变量x中的值加上浮点数2
 // 结果压入堆栈
+// Add the value in variable x to floating point number 2
+// Result pushed onto the stack
 add $push $x #f2
 
 // 将堆栈顶部的值弹出到变量y
+// Pop the value at the top of the stack onto the variable y
 pop $y
 
 // 将变量x与变量y中的值相加，结果压栈
+// Add the values of variable x and variable y, and the result is stacked
 add $push $x $y
 
 // 弹出栈顶值并将其输出查看
 // pln指令相当于其他语言中的println函数
+// Pop up the top value of the stack and view its output
+// The pln instruction is equivalent to the println function in other languages
 pln $pop
+
+// 脚本返回一个字符串“10”
+// 如果有全局变量$outG声明过，则将其作为脚本返回值返回，谢语言主程序会将其输出
+// The script returns a string of '10'
+// If a global variable $outG has been declared, it will be returned as a script return value, and the Xielang main program will output it
+= $outG 10
 
 ```
 
 实际上读取了当前目录的scripts子目录下的basic.xie文件展示。
 
+Actually, the server read the basic.xie file in the scripts subdirectory of the current directory and show it as the browsing result.
+
 &nbsp;
 
-##### - **动态网页服务器**
+##### - **动态网页服务器**（Dynamic Web Server）
 
 &nbsp;
 
 如果想要实现动态网页服务器，类似PHP、JSP、ASP等，可以参考之前的微服务/应用服务器和手动编写API服务器等例子，很容易实现。
 
+If you want to implement a dynamic web server, such as PHP, JSP, ASP, etc., you can refer to previous examples of microservices/application servers and manually writing API servers, which are easy to implement.
+
 &nbsp;
 
-##### - **博客系统**
+##### - **博客系统**（Implementing a tiny blog system）
 
 &nbsp;
 

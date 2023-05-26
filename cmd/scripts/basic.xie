@@ -1,22 +1,32 @@
 // 本例演示做简单的加法操作
+// This example demonstrates performing a simple addition operation
 
 // 将变量x赋值为浮点数1.8
+// Assign variable x to floating point 1.8
 assign $x #f1.8
 
 // 将变量x中的值加上浮点数2
 // 结果压入堆栈
+// Add the value in variable x to floating point number 2
+// Result pushed onto the stack
 add $push $x #f2
 
 // 将堆栈顶部的值弹出到变量y
+// Pop the value at the top of the stack onto the variable y
 pop $y
 
 // 将变量x与变量y中的值相加，结果压栈
+// Add the values of variable x and variable y, and the result is stacked
 add $push $x $y
 
 // 弹出栈顶值并将其输出查看
 // pln指令相当于其他语言中的println函数
+// Pop up the top value of the stack and view its output
+// The pln instruction is equivalent to the println function in other languages
 pln $pop
 
 // 脚本返回一个字符串“10”
 // 如果有全局变量$outG声明过，则将其作为脚本返回值返回，谢语言主程序会将其输出
+// The script returns a string of '10'
+// If a global variable $outG has been declared, it will be returned as a script return value, and the Xielang main program will output it
 = $outG 10
