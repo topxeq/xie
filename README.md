@@ -1174,7 +1174,7 @@ We have seen some built-in global variables commonly used in Xielang, such as \$
   表示输出，例如：md5 $pln abc，将把字符串abc的MD5编码输出到命令行（类似于println函数的方式，结尾会输出一个回车符）
   Indicates the output, for example: "md5 $pln abc". The MD5 encoding of the string abc will be output to the command line (similar to the println function, with a carriage return at the end)
 
-- **\$drop** 
+- **\$drop** 或/or **\$_**
   表示丢弃，通常在不关心指令执行结果时使用，例如：removeFile \$drop "c:\temp\tmp.txt"，将删除相应文件后，将执行结果丢弃
   Indicates discarding, which is usually used when the instruction execution result is not concerned, for example: removeFile \$drop "c:\\temp\\tmp.txt". After the corresponding file is deleted, the execution result will be discarded
   
@@ -5520,29 +5520,57 @@ If you want to implement a dynamic web server, such as PHP, JSP, ASP, etc., you 
 
 谢语言内置已经具备能力实现一个简单的博客系统。博客系统对比一般的网站服务器，主要需要增加下面几个功能：
 
+Xielang already has the ability to implement a simple blog system built-in. Compared to general website servers, the blog system mainly needs to add the following functions:
+
 - 支持注册、登录与鉴权
 - 支持编辑文章
 - 支持将特定格式的文章渲染成网页以便展示
 
+- Support registration, login, and authentication
+- Support for editing articles
+- Support for rendering articles in specific formats into web pages for display
+
 下面我们就举例说明谢语言实现一个最简单博客系统的方法。
 
-首先，我们先建立一个登录服务（登录页面此处略去，有了登录服务接口，登录网页很容易就可以实现）。登录服务的目的是在用户成功登录以后获取一个令牌（token），此后在需要令牌鉴权的时候（例如编辑文章）会需要将该令牌传入。例子如下：
+Below, we will provide an example to illustrate the method of implementing the simplest blog system using Xielang.
+
+首先，我们先建立一个登录服务（登录页面此处略去，有了登录服务接口，登录网页很容易就可以实现）。登录服务的目的是在用户成功登录以后获取一个令牌（token），此后在需要令牌鉴权的时候（例如编辑文章）会需要将该令牌传入。例子（blog/xms/xlogin.xie）如下：
+
+Firstly, we will establish a login service (omitted here on the login page, with the login service interface, it is easy to implement logging into the webpage). The purpose of the login service is to obtain a token after the user successfully logs in, and then when token authentication is required (such as editing an article), the token will need to be passed in. An example is as follows:
 
 ```go
+// 新建一个字符串缓冲区用于调试输出
+// 实际系统中可取消此功能
+// Create a new string buffer for debugging output
+// This function can be cancelled in the actual system
+new $debufG strBuf
+
+// 跳转到主函数处执行
+// Jump to the main function for execution
 goto :main
 
+// 几个出错时的处理分支
+// 每个分支一般对应一种错误类型
+// Several processing branches in case of errors
+// Each branch generally corresponds to one error type
 :fail1
-
+    // 拼装错误信息字符串
+    // Assembly error message string
     spr $tmps "empty %v" $fail1Reason
 
+    // 生成JSON格式的错误对象
+    // Generate JSON formatted error object
     genResp $result $requestG "fail" $tmps
 
+    // 将其写入到HTTP请求响应中
+    // Write it into the HTTP request response
     writeResp $responseG $result
 
+    // 退出整个HTTP请求响应脚本
+    // Exit the entire HTTP request response script
     exit
 
 :fail2
-
     spr $tmps "require SSL"
 
     genResp $result $requestG "fail" $tmps
@@ -5552,7 +5580,6 @@ goto :main
     exit
 
 :fail3
-
     spr $tmps "%v" $fail1Reason
 
     genResp $result $requestG "fail" $tmps
@@ -5561,33 +5588,43 @@ goto :main
 
     exit
 
+// 通用错误处理函数
+// General error handling function
 :handler1
-    pop $lastLine
-    pop $errMsg
-    pop $detail
+    spr $failMsg "internal error(line %v): %v（%v）" $lastLineG $errorMessageG $errorDetailG
 
-    pl "代码运行到第%v行时发现错误：%v（%v）" $lastLine $errMsg $detail
-
-    spr $failMsg "internal error(line %v): %v（%v）" $lastLine $errMsg $detail
-
-    genResp $result $requestG "fail" $failMsg
+    genResp $result $requestG "fail" $failMsg debuf $debufG
 
     writeResp $responseG $result
 
     exit
 
+// 主函数开始
+// Start of main function
 :main
 
+// 设定错误处理函数
+// 所有未经处理的错误都将转入该函数进行处理
+// Set error handling function
+// All unhandled errors will be transferred to this function for processing
 onError :handler1
 
+// 默认返回TX_END_RESPONSE_XT，表示HTTP响应将不再输出（除了本脚本中已经输出的之外）
+// Default return TX_END_RESPONSE_XT, indicating that the HTTP response will no longer be output (except for the content already output in this script)
 = $outG "TX_END_RESPONSE_XT"
 
+// 设置响应头中的字段
+// Set the fields in the response header
 setRespHeader $responseG "Content-Type" "text/json; charset=utf-8"
 
+// 设置响应头状态为200，表示HTTP响应成功
+// Set the response header status to 200, indicating successful HTTP response
 writeRespHeader $responseG #i200
 
-pl "[%v] %v params: %v" ?(?nowStr) $reqNameG $paraMapG
+pl "[%v] %v params: %v" @'{nowStr}' $reqNameG $paraMapG
 
+// 获取HTTP请求中的URL、协议等信息，可用于强制SSL判断等场景
+// Obtain URL, protocol, and other information from HTTP requests, which can be used to enforce SSL judgment and other scenarios
 mb $urlT $requestG URL
 
 # pl urlT:%#v $urlT
@@ -5604,55 +5641,84 @@ mb $tlsT $requestG TLS
 
 isNil $tlsT
 
-if $tmp :fail2
+// 打开下面的注释将强制要求此请求通过https访问
+// if $tmp :fail2
 
 # plv $requestG
 
+// 获取请求参数中的appCode，u，p和secret，分别表示应用代码、用户名、密码和密钥
+// 可以通过这些参数来进行鉴权，决定是否要授予令牌
+// 本例中只通过判断密码来进行令牌授权
+// 密钥是用于加密令牌的，可以为空值，将使用默认密钥
+// Obtain the appCode, u, p, and secret in the request parameters, representing the application code, username, password, and key, respectively
+// These parameters can be used for authentication to determine whether to grant a token
+// In this example, token authorization is only performed by determining the password
+// The key is used for encrypting tokens and can be empty, and then the default key will be used
 getMapItem $appCode $paraMapG app
 
-# plv $appCode
+writeStr $drop $debufG @'"appCode: " + $appCode'
 
 = $fail1Reason appCode
 
-if ?`($appCode == $undefined)` :fail1
+if @`$appCode == $undefinedG` :fail1
 
 getMapItem $user $paraMapG u
 
 = $fail1Reason user
 
-if ?`(?isUndef $push $user)` :fail1
+if @`{isUndef $tmp $user}` :fail1
 
 getMapItem $password $paraMapG p ""
 
 = $fail1Reason password
 
-if ?`($password == "")` :fail1
+if @`($password == "")` :fail1
 
 = $fail1Reason "password not match"
 
-// 此处控制密码的校验
-if ?`($password != "abc123")` :fail3
+if @`($password != "123456")` :fail3
 
 getMapItem $secret $paraMapG secret ""
-# pln ?`("-secret=" + $secret)`
 
-genToken $result $appCode $user admin ?`(? ifThenElse (? == $secret "") "" ("-secret=" + $secret))`
+writeStr $_ $debufG @`(" -secret=" + $secret)`
 
-genResp $result $requestG "success" $result debug ?`(? ifThenElse (? == $secret "") "" ("-secret=" + $secret))`
+// 生成令牌
+// ifThenElse指令相当于JavaScript语言中的三元操作符（类似 a?true:false)
+// Generate Token
+// The ifThenElse instruction is equivalent to a ternary operator in JavaScript language (similar to a? True: false)
+genToken $result $appCode $user admin @'{ifThenElse ($secret == "") "" ("-secret=" + $secret)}'
 
+// 生成HTTP请求的响应字符串，JSON格式
+// Generate a response string for HTTP requests in JSON format
+genResp $result $requestG "success" $result debuf $debufG
+
+// 写入HTTP响应
+// Write HTTP response
 writeResp $responseG $result
 
 exit
 
 ```
 
-获取令牌的方法如下（为了安全起见，代码限制了必须用https访问，另外参数最好使用POST方式传递，这里为了演示方便，采用了GET方式）：
+然后，我们启动谢语言服务器，假设所需文件都在/goprjs/src/github.com/topxeq/xie/cmd/scripts/blog目录下：
+
+Then, we start the Xielang server, assuming that the required files are all in the/goprjs/src/github.com/topxeq/xie/cmd/scripts/blog directory:
+
+```shell
+xie -server -port=:80 -sslPort=:443 -dir=/goprjs/src/github.com/topxeq/xie/cmd/scripts/blog/xms -webDir=/goprjs/src/github.com/topxeq/xie/cmd/scripts/blog/web -certDir=/goprjs/src/github.com/topxeq/xie/cmd/scripts/blog/cert -verbose
+```
+
+获取令牌的方法如下（为了安全起见，代码可以限制必须用https访问，另外参数最好使用POST方式传递，这里为了演示方便，采用了GET方式）：
+
+The method to obtain a token is as follows (for security reasons, the code can restrict access to HTTPS, and it is best to use POST to pass parameters. Here, for demonstration purposes, GET method is used):
 
 ```
-https://auth.example.com/xms/xlogin?app=app1&u=userName&p=password&secret=sdf789
+http://127.0.0.1/xms/xlogin?app=app1&u=userName&p=123456&secret=sdf789
 ```
 
 其中，app是应用名称，可以自己设定，u是用户名，p是密码，secret是令牌加密秘钥（可以省略）。返回信息类似下面：
+
+Among them, app is the application name, which can be set by oneself. u is the username, p is the password, and secret is the token encryption key (which can be omitted). The return information is similar to the following:
 
 ```
 {
@@ -5664,13 +5730,19 @@ https://auth.example.com/xms/xlogin?app=app1&u=userName&p=password&secret=sdf789
 
 Value字段中是后面可用的令牌。
 
+The Value field contains the tokens available later.
+
 然后，我们来架设博客服务。以Linux服务器为例，假定我们在/mnt/xms实现我们的博客服务，我们以下面的命令启动谢语言服务器：
+
+Then, let's set up a blog service. Taking a Linux server as an example, assuming we implement our blog service in/mnt/xms, we start the Xielang server with the following command:
 
 ```shell
 xie -server -port=:80 -sslPort=:443 -dir=/mnt/xms -webDir=/mnt/web -certDir=/mnt/cert -verbose
 ```
 
-此时/mnt/web下为我们的静态网页文件，/mnt/xms下为我们的动态网页文件，SSL证书放在/mnt/cert（因为server.crt和server.key两个文件）。一个特殊的约定是，/mnt/xms目录下的doxc.xie文件默认为博客处理的代码文件，访问http://blog.example.com/xc/test这样的请求时，将被交给doxc.xie来处理。因此我们根据自己需要修改该文件即可，一个典型例子如下：
+此时/mnt/web下为我们的静态网页文件，/mnt/xms下为我们的动态网页文件（前面的xlogin.xie也应该放在这个目录下），SSL证书放在/mnt/cert（因为server.crt和server.key两个文件）。一个特殊的约定是，/mnt/xms目录下的doxc.xie文件默认为博客处理的代码文件，访问http://blog.example.com/xc/test这样的请求时，将被交给doxc.xie来处理。因此我们根据自己需要修改该文件即可，一个典型例子如下：
+
+At this point,/mnt/web is our static webpage file, and/mnt/xms is our dynamic webpage file(The previous xlogin.xie should also be placed in this directory). The SSL certificate is placed in/mnt/cert (because server.crt and server.key are two files). A special convention is that the doxc.xie file in the/mnt/xms directory defaults to the code file processed by the blog http://blog.example.com/xc/test When such a request is made, it will be handed over to doxc.xie for processing. Therefore, we can modify the file according to our own needs, a typical example is as follows:
 
 ```go
 // 设置默认返回值为TX_END_RESPONSE_XT以避免多余的网页输出
@@ -6123,6 +6195,7 @@ exit
 
 运行后，先登录xlogin网页获得token，然后访问类似（域名替换成自己的） http://blog.example.com/xc/edit/abc.md （注意要带上URL参数txtoken=自己刚刚登录获得的token），即可编辑Markdown格式的文件内容，位置在服务器/mnt/xms/wk目录下的abd.md文件。编辑后保存。然后访问 http://blog.example.com/xc/md/abc 即可访问渲染后的网页，同理 http://blog.example.com/xc/t/abc 可访问纯文本格式的abc.txt文件， http://blog.example.com/xc/h/abc 可访问网页格式的abc.html文件。 http://blog.example.com/xc/editxms/abc.xie 则是编辑一个谢语言代码文件，该文件保存后位于/mnt/xms/x目录下，之后可以用 http://blog.example.com/xms/x/abc 来访问该服务。一个例子文件如下，
 
+After running, first log in to the xlogin webpage to obtain the token, and then visit something similar (replace the domain name with your own) http://blog.example.com/xc/edit/abc.md (Please note that you need to bring the URL parameter txtoken='the token you just logged in to obtain') to edit the file content in Markdown format, located in the abd.md file in the server/mnt/xms/wk directory. Save after editing. Then visit http://blog.example.com/xc/md/abc You can access the rendered webpage, similarly http://blog.example.com/xc/t/abc Accessible abc.txt file in plain text format, http://blog.example.com/xc/h/abc Accessible abc. html file in web format. http://blog.example.com/xc/editxms/abc.xie It is to edit a Xie language code file, which is saved and located in the/mnt/xms/x directory. Afterwards, you can use the http://blog.example.com/xms/x/abc To access the service. An example file is as follows:,
 
 ```
 = $outG "TX_END_RESPONSE_XT"
@@ -6140,7 +6213,9 @@ writeResp $responseG $rs
 exit
 ```
 
-还可以进一步扩展功能，但一个简单的博客系统或者叫CMS（内容管理系统）已经搭建成了。
+还可以进一步扩展功能，但一个简单的博客系统或者叫CMS（内容管理系统）已经搭建完成了。
+
+The function can be further extended, but a simple blog system or content management system (CMS) has been built.
 
 &nbsp;
 

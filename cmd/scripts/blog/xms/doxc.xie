@@ -1,0 +1,453 @@
+// 设置默认返回值为TX_END_RESPONSE_XT以避免多余的网页输出
+// Set the default return value to TX_END_RESPONSE_XT to avoid unnecessary web page output
+= $outG "TX_END_RESPONSE_XT"
+
+pl "[%v] %v params: %v" @'{nowStr}' $reqNameG $paraMapG
+
+// 设定错误和提示页面的HTML，其中的TX_main_XT等标记将被替换为有意义的内容
+// Set HTML for error and prompt pages, where TX_ main_ Marks such as XT will be replaced with meaningful content
+= $infoTmpl `
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title></title>
+</head>
+<body>
+    <div style="text-align: center;">
+        <div id="main" style="witdth: 60%; margin-top: 3.0em; font-weight: bold; font-size: 2.0em; color: TX_mainColor_XT;">
+            TX_main_XT
+        </div>
+        <div id="info" style="witdth: 90%; margin-top: 3.0em; font-size: 1.5em;">
+            TX_info_XT
+        </div>
+    </div>
+</body>
+</html>
+`
+
+// 下面将放置一些快速调用的函数，因此这里直接跳转到main标号执行主程序代码
+// Below will be some quick calling functions, so here we will directly jump to the main label to execute the main program code
+goto :main
+
+// 用于输出错误提示页面的函数
+// Function for outputting error prompt pages
+:fatalReturn
+    strReplace $result $infoTmpl TX_info_XT $pop
+
+    strReplace $result $result TX_main_XT $pop
+
+    strReplace $result $result TX_mainColor_XT "#FF1111"
+
+    writeResp $responseG $result
+
+    exit
+
+// 用于输出信息提示页面的函数
+// Functions for outputting information prompt pages
+:infoReturn
+
+    strReplace $result $infoTmpl TX_info_XT $pop
+
+    strReplace $result $result TX_main_XT $pop
+
+    strReplace $result $result TX_mainColor_XT "#32CD32"
+
+    writeResp $responseG $result
+
+    exit
+
+// 主函数代码入口
+// Main function code entry
+:main
+
+// 新建一个字符串缓冲区（即可变长字符串）用于输出调试信息
+// Create a new string buffer (i.e. a variable length string) for outputting debugging information
+new $debufG strBuf
+
+// reqNameG预设全局变量中存放的是请求路由
+// 例如，访问http://example.com/xms/h/test/a1
+// 则reqNameG为h/test/a1
+// 将其分割为h和test/a1两段
+// The reqNameG preset global variable stores the request routing
+// For example, accessing http://example.com/xms/h/test/a1
+// Then reqNameG is h/test/a1
+// Divide it into two segments: h and test/a1
+strSplit $listT $reqNameG "/" 2
+
+// 加入调试信息
+// Add debugging information
+mt $drop $debufG append $listT
+
+// 获取子请求的第一部分（本例中为h）
+getItem $subReqT $listT 0
+
+// 获取子请求的第二部分（本例中为test/a1）
+getItem $subReqArgsT $listT 1
+
+pln subReqT: $subReqT
+
+// 如果子请求（第一部分）为edit则表示编辑该页面
+ifEval `$subReqT == "edit"` +1 :next1
+    # fastCall :infoReturn $subReqT $basePathG
+    # exit
+
+    setRespHeader $responseG "Content-Type" "text/html; charset=utf-8"
+
+    writeRespHeader $responseG #i200
+
+    // 检查token
+    getMapItem $tokenT $paraMapG txtoken
+
+    checkToken $r0 $tokenT -sercret=sdf789
+
+    isErrX $r1 $r0 $msgT
+
+    if $r1 +1 +2
+        fastCall :fatalReturn 鉴权失败 $msgT
+    
+    pln token: $r0
+
+    strSplit $list1T $r0 "|"
+
+    getItem $userNameT $list1T 1
+
+    // 只允许用户名为admin的用户操作
+    == $userNameT "admin"
+
+    if $tmp :inext2
+        fastCall :fatalReturn 鉴权失败 用户不存在
+
+    // 获取文件绝对路径
+    :inext2
+    strTrim $relDirT $subReqArgsT
+
+    joinPath $absPathT $basePathG wk $relDirT
+
+    pln absPathT: $absPathT
+
+    // 获取post参数ta1，如果存在则表示是保存
+
+    getMapItem $ta1T $paraMapG ta1
+
+    isUndef $push $ta1T
+
+    if $pop :inext4 
+        // 保存文件
+
+        extractFileDir $push $absPathT
+
+        ensureMakeDirs $push $pop
+
+        isErrX $errT $pop $msgT
+
+        if $errT +1 +2
+            fastCall :fatalReturn 创建目录失败 $msgT
+
+        saveText $push $ta1T  $absPathT
+
+        isErrX $errT $pop $msgT
+
+        if $errT +1 +2
+            fastCall :fatalReturn 保存文件失败 $msgT
+
+    // 读取原有文件并展示
+    :inext4
+    ifFileExists $b1 $absPathT
+
+    = $fcT ""
+
+    ifNot $b1 +2
+        loadText $fcT $absPathT
+
+    // 编辑页面模板
+    = $editTmplT `
+    <!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title></title>
+<script type="text/javascript" src="/js/jquery.min.js"></script>
+<script>
+	$().ready(function() {
+        $("textarea").on(
+            'keydown',
+            function(e) {
+                if (e.keyCode == 9) {
+                    e.preventDefault();
+                    var indent = "\t";
+                    var start = this.selectionStart;
+                    var end = this.selectionEnd;
+                    var selected = window.getSelection().toString();
+                    selected = indent + selected.replace(/\n/g, '\n' + indent);
+                    this.value = this.value.substring(0, start) + selected
+                            + this.value.substring(end);
+                    this.setSelectionRange(start + indent.length, start
+                            + selected.length);
+                }
+            });
+	});
+</script>
+</head>
+<body>
+<div id="div1" style="text-align: center; width: 100%; height: 100%;">
+    <div style="width: 60%; margin: 0 auto; font-weight: bold; font-size: 2.0em;">
+        <p>TX_filePath_XT</p>
+    </div>
+    <form method="POST">
+        <div id="main" style="width: 80%; margin: 0 auto; height: 100%;">
+            <textarea id="ta1" name="ta1" style="width: 100%; height: 30em; font-size: 1.5em;">TX_textAreaValue_XT</textarea>
+        </div>
+        <div style="width: 60%; margin: 0 auto; font-weight: bold; font-size: 2.0em;">
+            <button type="submit">保存</button>
+        </div>
+    </form>
+</div>
+</body>
+</html>
+    `
+
+    htmlEncode $rs1 $fcT
+
+    strReplace $rs2 $editTmplT TX_textAreaValue_XT $rs1
+    strReplace $rs2 $rs2 TX_filePath_XT $relDirT
+
+    writeResp $responseG $rs2
+
+    exit
+    # fastCall :infoReturn $absPathT $fcT
+
+:next1
+# dumpf labels
+
+// 如果子请求为h，则表示以网页形式输出页面
+ifEval `$subReqT == "h"` +1 :next2
+
+    setRespHeader $responseG "Content-Type" "text/html; charset=utf-8"
+
+    writeRespHeader $responseG #i200
+
+    // 获取文件绝对路径
+    strTrim $relDirT $subReqArgsT
+
+    joinPath $absPathT $basePathG wk $relDirT
+
+    pln absPathT: $absPathT
+
+    strEndsWith $b2T $absPathT ".html" ".htm"
+
+    if $b2T :inext5
+        + $absPathT $absPathT ".html"
+
+    :inext5
+    loadText $fcT $absPathT
+
+    isErrX $errT $fcT $msgT
+
+    if $errT +1 +2
+        fastCall :fatalReturn 操作失败 $msgT
+
+    writeResp $responseG $fcT
+    exit
+
+:next2
+
+// 如果子请求为t，则表示以纯文本形式输出页面
+ifEval `$subReqT == "t"` +1 :next3
+
+    // 获取文件绝对路径
+    strTrim $relDirT $subReqArgsT
+
+    joinPath $absPathT $basePathG wk $relDirT
+
+    pln absPathT: $absPathT
+
+    loadText $fcT $absPathT
+
+    isErrX $errT $fcT $msgT
+
+    if $errT +1 +2
+        fastCall :fatalReturn 操作失败 $msgT
+
+    setRespHeader $responseG "Content-Type" "text/plain; charset=utf-8"
+
+    writeRespHeader $responseG #i200
+
+    writeResp $responseG $fcT
+    exit
+
+:next3
+
+// 如果子请求为md，则表示以markdown形式渲染后输出页面
+ifEval `$subReqT == "md"` +1 :next4
+
+    // 获取文件绝对路径
+    strTrim $relDirT $subReqArgsT
+
+    joinPath $absPathT $basePathG wk $relDirT
+
+    pln absPathT: $absPathT
+
+    strEndsWith $b2T $absPathT ".md"
+
+    if $b2T :inext3
+        + $absPathT $absPathT ".md"
+
+    :inext3
+    loadText $fcT $absPathT
+
+    isErrX $errT $fcT $msgT
+
+    if $errT +1 +2
+        fastCall :fatalReturn 操作失败 $msgT
+
+    renderMarkdown $fcT $fcT
+
+    setRespHeader $responseG "Content-Type" "text/html; charset=utf-8"
+
+    writeRespHeader $responseG #i200
+
+    writeResp $responseG $fcT
+    exit
+
+:next4
+
+// 如果子请求为editxms，则表示以编辑谢语言代码
+ifEval `$subReqT == "editxms"` +1 :next5
+
+    setRespHeader $responseG "Content-Type" "text/html; charset=utf-8"
+
+    writeRespHeader $responseG #i200
+
+    // 检查token
+    getMapItem $tokenT $paraMapG txtoken
+
+    checkToken $r0 $tokenT
+
+    isErrX $r1 $r0 $msgT
+
+    if $r1 +1 +2
+        fastCall :fatalReturn 鉴权失败 $msgT
+    
+    pln token: $r0
+
+    strSplit $list1T $r0 "|"
+
+    getItem $userNameT $list1T 1
+
+    == $userNameT "admin"
+
+    if $tmp :inext6
+        fastCall :fatalReturn 鉴权失败 用户不存在
+
+    // 获取文件绝对路径
+    :inext6
+    strTrim $relDirT $subReqArgsT
+
+    joinPath $absPathT $basePathG x $relDirT
+
+    pln absPathT: $absPathT
+
+    // 获取post参数ta1，如果存在则表示是保存
+
+    getMapItem $ta1T $paraMapG ta1
+
+    isUndef $push $ta1T
+
+    if $pop :inext7 
+        // 保存文件
+
+        extractFileDir $push $absPathT
+
+        ensureMakeDirs $push $pop
+
+        isErrX $errT $pop $msgT
+
+        if $errT +1 +2
+            fastCall :fatalReturn 创建目录失败 $msgT
+
+        saveText $push $ta1T  $absPathT
+
+        isErrX $errT $pop $msgT
+
+        if $errT +1 +2
+            fastCall :fatalReturn 保存文件失败 $msgT
+
+    // 读取原有文件并展示
+    :inext7
+    ifFileExists $b1 $absPathT
+
+    = $fcT ""
+
+    ifNot $b1 +2
+        loadText $fcT $absPathT
+
+    = $editTmplT `
+    <!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title></title>
+<script type="text/javascript" src="/js/jquery.min.js"></script>
+<script>
+	$().ready(function() {
+        $("textarea").on(
+            'keydown',
+            function(e) {
+                if (e.keyCode == 9) {
+                    e.preventDefault();
+                    var indent = "\t";
+                    var start = this.selectionStart;
+                    var end = this.selectionEnd;
+                    var selected = window.getSelection().toString();
+                    selected = indent + selected.replace(/\n/g, '\n' + indent);
+                    this.value = this.value.substring(0, start) + selected
+                            + this.value.substring(end);
+                    this.setSelectionRange(start + indent.length, start
+                            + selected.length);
+                }
+            });
+	});
+</script>
+</head>
+<body>
+<div id="div1" style="text-align: center; width: 100%; height: 100%;">
+    <div style="width: 60%; margin: 0 auto; font-weight: bold; font-size: 2.0em;">
+        <p>TX_filePath_XT</p>
+    </div>
+    <form method="POST">
+        <div id="main" style="width: 80%; margin: 0 auto; height: 100%;">
+            <textarea id="ta1" name="ta1" style="width: 100%; height: 30em; font-size: 1.5em;">TX_textAreaValue_XT</textarea>
+        </div>
+        <div style="width: 60%; margin: 0 auto; font-weight: bold; font-size: 2.0em;">
+            <button type="submit">保存</button>
+        </div>
+    </form>
+</div>
+</body>
+</html>
+    `
+
+    htmlEncode $rs1 $fcT
+
+    strReplace $rs2 $editTmplT TX_textAreaValue_XT $rs1
+    strReplace $rs2 $rs2 TX_filePath_XT $relDirT
+
+    writeResp $responseG $rs2
+
+    exit
+ 
+:next5
+
+# push 测试
+# push 详细信息
+
+fastCall :infoReturn 未知请求 $subReqT
+
+exit

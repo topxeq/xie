@@ -486,6 +486,10 @@ var InstrNameSet map[string]int = map[string]int{
 	// math related 数学相关
 	"abs": 2100, // 取绝对值
 
+	"ceil":  2111, // 向上取整
+	"floor": 2113, // 向下取整
+	"round": 2115, // 四舍五入
+
 	// command-line related 命令行相关
 	"getParam": 10001, // 获取指定序号的命令行参数，结果参数外第一个参数为list或strList类型，第二个为整数，第三个为默认值（字符串类型），例：getParam $result $argsG 2 ""
 	"获取参数":     10001,
@@ -1193,7 +1197,7 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 				s1T = s1T[:len(s1T)-3]
 			}
 
-			if s1T == "$drop" {
+			if s1T == "$drop" || s1T == "_" {
 				return VarRef{-2, nil}
 			} else if s1T == "$debug" {
 				return VarRef{-1, nil}
@@ -12155,6 +12159,63 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		v1 := p.GetVarValue(r, instrT.Params[v1p])
 
 		p.SetVar(r, pr, tk.Abs(v1))
+
+		return ""
+
+	case 2111: // ceil
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough paramters")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		p.SetVar(r, pr, tk.Ceil(v1))
+
+		return ""
+
+	case 2113: // floor
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough paramters")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		p.SetVar(r, pr, tk.Floor(v1))
+
+		return ""
+
+	case 2115: // round
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough paramters")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		p.SetVar(r, pr, tk.Round(v1))
 
 		return ""
 
