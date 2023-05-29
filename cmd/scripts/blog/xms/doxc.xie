@@ -35,7 +35,8 @@ goto :main
 // 用于输出错误提示页面的函数
 // Function for outputting error prompt pages
 :fatalReturn
-    strReplace $result $infoTmpl TX_info_XT $pop
+    getErrStrX $errStrL $pop
+    strReplace $result $infoTmpl TX_info_XT $errStrL
 
     strReplace $result $result TX_main_XT $pop
 
@@ -68,45 +69,103 @@ goto :main
 new $debufG strBuf
 
 // reqNameG预设全局变量中存放的是请求路由
-// 例如，访问http://example.com/xms/h/test/a1
-// 则reqNameG为h/test/a1
-// 将其分割为h和test/a1两段
+// 例如，访问http://example.com/xc/h/a1
+// 则reqNameG为h/a1
+// 将其分割为h和a1两段
 // The reqNameG preset global variable stores the request routing
-// For example, accessing http://example.com/xms/h/test/a1
-// Then reqNameG is h/test/a1
-// Divide it into two segments: h and test/a1
+// For example, accessing http://example.com/xc/h/a1
+// Then reqNameG is h/a1
+// Divide it into two segments: h and a1
 strSplit $listT $reqNameG "/" 2
 
 // 加入调试信息
 // Add debugging information
 mt $drop $debufG append $listT
 
-// 获取子请求的第一部分（本例中为h）
+// 获取子请求的第一部分，即子请求名称（本例中为h）
+// Obtain the first part of the sub request, which is the sub request name (in this case, h)
 getItem $subReqT $listT 0
 
-// 获取子请求的第二部分（本例中为test/a1）
+// 获取子请求的第二部分，即子请求参数，常用于表示对应资源的路径（本例中为a1）
+// Obtain the second part of the sub request, which is the sub request parameter, commonly used to represent the path of the corresponding resource (in this example, a1)
 getItem $subReqArgsT $listT 1
 
 pln subReqT: $subReqT
 
-// 如果子请求（第一部分）为edit则表示编辑该页面
-ifEval `$subReqT == "edit"` +1 :next1
-    # fastCall :infoReturn $subReqT $basePathG
-    # exit
+// 如果子请求名称为h，则表示以网页形式输出页面（路径由子请求参数指定）
+// If the sub request name is h, it means outputting the page as a web page (the path is specified by the sub request parameter)
+ifEval `$subReqT == "h"` :+1 :next1
 
     setRespHeader $responseG "Content-Type" "text/html; charset=utf-8"
 
     writeRespHeader $responseG #i200
 
-    // 检查token
-    getMapItem $tokenT $paraMapG txtoken
+    strTrim $relDirT $subReqArgsT
+
+    // 获取文件绝对路径，至于变量absPathT中
+    // basePathG是启动谢语言服务器时指定的根目录
+    // 例如，如果启动谢语言服务器时指定的根路径是 /mnt/xms，请求是：http://example.com/xc/h/a1 
+    // 则实际输出的文件是 /mnt/xms/pages/a1.html
+    // Obtain the absolute path of the file, ant put it in the variable absPathT
+    // basePathG is the root directory specified when starting the Xielang server
+    // For example, if the root path specified when starting the Xielang server is /mnt/xms, the request is: http://example.com/xc/h/a1 
+    // The actual output file is/mnt/xms/pages/a1.html
+    joinPath $absPathT $basePathG "pages" $relDirT
+
+    pln absPathT: $absPathT
+
+    // 如果子请求参数后缀不是“.html”或“.htm”，则加上后缀“.html”
+    // If the subrequest parameter suffix is not ".html" or ".htm", add the suffix ".html"
+    strEndsWith $b2T $absPathT ".html" ".htm"
+
+    if $b2T :inext5
+        + $absPathT $absPathT ".html"
+
+    :inext5
+    // 读取文件内容
+    // Read File Content
+    loadText $fcT $absPathT
+
+    ifErrX $fcT :+1 :+2
+        // fastCall后跳转标号后的参数将被依次压栈
+        // The parameters after the jump label after fastCall will be sequentially pushed onto the stack
+        fastCall :fatalReturn "action failed" $fcT
+
+    // 将文件内容写入到HTTP响应
+    // Write the file content to the HTTP response
+    writeResp $responseG $fcT
+
+    // 结束HTTP请求响应
+    // End the HTTP request response
+    exit
+
+:next1
+
+// 如果子请求名称为edit则表示编辑该页面
+// 由于编辑操作一般需要权限验证，因此需要URL参数中传递通过xlogin接口获取的token
+// 例如，需要这样访问： http://example.com/xc/edit/a1.html?token=96A4617B681F8668667971817C57767C73828C4D38304D47474E5153493958544F
+// 注意，这里的文件名后缀不可省略
+// If the sub request name is edit, it means editing the page
+// Due to the fact that editing operations typically require permission verification, tokens obtained through the xlogin interface need to be passed in the URL parameters
+// For example, it is necessary to access: http://example.com/xc/edit/a1.html?token=96A4617B681F8668667971817C57767C73828C4D38304D47474E5153493958544F
+// Note that the file name suffix cannot be omitted here
+ifEval `$subReqT == "edit"` :+1 :next2
+    setRespHeader $responseG "Content-Type" "text/html; charset=utf-8"
+
+    writeRespHeader $responseG #i200
+
+    // 先检查token
+    // secret是获取token时约定的密钥
+    // Check the token first
+    // Secret is the key agreed upon when obtaining the token
+    getMapItem $tokenT $paraMapG "token"
 
     checkToken $r0 $tokenT -sercret=sdf789
 
     isErrX $r1 $r0 $msgT
 
-    if $r1 +1 +2
-        fastCall :fatalReturn 鉴权失败 $msgT
+    if $r1 :+1 :+2
+        fastCall :fatalReturn "auth failed" $msgT
     
     pln token: $r0
 
@@ -115,54 +174,55 @@ ifEval `$subReqT == "edit"` +1 :next1
     getItem $userNameT $list1T 1
 
     // 只允许用户名为admin的用户操作
+    // Only users with username admin are allowed to operate
     == $userNameT "admin"
 
     if $tmp :inext2
-        fastCall :fatalReturn 鉴权失败 用户不存在
+        fastCall :fatalReturn "auth failed" "user not exists"
 
     // 获取文件绝对路径
+    // Obtain the absolute path of the file
     :inext2
     strTrim $relDirT $subReqArgsT
 
-    joinPath $absPathT $basePathG wk $relDirT
+    joinPath $absPathT $basePathG "pages" $relDirT
 
     pln absPathT: $absPathT
 
-    // 获取post参数ta1，如果存在则表示是保存
+    // 获取post参数ta1，如果存在则表示是保存操作
+    // Obtain the post parameter ta1. If it exists, it means it is the save action
 
     getMapItem $ta1T $paraMapG ta1
 
-    isUndef $push $ta1T
+    isUndef $b1T $ta1T
 
-    if $pop :inext4 
+    if $b1T :inext4 
         // 保存文件
 
-        extractFileDir $push $absPathT
+        extractFileDir $fileDirT $absPathT
 
-        ensureMakeDirs $push $pop
+        ensureMakeDirs $rs1T $fileDirT
 
-        isErrX $errT $pop $msgT
+        ifErrX $rs1T :+1 :+2
+            fastCall :fatalReturn "failed to create path" $rs1T
 
-        if $errT +1 +2
-            fastCall :fatalReturn 创建目录失败 $msgT
+        saveText $rs2T $ta1T $absPathT
 
-        saveText $push $ta1T  $absPathT
-
-        isErrX $errT $pop $msgT
-
-        if $errT +1 +2
-            fastCall :fatalReturn 保存文件失败 $msgT
+        ifErrX $rs2T :+1 :+2
+            fastCall :fatalReturn "failed to save file" $rs2T
 
     // 读取原有文件并展示
+    // Read the original file and display it
     :inext4
     ifFileExists $b1 $absPathT
 
     = $fcT ""
 
-    ifNot $b1 +2
+    ifNot $b1 :+2
         loadText $fcT $absPathT
 
-    // 编辑页面模板
+    // 编辑页面的HTML模板
+    // HTML template for the edit page
     = $editTmplT `
     <!DOCTYPE html>
 <html>
@@ -171,26 +231,25 @@ ifEval `$subReqT == "edit"` +1 :next1
 <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title></title>
-<script type="text/javascript" src="/js/jquery.min.js"></script>
 <script>
-	$().ready(function() {
-        $("textarea").on(
-            'keydown',
-            function(e) {
-                if (e.keyCode == 9) {
-                    e.preventDefault();
-                    var indent = "\t";
-                    var start = this.selectionStart;
-                    var end = this.selectionEnd;
-                    var selected = window.getSelection().toString();
-                    selected = indent + selected.replace(/\n/g, '\n' + indent);
-                    this.value = this.value.substring(0, start) + selected
-                            + this.value.substring(end);
-                    this.setSelectionRange(start + indent.length, start
-                            + selected.length);
-                }
-            });
-	});
+    window.onload = function() {
+        // 设置文本输入框中TAB键的处理
+        // Set the TAB key handler in the text input box
+        document.getElementById('ta1').onkeydown = function(e) {
+            if (e.keyCode == 9) {
+                e.preventDefault();
+                var indent = "\t";
+                var start = this.selectionStart;
+                var end = this.selectionEnd;
+                var selected = window.getSelection().toString();
+                selected = indent + selected.replace(/\n/g, '\n' + indent);
+                this.value = this.value.substring(0, start) + selected
+                        + this.value.substring(end);
+                this.setSelectionRange(start + indent.length, start
+                        + selected.length);
+            }
+        };
+    }
 </script>
 </head>
 <body>
@@ -203,7 +262,7 @@ ifEval `$subReqT == "edit"` +1 :next1
             <textarea id="ta1" name="ta1" style="width: 100%; height: 30em; font-size: 1.5em;">TX_textAreaValue_XT</textarea>
         </div>
         <div style="width: 60%; margin: 0 auto; font-weight: bold; font-size: 2.0em;">
-            <button type="submit">保存</button>
+            <button type="submit">Save</button>
         </div>
     </form>
 </div>
@@ -211,6 +270,8 @@ ifEval `$subReqT == "edit"` +1 :next1
 </html>
     `
 
+    // 直接作为HTML代码插入页面，则需要进行HTML编码
+    // Directly inserting the page as HTML code requires HTML encoding
     htmlEncode $rs1 $fcT
 
     strReplace $rs2 $editTmplT TX_textAreaValue_XT $rs1
@@ -219,79 +280,49 @@ ifEval `$subReqT == "edit"` +1 :next1
     writeResp $responseG $rs2
 
     exit
-    # fastCall :infoReturn $absPathT $fcT
-
-:next1
-# dumpf labels
-
-// 如果子请求为h，则表示以网页形式输出页面
-ifEval `$subReqT == "h"` +1 :next2
-
-    setRespHeader $responseG "Content-Type" "text/html; charset=utf-8"
-
-    writeRespHeader $responseG #i200
-
-    // 获取文件绝对路径
-    strTrim $relDirT $subReqArgsT
-
-    joinPath $absPathT $basePathG wk $relDirT
-
-    pln absPathT: $absPathT
-
-    strEndsWith $b2T $absPathT ".html" ".htm"
-
-    if $b2T :inext5
-        + $absPathT $absPathT ".html"
-
-    :inext5
-    loadText $fcT $absPathT
-
-    isErrX $errT $fcT $msgT
-
-    if $errT +1 +2
-        fastCall :fatalReturn 操作失败 $msgT
-
-    writeResp $responseG $fcT
-    exit
 
 :next2
 
-// 如果子请求为t，则表示以纯文本形式输出页面
-ifEval `$subReqT == "t"` +1 :next3
-
-    // 获取文件绝对路径
+// 如果子请求名称为t，则表示以纯文本形式输出页面
+// If the sub request name is t, it means that the page is output in plain text form
+ifEval `$subReqT == "t"` :+1 :next3
     strTrim $relDirT $subReqArgsT
 
-    joinPath $absPathT $basePathG wk $relDirT
+    joinPath $absPathT $basePathG "pages" $relDirT
 
-    pln absPathT: $absPathT
+    // 如果路径不以“.txt”结尾，自动加上后缀“.txt”
+    // If the path does not end with ". txt", automatically add the suffix ".txt"
+    strEndsWith $b2T $absPathT ".txt"
+
+    if $b2T :+2
+        + $absPathT $absPathT ".txt"
 
     loadText $fcT $absPathT
 
-    isErrX $errT $fcT $msgT
-
-    if $errT +1 +2
-        fastCall :fatalReturn 操作失败 $msgT
+    ifErrX $fcT :+1 :+2
+        fastCall :fatalReturn "action failed" $fcT
 
     setRespHeader $responseG "Content-Type" "text/plain; charset=utf-8"
 
     writeRespHeader $responseG #i200
 
     writeResp $responseG $fcT
+
     exit
 
 :next3
 
-// 如果子请求为md，则表示以markdown形式渲染后输出页面
-ifEval `$subReqT == "md"` +1 :next4
-
-    // 获取文件绝对路径
+// 如果子请求名称为md，则表示以markdown形式渲染后输出页面
+// If the sub request name is md, it means that the page is rendered as a markup and output
+ifEval `$subReqT == "md"` :+1 :next4
     strTrim $relDirT $subReqArgsT
 
-    joinPath $absPathT $basePathG wk $relDirT
+    joinPath $absPathT $basePathG "pages" $relDirT
 
     pln absPathT: $absPathT
 
+    // 如果路径不以“.md”结尾，自动加上后缀“.md”
+    // If the path does not end with ". md", automatically add the suffix ". md"
     strEndsWith $b2T $absPathT ".md"
 
     if $b2T :inext3
@@ -302,7 +333,7 @@ ifEval `$subReqT == "md"` +1 :next4
 
     isErrX $errT $fcT $msgT
 
-    if $errT +1 +2
+    if $errT :+1 :+2
         fastCall :fatalReturn 操作失败 $msgT
 
     renderMarkdown $fcT $fcT
@@ -316,22 +347,21 @@ ifEval `$subReqT == "md"` +1 :next4
 
 :next4
 
-// 如果子请求为editxms，则表示以编辑谢语言代码
-ifEval `$subReqT == "editxms"` +1 :next5
+// 如果子请求名称为editxms，则表示编辑谢语言代码
+ifEval `$subReqT == "editxms"` :+1 :next5
 
     setRespHeader $responseG "Content-Type" "text/html; charset=utf-8"
 
     writeRespHeader $responseG #i200
 
-    // 检查token
-    getMapItem $tokenT $paraMapG txtoken
+    getMapItem $tokenT $paraMapG "token"
 
     checkToken $r0 $tokenT
 
     isErrX $r1 $r0 $msgT
 
-    if $r1 +1 +2
-        fastCall :fatalReturn 鉴权失败 $msgT
+    if $r1 :+1 :+2
+        fastCall :fatalReturn "auth failed" $msgT
     
     pln token: $r0
 
@@ -342,7 +372,7 @@ ifEval `$subReqT == "editxms"` +1 :next5
     == $userNameT "admin"
 
     if $tmp :inext6
-        fastCall :fatalReturn 鉴权失败 用户不存在
+        fastCall :fatalReturn "auth failed" "user not exists"
 
     // 获取文件绝对路径
     :inext6
@@ -367,15 +397,15 @@ ifEval `$subReqT == "editxms"` +1 :next5
 
         isErrX $errT $pop $msgT
 
-        if $errT +1 +2
-            fastCall :fatalReturn 创建目录失败 $msgT
+        if $errT :+1 :+2
+            fastCall :fatalReturn "failed to create path" $msgT
 
         saveText $push $ta1T  $absPathT
 
         isErrX $errT $pop $msgT
 
-        if $errT +1 +2
-            fastCall :fatalReturn 保存文件失败 $msgT
+        if $errT :+1 :+2
+            fastCall :fatalReturn "failed to save file" $msgT
 
     // 读取原有文件并展示
     :inext7
@@ -383,7 +413,7 @@ ifEval `$subReqT == "editxms"` +1 :next5
 
     = $fcT ""
 
-    ifNot $b1 +2
+    ifNot $b1 :+2
         loadText $fcT $absPathT
 
     = $editTmplT `
@@ -394,26 +424,25 @@ ifEval `$subReqT == "editxms"` +1 :next5
 <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title></title>
-<script type="text/javascript" src="/js/jquery.min.js"></script>
 <script>
-	$().ready(function() {
-        $("textarea").on(
-            'keydown',
-            function(e) {
-                if (e.keyCode == 9) {
-                    e.preventDefault();
-                    var indent = "\t";
-                    var start = this.selectionStart;
-                    var end = this.selectionEnd;
-                    var selected = window.getSelection().toString();
-                    selected = indent + selected.replace(/\n/g, '\n' + indent);
-                    this.value = this.value.substring(0, start) + selected
-                            + this.value.substring(end);
-                    this.setSelectionRange(start + indent.length, start
-                            + selected.length);
-                }
-            });
-	});
+window.onload = function() {
+    // 设置文本输入框中TAB键的处理
+    // Set the TAB key handler in the text input box
+    document.getElementById('ta1').onkeydown = function(e) {
+        if (e.keyCode == 9) {
+            e.preventDefault();
+            var indent = "\t";
+            var start = this.selectionStart;
+            var end = this.selectionEnd;
+            var selected = window.getSelection().toString();
+            selected = indent + selected.replace(/\n/g, '\n' + indent);
+            this.value = this.value.substring(0, start) + selected
+                    + this.value.substring(end);
+            this.setSelectionRange(start + indent.length, start
+                    + selected.length);
+        }
+    };
+}
 </script>
 </head>
 <body>
@@ -426,7 +455,7 @@ ifEval `$subReqT == "editxms"` +1 :next5
             <textarea id="ta1" name="ta1" style="width: 100%; height: 30em; font-size: 1.5em;">TX_textAreaValue_XT</textarea>
         </div>
         <div style="width: 60%; margin: 0 auto; font-weight: bold; font-size: 2.0em;">
-            <button type="submit">保存</button>
+            <button type="submit">Save</button>
         </div>
     </form>
 </div>
@@ -445,9 +474,8 @@ ifEval `$subReqT == "editxms"` +1 :next5
  
 :next5
 
-# push 测试
-# push 详细信息
-
-fastCall :infoReturn 未知请求 $subReqT
+// 如果不是任何已知的子请求名称，转到提示页面
+// If it is not any known sub request name, go to the prompt page
+fastCall :infoReturn "unknown request" $subReqT
 
 exit

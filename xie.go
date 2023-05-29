@@ -305,7 +305,7 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"go": 1063, // 快速并发调用一个标号处的代码，该段代码应该使用exit命令来表示退出该线程
 
-	"fastCall": 1070, // fast call function, no function stack used, no result value or arguments allowed, use stack or variables for input and output, use fastRet or ret to return
+	"fastCall": 1070, // 快速调用函数，第一个参数是跳转标号，后面的参数将被依次压栈，可以在函数体内弹栈使用 fast call function, no function stack used, no result value allowed, use stack or variables for input and output(parameters after the label parameter will be pushed to the stack in order), use fastRet or ret to return
 
 	"fastRet": 1071, // return from fast function, used with fastCall
 
@@ -8768,6 +8768,12 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		if c1 < 0 {
 			return p.Errf(r, "invalid label: %v", v1)
+		}
+
+		vs := p.ParamsToList(r, instrT, 1)
+
+		for _, v := range vs {
+			p.Stack.Push(v)
 		}
 
 		r.PointerStack.Push(CallStruct{Type: 1, ReturnPointer: r.CodePointer})

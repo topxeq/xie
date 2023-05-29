@@ -1,0 +1,13 @@
+= $outG "TX_END_RESPONSE_XT"
+
+setRespHeader $responseG "Content-Type" "text/json; charset=utf-8"
+
+writeRespHeader $responseG #i200
+
+pl "[%v] %v params: %v" @'{nowStr}' $reqNameG $paraMapG
+
+genResp $rs $requestG success test2
+
+writeResp $responseG $rs
+
+exit
