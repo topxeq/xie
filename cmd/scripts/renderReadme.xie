@@ -1,0 +1,12 @@
+getEnv $s1 GOPATH
+
+joinPath $s2 $s1 "src" "github.com" "topxeq" "xie" "README.md"
+
+loadText $t1 $s2
+
+checkErrX $t1
+
+renderMarkdown $m1 $t1
+
+pln $m1
+

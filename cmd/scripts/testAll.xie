@@ -178,3 +178,7 @@ systemCmd $rs "xie" "-gopath" "stringBuffer.xie"
 
 test $rs "(string)\"abc\\n123\\\\n\"\nabc\n123\\n\n" $seq "stringBuffer.xie"
 
+systemCmd $rs "xie" "-gopath" "operator3.xie"
+
+test $rs "(string)\"abc\"\nThe second result is:  correct result\n" $seq "operator3.xie"
+

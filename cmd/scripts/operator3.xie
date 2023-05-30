@@ -1,28 +1,40 @@
-// 三元操作符?（实际上是指令）用法示例
+// 三元操作符“?”（实际上是指令ifThenElse的简写形式）用法示例
+// Triple operator '?' (actually a shortened form of the instruction ifThenElse) Usage Example 
 
 // 判断整数2是否小于整数5
 // 结果将放入全局预置变量$tmp
+// Determine if integer 2 is less than integer 5
+// The results will be placed in the global preset variable $tmp
 < #i2 #i5
 
 // 给变量s1赋值为字符串abc
+// Assign variable s1 as the string abc
 assign $s1 "abc"
 
 // 判断$tmp值是否为true
 // 如果为true，则将变量s1中值赋给变量result
 // 否则将浮点数16.9赋给变量result
+// Determine whether the $tmp value is true
+// If true, assign the value of variable s1 to variable result
+// Otherwise, assign the floating point 16.9 to the variable result
 ? $result $tmp $s1 #f16.9
 
 // 输出变量result供参考
 // 本例应输出字符串abc
+// Output variable result for reference
+// This example should output the string abc
 plo $result
 
 // 将变量b2赋值为布尔值false
+// Assign variable b2 to a Boolean value of false
 assign $b2 #bfalse
 
 // 使用包含三元操作符指令的表达式作为参数
-// 注意这里的第一个“?”是表达式做参数的引导符，并不是三元操作符
-// 第二个“?”也是起到表明括号中的子表达式是一条指令的作用（也说明应该叫三元操作指令更妥当）
-// 第三个“?”才是三元操作指令
+// 注意这里由于“?”也是一条指令，因此在表达式中需要用花括号括起来
 // 注意表达式要求结果都要在$tmp变量中返回
-// 本例应该返回“正确结果”
-pln 第二个结果： ?`(? ? $tmp $b2 "错误结果" "正确结果")`
+// 本例应该返回“correct result”
+// Using expressions containing ternary operator instructions as arguments
+// Note that since '?' is also an instruction, curly braces need to be used in the expression
+// Note that expressions require results to be returned in the $tmp variable
+// This example should return 'correct result'
+pln "The second result is: " @`{ ? $tmp $b2 "false result" "correct result"}`
