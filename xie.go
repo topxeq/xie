@@ -49,7 +49,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var VersionG string = "1.2.5"
+var VersionG string = "1.2.6"
 
 func Test() {
 	tk.Pl("test")
@@ -977,7 +977,7 @@ var InstrNameSet map[string]int = map[string]int{
 // }
 
 type VarRef struct {
-	Ref   int // -99 - invalid, -23 - slice of array/slice, -22 - map item, -21 - array/slice item, -18 - local reg, -17 - reg, -16 - label, -15 - ref, -12 - unref, -11 - seq, -10 - quickEval, -9 - eval, -8 - pop, -7 - peek, -6 - push, -5 - tmp, -4 - pln, -3 - value only, -2 - drop, -1 - debug, 3 normal vars
+	Ref   int // -99 - invalid, -31 - clipboard(text), -23 - slice of array/slice, -22 - map item, -21 - array/slice item, -18 - local reg, -17 - reg, -16 - label, -15 - ref, -12 - unref, -11 - seq, -10 - quickEval, -9 - eval, -8 - pop, -7 - peek, -6 - push, -5 - tmp, -4 - pln, -3 - value only, -2 - drop, -1 - debug, 3 normal vars
 	Value interface{}
 }
 
@@ -1213,6 +1213,8 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 				return VarRef{-5, vv}
 			} else if s1T == "$seq" {
 				return VarRef{-11, nil}
+			} else if s1T == "$clip" {
+				return VarRef{-31, nil}
 			}
 
 			typeT := byte(0)
@@ -2647,6 +2649,10 @@ func (p *XieVM) GetVarValue(runA *RunningContext, vA VarRef) interface{} {
 		return GlobalsG.SyncSeq.Get()
 	}
 
+	if idxT == -31 {
+		return tk.GetClipboardTextDefaultEmpty()
+	}
+
 	if idxT == -8 {
 		return p.Stack.Pop()
 	}
@@ -2763,6 +2769,10 @@ func (p *XieVM) GetVarValueGlobal(runA *RunningContext, vA VarRef) interface{} {
 
 	if idxT == -11 {
 		return GlobalsG.SyncSeq.Get()
+	}
+
+	if idxT == -31 {
+		return tk.GetClipboardTextDefaultEmpty()
 	}
 
 	if idxT == -8 {
@@ -2976,6 +2986,11 @@ func (p *XieVM) SetVar(runA *RunningContext, refA interface{}, setValueA interfa
 		return nil
 	}
 
+	if refIntT == -31 { // $clip
+		tk.SetClipText(tk.ToStr(setValueA))
+		return nil
+	}
+
 	if refIntT == -17 { // regs
 		p.Regs[refT.Value.(int)] = setValueA
 		return nil
@@ -3104,6 +3119,11 @@ func (p *XieVM) SetVarLocal(runA *RunningContext, refA interface{}, setValueA in
 		return nil
 	}
 
+	if refIntT == -31 { // $clip
+		tk.SetClipText(tk.ToStr(setValueA))
+		return nil
+	}
+
 	if refIntT == -17 { // regs
 		p.Regs[refT.Value.(int)] = setValueA
 		return nil
@@ -3205,6 +3225,11 @@ func (p *XieVM) SetVarGlobal(refA interface{}, setValueA interface{}) error {
 
 	if refIntT == -11 { // $seq
 		GlobalsG.SyncSeq.Reset(tk.ToInt(setValueA, 0))
+		return nil
+	}
+
+	if refIntT == -31 { // $clip
+		tk.SetClipText(tk.ToStr(setValueA))
 		return nil
 	}
 
