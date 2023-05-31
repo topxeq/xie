@@ -49,7 +49,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var VersionG string = "1.2.3"
+var VersionG string = "1.2.5"
 
 func Test() {
 	tk.Pl("test")
@@ -103,7 +103,7 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"quickRun": 155, // quick run a piece of code, in a new running context(but same VM, so the global values are accessible), use exit to exit the running context, no return value needed(only erturn error object or "undefined")
 
-	"runCode": 156, // 运行一段谢语言代码，在新的虚拟机中执行，除结果参数（不可省略）外，第一个参数是字符串类型的代码或编译后代码（必选，后面参数都是可选），第二个参数为任意类型的传入虚拟机的参数（虚拟机内通过inputG全局变量来获取该参数），后面的参数可以是一个字符串数组类型的变量或者多个字符串类型的变量（也可以是一个字符串表示命令行），虚拟机内通过argsG（字符串数组）来对其进行访问。返回值是虚拟机正常运行返回值，即$outG或exit加参数的返回值。
+	"runCode": 156, // 运行一段谢语言代码，在新的虚拟机中执行，除结果参数（不可省略）外，第一个参数是字符串类型的代码或编译后代码（必选，后面参数都是可选），第二个参数为任意类型的传入虚拟机的参数（虚拟机内通过inputG全局变量来获取该参数），第三个参数可以是一个列表，键值对将依次传入新虚拟机作为全局变量，这两个参数（第二、三个）如果不需要可以传入$nilG，后面的参数可以是一个字符串数组类型的变量或者多个字符串类型的变量，虚拟机内通过argsG（字符串数组）来对其进行访问。返回值是虚拟机正常运行返回值，即$outG或exit加参数的返回值。
 
 	"runPiece": 157, // run a piece of code, in current running context，运行一段谢语言代码，在当前的虚拟机和运行上下文中执行，结果参数可省略，第一个参数是字符串类型的代码或编译后代码。不需要返回值，仅当发生运行错误时返回error对象，否则返回undefined，
 
@@ -5581,7 +5581,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		// vs := p.ParamsToStrs(r, instrT, v1p+3)
 		args1 := p.GetVarValue(r, GetVarRefInParams(instrT.Params, v1p+3))
 
-		var errT error
+		// var errT error
 
 		args2a, ok := args1.([]string)
 		if !ok {
@@ -5593,18 +5593,19 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 					args2a = append(args2a, tk.ToStr(va))
 				}
 			} else {
-				args2s, ok := args1.(string)
-				if ok {
-					args2a, errT = tk.ParseCommandLine(args2s)
+				args2a = p.ParamsToStrs(r, instrT, v1p+3)
+				// args2s, ok := args1.(string)
+				// if ok {
+				// 	args2a, errT = tk.ParseCommandLine(args2s)
 
-					if errT == nil {
+				// 	if errT == nil {
 
-					} else {
-						args2a = []string{args2s}
-					}
-				} else {
-					args2a = []string{tk.ToStr(args1)}
-				}
+				// 	} else {
+				// 		args2a = []string{args2s}
+				// 	}
+				// } else {
+				// 	args2a = []string{tk.ToStr(args1)}
+				// }
 			}
 		}
 

@@ -75,7 +75,7 @@ Xielang is a free, open-source, cross-platform, cross-language, ASM/SHELL-like, 
   - [- **静态WEB服务器**（Static WEB server）](#--静态web服务器static-web-server)
   - [- **动态网页服务器**（Dynamic Web Server）](#--动态网页服务器dynamic-web-server)
   - [- **博客系统**（Implementing a tiny blog system）](#--博客系统implementing-a-tiny-blog-system)
-  - [- **嵌套运行谢语言代码**](#--嵌套运行谢语言代码)
+  - [- **嵌套运行谢语言代码**（Nested Run Xielang Code）](#--嵌套运行谢语言代码nested-run-xielang-code)
 - [谢语言做系统服务](#谢语言做系统服务)
 - [图形界面（GUI）编程](#图形界面gui编程)
 - [谢语言GUI编程的基础（WebView2）](#谢语言gui编程的基础webview2)
@@ -6257,70 +6257,101 @@ The function can be further extended, but a simple blog system or content manage
 
 &nbsp;
 
-##### - **嵌套运行谢语言代码**
+##### - **嵌套运行谢语言代码**（Nested Run Xielang Code）
 
 &nbsp;
 
 谢语言中也可以另起一个虚拟机执行一段谢语言代码（即嵌套执行），某些情况下，这会是个很方便的功能。示例如下（runCode.xie）：
 
+In Xielang, another virtual machine started by a certain VM can also execute a section of Xielang code (i.e. nested execution), which can be a very convenient feature in some cases. An example is as follows (runCode.xie):
+
 ```go
 // 设定传入参数inputT，在虚拟机中通过全局变量inputG访问
+// Set the input parameter inputT and access it in the virtual machine through the global variable inputG
 assign $inputT #L`[{"name": "tom", "age": 25}, 15]`
 
 // 用runCode指令运行代码
 // 代码将在新的虚拟机中执行
 // 除结果参数（不可省略）外，第一个参数是字符串类型的代码（必选，后面参数都是可选）
 // 第二个参数为任意类型的传入虚拟机的参数（虚拟机内通过inputG全局变量来获取该参数）
+// 第三个参数可以是一个列表，键值对将依次传入新虚拟机作为全局变量，这两个参数（第二、三个）如果不需要可以传入$nilG
 // 再后面的参数可以是一个字符串数组类型的变量或者多个字符串类型的变量，虚拟机内通过argsG（字符串数组）来对其进行访问
+// Running code with the runCode instruction
+// The code will be executed in the new virtual machine
+// Except for the result parameter (which cannot be omitted), the first parameter is the code of string type (required, all subsequent parameters are optional)
+// The second parameter is any type of parameter passed into the virtual machine (obtained through the inputG global variable within the virtual machine)
+// The third parameter can be a list, where key value pairs will be passed to the new virtual machine as global variables in sequence. If these two parameters (second and third) are not needed, $nilG can be passed in
+// The following parameters can be a variable of string array type or multiple variables of string type, which are accessed through argsG (string array) in the virtual machine
 runCode $result `
 
 // 输出inputG供参考
+// Output inputG for reference
 pln "inputG=" $inputG
 
 // 获取inputG中的第二项（序号为1，值为数字15）
+// Obtain the second item in inputG (sequence number 1, value 15)
 getItem $item2 $inputG 1
 
 plo $item2
 
 // 由于数字可能被JSON解析为浮点数，因此将其转换为整数
+// Since the number may be parsed as a floating point number by JSON, it is converted to an integer
 toInt $item2 $item2
 
+// 输出argsG供参考
+// Output argsG for reference
+pln "argsG=" $argsG
+
 // 从argsG中获取第一项（序号为0）
+// Get the first item from argsG (sequence number 0)
 getItem $v3 $argsG 0
 
 // 由于argsG中每一项都是字符串，因此将其转换为整数
+// Since each item in argsG is a string, convert it to an integer
 toInt $v3 $v3
 
 // 从argsG中获取第二项（序号为1）
+// Get the second item (sequence number 1) from argsG
 getItem $v4 $argsG 1
 
 toInt $v4 $v4
 
 // 定义一个变量a并赋值为整数6
+// Define a variable a and assign it as an integer 6
 assign $a #i6
 
 // 用eval指令计算几个数相加的值，结果入栈
 // 由于虚拟机已经用了反引号括起代码
 // 因此可以用双引号括起表达式以免冲突
+// Calculate the value of adding several numbers using the eval instruction, and push the result onto the stack
+// Because the virtual machine has already used back quotes to enclose the code
+// Therefore, expressions can be enclosed in double quotation marks to avoid conflicts
 eval "$a + $item2 + $v3 + $v4"
 
 // 设置虚拟机的返回值
+// Set the return value of the virtual machine
 assign $outG $tmp
 
-` $inputT 22 9
+` $inputT $nilG 22 9
 
 // 最后结果应为52
+// The final result should be 52
 pln result= $result
 
 ```
 
-需要注意的是输入参数和输出参数的运用方法，以及在嵌入代码中尽量避免使用反引号。
+需要注意的是输入参数和输出参数的运用方法，以及在嵌入代码中尽量避免使用反引号，如果确实会用到，可以用字符串替换的方法来解决。
+
+It should be noted that the application methods of input and output parameters, as well as avoiding the use of backquotes in embedded code, can be solved by replacing strings if necessary.
 
 运行结果如下：
+
+The operation results are as follows:
 
 ```shell
 inputG= [map[age:25 name:tom] 15]
 (float64)15
+argsG= [22 9]
 result= 52
 ```
 
