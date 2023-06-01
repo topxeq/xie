@@ -2,29 +2,42 @@
 // 启动一个谢语言WEB服务器和API服务器来自行提供网页资源与API数据服务
 // 这样可以避免网络访问或者从附带文件中读取的麻烦，实现前后台的互通
 // 唯一的缺点是需要占用一个本机端口
+// This example demonstrates using WebView2 as a graphical interface
+// Start a Xielang web server and API server to provide web resources and API data services on your own
+// This can avoid the trouble of network access or reading from accompanying files, and achieve interoperability between the front and back ends
+// The only drawback is that it requires occupying a local port
 
 guiNewWindow $w "-title=Test WebView2b" -width=1024 -height=768 -center -debug
 
 checkErrX $w
 
 // 设置路由处理器
+// Set Routing Processor
 newMux $muxT
 
 // 设置静态内容的处理函数
 // 用于网页中嵌入JS和CSS时获取内置资源中的这些内容
 // 这样，如果主页的网址是 http://127.0.0.1:8721
 // 那么，网页中可以用嵌入的 /static/js/jquery.min.js 来获取内置的内容
+// Set the processing function for static content
+// Used to obtain these contents from built-in resources when embedding JS and CSS in web pages
+// So, if the website address of the homepage is http://127.0.0.1:8721
+// So, embedded/static/js/jquery.min.js can be used in web pages to obtain built-in content
 setMuxHandler $muxT "/static/" "" `
 	// 去掉请求路由的前缀 /static/
+	// Remove prefix/static from request routing/
 	trimPrefix $shortNameT $reqNameG "/static/"
 
 	// 获取形如 js/jquery.min.js 形式的内置资源内容
+	// Obtain built-in resource content in the form of js/jquery.min.js
 	getResource $textT $shortNameT
 
 	// 根据内置资源的后缀名，获取其MIME类型，例如：text/javascript
+	// Obtain the MIME type of the built-in resource based on its suffix name, for example: text/JavaScript
 	getMimeType $mimeTypeT $shortNameT
 
 	// 拼装完整的mime类型字符串
+	// Assemble complete mime type strings
 	spr $mimeTypeT "%v; charset=utf-8" $mimeTypeT 
 
 	setRespHeader $responseG "Content-Type" $mimeTypeT
@@ -38,11 +51,13 @@ setMuxHandler $muxT "/static/" "" `
 
 // 设置/test路由处理函数，用于测试WEB API
 // 返回内容是JSON格式
+// Set '/test' routing processing function for testing WEB API
+// The returned content is in JSON format
 setMuxHandler $muxT "/test" 0 `
 	setRespHeader $responseG "Content-Type" "text/json; charset=utf-8"
 	writeRespHeader $responseG 200
 
-	spr $strT "[%v] 请求名: test，请求参数： %v，inputG：%v" ?(?nowStr) $paraMapG $inputG
+	spr $strT "[%v] Req: test，Parameters： %v，inputG：%v" @'{nowStr}' $paraMapG $inputG
 
 	var $resMapT map
 
@@ -58,6 +73,8 @@ setMuxHandler $muxT "/test" 0 `
 
 // htmlT中即为准备用于根路由访问时的网页
 // 其中 test、test1和test2函数分别演示了使用异步Ajax、fetch和同步Ajax方式来调用本地接口的例子
+// The webpage in HTMLT is prepared for root routing access
+// The test, test1, and test2 functions demonstrate examples of using asynchronous Ajax, fetch, and synchronous Ajax methods to call local interfaces, respectively
 = $htmlT `
 <!DOCTYPE html>
 <html>
@@ -166,6 +183,9 @@ setMuxHandler $muxT "/test" 0 `
 // 设置根路径访问时的返回内容
 // 即htmlT中存放的网页HTML
 // setMuxHandler中的第三个参数传入处理函数中即为可通过全局变量inputG访问的值
+// Set the return content when accessing the root path
+// The webpage HTML stored in htmlT
+// The third parameter in setMuxHandler passed into the processing function is the value that can be accessed through the global variable inputG
 setMuxHandler $muxT "/" $htmlT `
 	setRespHeader $responseG "Content-Type" "text/html; charset=utf-8"
 	writeRespHeader $responseG 200
@@ -177,15 +197,19 @@ setMuxHandler $muxT "/" $htmlT `
 
 
 // 获取一个随机的可用端口用于命令服务器与图形界面通信
+// Obtain a random available port for command server and graphical interface communication
 getRandomPort $portT
 
 // 启动一个线程来运行HTTP服务器
+// Start a thread to run the HTTP server
 startHttpServer $resultT $portT $muxT -go
 
 spr $urlT "http://127.0.0.1:%v" $portT
 
 // 让WebView2窗口访问本机的这个端口
 // URL地址类似http://127.0.0.1:8721
+// Enable the WebView2 window to access this port on the local machine
+// URL address is similar http://127.0.0.1:8721
 mt $rs $w navigate $urlT
 
 checkErrX $rs

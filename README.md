@@ -80,13 +80,13 @@ Xielang is a free, open-source, cross-platform, cross-language, ASM/SHELL-like, 
 - [**图形界面（GUI）编程**（GUI Programming）](#图形界面gui编程gui-programming)
 - [**谢语言GUI编程的基础（WebView2）** （Fundamentals of GUI Programming in Xielang (WebView2)）](#谢语言gui编程的基础webview2-fundamentals-of-gui-programming-in-xielang-webview2)
   - [- **基本界面**（Basic GUI）](#--基本界面basic-gui)
-  - [- 直接嵌入网页脚本](#--直接嵌入网页脚本)
-  - [- 启动后台服务与前台配合](#--启动后台服务与前台配合)
-- [谢语言GUI编程的基础（SciterJS）](#谢语言gui编程的基础sciterjs)
-  - [- 简单的计算器](#--简单的计算器)
-  - [- Linux系统中运行图形计算器代码](#--linux系统中运行图形计算器代码)
-  - [- Windows编译不带命令行窗口的谢语言主程序](#--windows编译不带命令行窗口的谢语言主程序)
-  - [- 制作一个登录框](#--制作一个登录框)
+  - [- **直接嵌入网页脚本**（Directly embed JavaScript file in WEB pages）](#--直接嵌入网页脚本directly-embed-javascript-file-in-web-pages)
+  - [- **启动后台服务与前台配合**（Start the backend service and cooperate with the front end）](#--启动后台服务与前台配合start-the-backend-service-and-cooperate-with-the-front-end)
+- [**谢语言GUI编程的基础（SciterJS）**（The Fundamentals of GUI Programming in XieLang (SciterJS)）](#谢语言gui编程的基础sciterjsthe-fundamentals-of-gui-programming-in-xielang-sciterjs)
+  - [- **简单的计算器**（A Simple Calculator）](#--简单的计算器a-simple-calculator)
+  - [- **Linux系统中运行图形计算器代码**（Running Graph Calculator Code in Linux System）](#--linux系统中运行图形计算器代码running-graph-calculator-code-in-linux-system)
+  - [- **Windows编译不带命令行窗口的谢语言主程序**（Compiling Xielang main program without command line window for Windows）](#--windows编译不带命令行窗口的谢语言主程序compiling-xielang-main-program-without-command-line-window-for-windows)
+  - [- **制作一个登录框**（Create a login box）](#--制作一个登录框create-a-login-box)
 - [编译运行谢语言代码（Compile and run Xielang code）](#编译运行谢语言代码compile-and-run-xielang-code)
 - [内置指令/命令/函数参考（Built-in instruction/command/function reference）](#内置指令命令函数参考built-in-instructioncommandfunction-reference)
 - [内置对象参考（Built-in object reference）](#内置对象参考built-in-object-reference)
@@ -581,7 +581,7 @@ for such a command line, to see the example code described.
   It can be seen that the variable a is defined as float64, which is a 64-bit floating point number, and initialized to the value 0.
 
   谢语言中的变量的类型可以任意改变，意味着谢语言是一门“弱类型”的语言，而不像Go、C/C++、Java等“强类型”的语言那样，变量一旦声明后只能改变数值而不能改变类型。
-  The type of variables in Xie language can be changed at will, which means that Xielang is a "weakly typed" language. Unlike "strongly typed" languages such as Go, C/C++, Java, etc., variables can only change the value but not the type once declared.
+  The type of variables in Xielang can be changed at will, which means that Xielang is a "weakly typed" language. Unlike "strongly typed" languages such as Go, C/C++, Java, etc., variables can only change the value but not the type once declared.
 
 &nbsp;
 
@@ -720,7 +720,7 @@ var $b string "abc非常好"
 
 堆栈是各种语言都会用到的数据结构，当然除了汇编语言外，一般都是“暗中”使用。但谢语言中将堆栈放开了使用，这有利于程序的性能，以及开发者灵活地操控。当然，对于对编程底层不是很了解的开发者来说，需要有一个适应的过程，容易犯错导致程序运行出乎意料。但熟悉之后，会发现这是一个很有力、很高效的编程基础设施。
 
-Stack is a data structure used by all languages. Except for assembly language, of course, it is generally used "secretly". However, Xie language has released the use of the stack, which is conducive to the performance of the program and the flexible control of developers. Of course, for developers who don't know much about the underlying programming, there needs to be an adaptation process, which is easy to make mistakes and lead to unexpected program operation. But after getting familiar with it, you will find that it is a very powerful and efficient programming infrastructure.
+Stack is a data structure used by all languages. Except for assembly language, of course, it is generally used "secretly". However, Xielang has released the use of the stack, which is conducive to the performance of the program and the flexible control of developers. Of course, for developers who don't know much about the underlying programming, there needs to be an adaptation process, which is easy to make mistakes and lead to unexpected program operation. But after getting familiar with it, you will find that it is a very powerful and efficient programming infrastructure.
 
 &nbsp;
 
@@ -1388,7 +1388,7 @@ pln 条件满足
 
 需要特别注意的是，谢语言中的表达式中，运算符是没有优先级之分的，因此一个表达式中是严格按照从左到右的顺序执行运算的，唯一的例外是括号，用圆括号可以改变运算的优先级，括号里的部分将被优先计算。另外，表达式中的值与运算符之间必须有空格分隔。也因为一般的表达式都存在空格，因此需要用反引号或双引号括起来。
 
-Special attention should be paid to the fact that in the expressions in Xie language, operators have no priority. Therefore, an expression performs operations in strict order from left to right. The only exception is parentheses. Parentheses can change the priority of operations, and the parts in parentheses will be calculated first. In addition, the value and operator in the expression must be separated by a space. Because there are spaces in general expressions, you need to enclose them with back quotes or double quotes.
+Special attention should be paid to the fact that in the expressions in Xielang, operators have no priority. Therefore, an expression performs operations in strict order from left to right. The only exception is parentheses. Parentheses can change the priority of operations, and the parts in parentheses will be calculated first. In addition, the value and operator in the expression must be separated by a space. Because there are spaces in general expressions, you need to enclose them with back quotes or double quotes.
 
 另外，如果括号里的内容以一个问号“?”开始，那么后面可以是一条指令，该指令必须通过$tmp变量返回一个结果值以便继续参加表达式的运算，这样可以使得表达式中实现基本运算符之外的运算功能，例如转换数值类型等。
 
@@ -1589,7 +1589,7 @@ In addition, in the goto statement, pseudolabels such as ":+1" and ":-3" can be 
 
 循环结构是一般计算机语言中必然会有的基本语法结构。谢语言中，一般使用各种跳转语句来实现循环结构。goto语句是其中的一种方法，最常见的是实现无限循环。
 
-Loop structure is the basic grammatical structure that is inevitable in general computer language. In Xie language, various jump statements are generally used to realize the loop structure. The goto statement is one of the methods. The most common method is to implement infinite loops.
+Loop structure is the basic grammatical structure that is inevitable in general computer language. In Xielang, various jump statements are generally used to realize the loop structure. The goto statement is one of the methods. The most common method is to implement infinite loops.
 
   ```go
   // 将字符串压栈
@@ -1989,7 +1989,7 @@ exit
 
 可以看出，谢语言中for指令做循环标准的写法如下：
 
-It can be seen that the for instruction in Xie language is written as a loop standard as follows:
+It can be seen that the for instruction in Xielang is written as a loop standard as follows:
 
 ```
 for "初始化指令" 判断条件 "循环间指令" 循环体标号 跳出循环标号
@@ -2113,7 +2113,7 @@ Note the difference between traversing integers and strings.
 
 最新版的谢语言中，range指令也支持切片（数组）和映射（字典）的遍历。
 
-In the latest version of Xie language, the range instruction also supports traversal of slices (arrays) and maps (dictionaries).
+In the latest version of Xielang, the range instruction also supports traversal of slices (arrays) and maps (dictionaries).
 
 &nbsp;
 
@@ -2855,11 +2855,11 @@ In Xielang, in addition to global registers, each function context (see the next
 
 基础设施是计算机语言提供给开发者使用的各种工具和便利措施，基础设施一定程度上也影响语言代码的结构。谢语言提供了一系列基础设施以保证语言能力并提高开发效率，下面先介绍谢语言基础设施的整体结构，然后按照从底层到高层的顺序介绍谢语言中提供的基础设施。
 
-Infrastructure is a variety of tools and convenience measures provided by computer language for developers to use. Infrastructure also affects the structure of language code to some extent. Xie Language provides a series of infrastructure to ensure language proficiency and improve development efficiency. Below, we will first introduce the overall structure of Xielang's infrastructure, and then introduce the infrastructure provided in Xielang from the bottom to the top in order.
+Infrastructure is a variety of tools and convenience measures provided by computer language for developers to use. Infrastructure also affects the structure of language code to some extent. Xielang provides a series of infrastructure to ensure language proficiency and improve development efficiency. Below, we will first introduce the overall structure of Xielang's infrastructure, and then introduce the infrastructure provided in Xielang from the bottom to the top in order.
 
 谢语言基础设施的整体结构包括：
 
-The overall structure of Xie Language Infrastructure includes:
+The overall structure of Xielang Infrastructure includes:
 
 - 跨虚拟机的全局上下文（Global Context Across Virtual Machines）
 - 虚拟机（Virtual Machines）
@@ -2868,11 +2868,11 @@ The overall structure of Xie Language Infrastructure includes:
 
 一般来说，谢语言中代码是在单独的虚拟机中运行的，虚拟机中提供了堆栈和寄存器等供虚拟机内部的代码使用。一个虚拟机中包含默认的运行上下文和默认的“根”函数上下文。运行上下文包含了代码运行所需的基本信息，有时候也称为“运行环境”。函数是谢语言中组织代码的基本方式，函数上下文包含了函数中代码运行所需的变量等内容。谢语言中，直接编写的代码都是运行在默认运行上下文和根函数上下文中的，在某些情况下，代码也可以运行在不同的运行上下文中；而在进行函数调用操作时，一般代码将在不同函数上下文中运行。
 
-Generally speaking, the code in Xielang runs in a separate virtual machine, which provides stacks and registers for internal code use. A virtual machine contains default runtime context and default 'root' function context. The runtime context contains the basic information required for code execution, sometimes also known as the "runtime environment". Functions are the basic way of organizing code in Xie language, and the function context includes variables and other content required for the code to run in the function. In Xielang, directly written code runs in the default runtime context and root function context, and in some cases, code can also run in different runtime contexts; When performing function call operations, the general code will run in different function contexts.
+Generally speaking, the code in Xielang runs in a separate virtual machine, which provides stacks and registers for internal code use. A virtual machine contains default runtime context and default 'root' function context. The runtime context contains the basic information required for code execution, sometimes also known as the "runtime environment". Functions are the basic way of organizing code in Xielang, and the function context includes variables and other content required for the code to run in the function. In Xielang, directly written code runs in the default runtime context and root function context, and in some cases, code can also run in different runtime contexts; When performing function call operations, the general code will run in different function contexts.
 
 在并发调用或者某些特殊需要时，谢语言中也可以启动另一个虚拟机来执行代码。谢语言也提供一些跨虚拟机共享的基础设施供所有虚拟机中的代码使用，例如线程安全的队列、堆栈、序号发生器等。
 
-In case of concurrent calls or certain special needs, Xie language can also start another virtual machine to execute code. Xielang also provides some shared infrastructure across virtual machines for code usage in all virtual machines, such as thread safe queues, stacks, sequence generators, etc.
+In case of concurrent calls or certain special needs, Xielang can also start another virtual machine to execute code. Xielang also provides some shared infrastructure across virtual machines for code usage in all virtual machines, such as thread safe queues, stacks, sequence generators, etc.
 
 下面详细介绍谢语言中的各个基础设施：
 
@@ -2892,7 +2892,7 @@ Below is a detailed introduction to the various infrastructure in Xielang:
 
 - **跨虚拟机共享设施**：谢语言还提供一些跨虚拟机的全局共享设施，跨虚拟机的全局设施我们称之为“泛全局”设施，大多数情况下泛全局设施是为了并发处理时共享数据或者互通消息使用。这些共享设施都是并发（线程）安全的，包括一个队列、一个映射、一个堆栈、一个自增长序列号发生器、可定义的变量等。注意，泛全局设施仅在一个宿主进程中有效，例如两个谢语言主程序各自启动的虚拟机之间是无法共享泛全局设施的；但是一个谢语言主程序启动的多个虚拟机、某个虚拟机启动的嵌套虚拟机之间均可以使用泛全局共享设施。
 
-- **Cross Virtual Machine Sharing Facilities**: Xielang also provides some global sharing facilities across virtual machines, which we call "pan global" facilities. In most cases, pan global facilities are used for sharing data or exchanging messages during concurrent processing. These shared facilities are all concurrency (thread) safe, including a queue, a map, a stack, a self growing sequence number generator, definable variables, and so on. Note that pan global facilities are only valid in one host process, for example, virtual machines launched by two Xielang main programs cannot share pan global facilities; However, multiple virtual machines initiated by a Xie language main program, as well as nested virtual machines initiated by a certain virtual machine, can all use pan global shared facilities.
+- **Cross Virtual Machine Sharing Facilities**: Xielang also provides some global sharing facilities across virtual machines, which we call "pan global" facilities. In most cases, pan global facilities are used for sharing data or exchanging messages during concurrent processing. These shared facilities are all concurrency (thread) safe, including a queue, a map, a stack, a self growing sequence number generator, definable variables, and so on. Note that pan global facilities are only valid in one host process, for example, virtual machines launched by two Xielang main programs cannot share pan global facilities; However, multiple virtual machines initiated by a Xielang main program, as well as nested virtual machines initiated by a certain virtual machine, can all use pan global shared facilities.
 
 Here we summarize the relationship between infrastructure in Xielang in a simple, less rigorous, but relatively easy to understand way: virtual machines contain a default runtime context and a function context (root function); A virtual machine can also contain more running contexts, each of which can contain multiple functions that are nested and called. The highest level of these functions in each running context is the only root function of the virtual machine; If we use function stacks to understand, each runtime context has a function stack, and the bottom layer of the function stack is the root function of the virtual machine. The meaning of running context is to isolate and run a piece of code, such as in the case of concurrent function calls.
 
@@ -3636,7 +3636,7 @@ In the example, a simple parent-child relationship data structure was created, w
 
 注意对比谢语言对该数据的表达形式与JSON形式的区别。
 
-Pay attention to the difference between Xie language's expression of this data and JSON format.
+Pay attention to the difference between Xielang's expression of this data and JSON format.
 
 &nbsp;
 
@@ -5092,7 +5092,7 @@ Then we try to perform dynamic web page output, which is a way of dynamically re
 // 默认谢语言服务器如果收到处理请求的函数返回结果是TX_END_RESPONSE_XT
 // 将会终止处理，否则将把返回值作为字符串输出到网页上
 // Set the default global return value variable outG to the string TX_END_RESPONSE_XT
-// If the default Xie language server receives a function to process a request, the return result is TX_END_RESPONSE_XT
+// If the default Xielang server receives a function to process a request, the return result is TX_END_RESPONSE_XT
 // Processing will be terminated, otherwise the return value will be output as a string to the webpage
 assign $outG "TX_END_RESPONSE_XT"
 
@@ -6361,7 +6361,7 @@ result= 52
 
 谢语言可以作为系统服务启动，支持Windows和Linux等操作系统。只要加命令行参数-reinstallService运行谢语言主程序，即可在系统中安装一个名为xieService的系统服务（在Windows下可以用计算机管理中的服务管理模块看到）。注意，操作系统中安装服务，一般需要管理员权限才可以进行，Windows下需要以管理员身份打开CMD窗口执行该命令，Linux下需要以root用户或用sudo命令来执行。
 
-Xielang can be started as a system service and supports operating systems such as Windows and Linux. As long as you add the command line parameter '-reinstallService' to run the Xie language main program, you can install a system service called xieService in the system (which can be seen using the service management module in computer management under Windows). Note that installing services in the operating system generally requires administrator privileges. Under Windows, you need to open the CMD window as an administrator to execute this command, while under Linux, you need to execute it as root or with the sudo command.
+Xielang can be started as a system service and supports operating systems such as Windows and Linux. As long as you add the command line parameter '-reinstallService' to run the Xielang main program, you can install a system service called xieService in the system (which can be seen using the service management module in computer management under Windows). Note that installing services in the operating system generally requires administrator privileges. Under Windows, you need to open the CMD window as an administrator to execute this command, while under Linux, you need to execute it as root or with the sudo command.
 
 服务启动后会在服务根目录（Windows下为c:\xie，Linux下为/xie）下的文件中xieService.log记录日志。服务初次启动时，会在服务根目录下寻找所有名称类似taskXXX.xie的文件（例如task001.xie、taskAbc.xie等）逐个运行，并将其执行结果（通过全局变量outG返回）输出到日志。这种代码文件称为一次性运行任务文件，一般用于需要开机运行一次的情况，也可以通过手动执行xie -restartService命令来重启服务达到再次执行的目的。
 
@@ -6389,7 +6389,7 @@ Xielang supports convenient graphical interface (GUI) programming, including mul
 
 其中，Windows下使用WebView2系统控件是比较推荐的GUI编程方式，WebView2功能强大并且随时更新，在Windows 10及以上系统中已经内置，Windows 7等系统中也可以单独安装，谢语言无需附加任何文件即可用这种方式编写和分发图形界面应用。
 
-Among them, using WebView2 system controls under Windows is a recommended GUI programming method. WebView2 is powerful and constantly updated, and is already built-in in Windows 10 and above systems. It can also be installed separately in Windows 7 and other systems. Xie language can write and distribute graphical interface applications in this way without attaching any files.
+Among them, using WebView2 system controls under Windows is a recommended GUI programming method. WebView2 is powerful and constantly updated, and is already built-in in Windows 10 and above systems. It can also be installed separately in Windows 7 and other systems. Xielang can write and distribute graphical interface applications in this way without attaching any files.
 
 第二种方式是通过 [SciterJS](http://sciter.com) 这个第三方库实现，Windows下只需要一个动态链接库文件（sciter.dll），Linux下的配置请参考[这里](https://www.jianshu.com/p/b184826b9de1)。
 
@@ -6405,7 +6405,7 @@ The fourth method is based on the third method, calling the browser supporting X
 
 谢语言中的图形界面编程通过下面的基本说明和几个例子可以快速地了解掌握。
 
-The graphical interface programming in Xie language can be quickly understood and mastered through the following basic explanations and a few examples.
+The graphical interface programming in Xielang can be quickly understood and mastered through the following basic explanations and a few examples.
 
 &nbsp;
 
@@ -6413,7 +6413,7 @@ The graphical interface programming in Xie language can be quickly understood an
 
 谢语言GUI图形编程的WebView2方式，主要通过Windows自带的WebView2组件来支持GUI编程，仅适用于Windows系统，分发时无需附加文件（如果低版本Windows系统，可以自行下载安装WebView2）。WebView2使用标准的HTML、CSS以及JavaScript的进行编程，来实现图形界面的展示和操控，谢语言则负责后台逻辑的处理，两者之间可以互通，JavaScript中通过特定的接口方式可以调用谢语言中的函数传递数据并进行操作，反之亦然，谢语言也可以调用JavaScript中的特定函数。基本熟悉网页编程的开发者都可以很方便地上手。
 
-The WebView2 method of GUI graphical programming in Xielang mainly supports GUI programming through the built-in WebView2 component of Windows. It is only applicable to Windows systems and does not require additional files for distribution (if you have a lower version of Windows system, you can download and install WebView2 yourself). WebView2 uses standard HTML, CSS, and JavaScript programming to display and manipulate graphical interfaces, while Xie language is responsible for processing backend logic. The two can communicate with each other. JavaScript can call functions in Xie language to transmit data and perform operations through specific interface methods, and vice versa. Xielang can also call specific functions in JavaScript. Developers who are basically familiar with web programming can easily get started.
+The WebView2 method of GUI graphical programming in Xielang mainly supports GUI programming through the built-in WebView2 component of Windows. It is only applicable to Windows systems and does not require additional files for distribution (if you have a lower version of Windows system, you can download and install WebView2 yourself). WebView2 uses standard HTML, CSS, and JavaScript programming to display and manipulate graphical interfaces, while Xielang is responsible for processing backend logic. The two can communicate with each other. JavaScript can call functions in Xielang to transmit data and perform operations through specific interface methods, and vice versa. Xielang can also call specific functions in JavaScript. Developers who are basically familiar with web programming can easily get started.
 
 谢语言中有一个预置全局变量\$guiG，用于作为调用GUI功能的接口对象。
 
@@ -6621,7 +6621,7 @@ plo $rs
 	}
 
 	// 点击test2按钮后，将调用quickDelegateDo函数来调用谢语言中定义的快速代理函数，并alert返回的值
-	// After clicking the test2 button, the quickDelegateDo function will be called to call the fast proxy function defined in Xie language, and the returned value will be alerted
+	// After clicking the test2 button, the quickDelegateDo function will be called to call the fast proxy function defined in Xielang, and the returned value will be alerted
 	function test2() {
 		var rs = quickDelegateDo("showNav", "userAgent", navigator.userAgent);
 
@@ -6703,26 +6703,35 @@ After running the code, you will see an interface similar to the following:
 
 代码中有详尽注释，我们可以看到，代码中展示了如何载入一个HTML页面作为窗口并显示出来，点击几个test按钮可以进行不同的操作，其中test1和test2都是与谢语言的后台逻辑进行互动，其中test1、test2还从谢语言处理函数中获取了返回值并显示。test按钮则演示了如何通过Ajax方式获取一个网络API请求的结果并进行处理。
 
-There are detailed annotations in the code, which shows how to load an HTML page as a window and display it. Clicking a few test buttons can perform different operations. Among them, test1 and test2 interact with the backend logic of Xie language, and test1 and test2 also obtain return values from Xielang processing functions and display them. The test button demonstrates how to obtain the result of a network API request through Ajax and process it.
+There are detailed annotations in the code, which shows how to load an HTML page as a window and display it. Clicking a few test buttons can perform different operations. Among them, test1 and test2 interact with the backend logic of Xielang, and test1 and test2 also obtain return values from Xielang processing functions and display them. The test button demonstrates how to obtain the result of a network API request through Ajax and process it.
 
 &nbsp;
 
-##### - 直接嵌入网页脚本
+##### - **直接嵌入网页脚本**（Directly embed JavaScript file in WEB pages）
 
 下面的这个代码例子（webGui2.xie）与上面类似，但使用了内置嵌入JavaScript或CSS文本的方式，避免了网络访问或者从附带文件中读取的麻烦。另外，本例中还演示了如何设置更安全的代理（回调）函数来进行前台界面与谢语言后台的互动。
+
+The following code example (webGui2.xie) is similar to the above, but uses built-in embedded JavaScript or CSS text to avoid the hassle of network access or reading from accompanying files. In addition, this example also demonstrates how to set up a more secure proxy (callback) function to interact with the front-end interface and Xielang backend.
 
 ```go
 // 本例演示使用WebView2做图形界面时
 // 获取内置的JavaScript或CSS文本嵌入HTML中
 // 这样可以避免网络访问或者从附带文件中读取的麻烦
 // 另外，本例也演示了如何设置普通代理函数来更安全地进行网页与谢语言后台逻辑之间的互动
+// This example demonstrates using WebView2 as a graphical interface
+// Get built-in JavaScript or CSS text embedded in HTML
+// This can avoid the hassle of network access or reading from accompanying files
+// In addition, this example also demonstrates how to set a regular proxy function to more securely interact between web pages and Xielang backend logic
 
 // guiNewWindow是内置指令，与下面命令等效
+// guiNewWindow is a built-in instruction that is equivalent to the following commands
 // mt $w $guiG newWindow "-title=Test WebView2a" -width=1024 -height=768 -center -debug
 // -debug参数表示打开调试功能
+// The -debug parameter indicates that debugging is enabled
 guiNewWindow $w "-title=Test WebView2a" -width=1024 -height=768 -center -debug
 
 // 如果出错则停止执行
+// Stop execution if an error occurs
 checkErrX $w
 
 // 调用窗口对象的setDelegate方法来指定代理函数
@@ -6732,7 +6741,15 @@ checkErrX $w
 // 普通代理函数将在单独新建的虚拟机中运行
 // 传入的参数通过全局变量inputG传入，是一个参数数组
 // 传出的参数则应放于全局outG中返回
-// 与快速代理函数不同，普通代理函数不用fastRet指令来退出，而是直接用exit指令
+// 与快速代理函数不同，普通代理函数不用exitL指令来退出，而是直接用exit指令
+// Call the setDelegate method of the window object to specify the proxy(callback) function
+// The fast proxy function used in the previous example runs directly on the current virtual machine, which has a certain possibility of concurrency conflicts
+// Therefore, for safety reasons, it is more recommended to use regular proxy functions
+// A regular proxy function defines its code through a string
+// The regular proxy function will run in a newly created virtual machine separately
+// The passed in parameters are passed in through the global variable inputG, which is an array of parameters
+// The outgoing parameters should be placed in the global outG and returned
+// Unlike fast proxy functions, regular proxy functions do not use the exitL instruction to exit, but instead use the exit instruction directly
 mt $rs $w setDelegate `
      
     getArrayItem $cmdT $inputG 0
@@ -6812,7 +6829,6 @@ mt $rs $w setDelegate `
 	function test2() {
 		var rs = delegateDo("showNav", "userAgent", navigator.userAgent);
 
-		// 返回的结果是一个Promise，因此要用相应的方式获取
 		rs.then(res => {
 			alert("test2: "+res);
 		});
@@ -6831,6 +6847,7 @@ mt $rs $w setDelegate `
 `
 
 // 提示：使用getResourceList指令可以看到所有内置的资源
+// Tip: Use the getResourceList directive to see all built-in resources
 getResource $t1 "js/jquery.min.js"
 
 strReplace $htmlT $htmlT "TX_jquery.min.js_XT" $t1
@@ -6855,43 +6872,57 @@ mt $rs $w close
 
 exit
 
-
 ```
 
 &nbsp;
 
-##### - 启动后台服务与前台配合
+##### - **启动后台服务与前台配合**（Start the backend service and cooperate with the front end）
 
 下面的这个代码例子（webGui3.xie）与前两个也是类似，但前后台并非采用回调函数来进行互动，而是谢语言后台用线程在本机的随机端口上启动了一个WEB与API混合服务器来提供网页与接口服务，前台WebView2通过HTTP协议来访问后台接口实现互动，这也是常见的一种方式。
+
+The following code example (webGui3.xie) is also similar to the previous two, but the front-end and back-end do not use callback functions for interaction. Instead, the Xielang back-end uses a thread to start a web and API mixed server on a random port on the local machine to provide web page and interface services. The front-end WebView2 accesses the back-end interface through the HTTP protocol to achieve interaction, which is also a common way.
 
 ```go
 // 本例演示使用WebView2做图形界面时
 // 启动一个谢语言WEB服务器和API服务器来自行提供网页资源与API数据服务
 // 这样可以避免网络访问或者从附带文件中读取的麻烦，实现前后台的互通
 // 唯一的缺点是需要占用一个本机端口
+// This example demonstrates using WebView2 as a graphical interface
+// Start a Xielang web server and API server to provide web resources and API data services on your own
+// This can avoid the trouble of network access or reading from accompanying files, and achieve interoperability between the front and back ends
+// The only drawback is that it requires occupying a local port
 
 guiNewWindow $w "-title=Test WebView2b" -width=1024 -height=768 -center -debug
 
 checkErrX $w
 
 // 设置路由处理器
+// Set Routing Processor
 newMux $muxT
 
 // 设置静态内容的处理函数
 // 用于网页中嵌入JS和CSS时获取内置资源中的这些内容
 // 这样，如果主页的网址是 http://127.0.0.1:8721
 // 那么，网页中可以用嵌入的 /static/js/jquery.min.js 来获取内置的内容
+// Set the processing function for static content
+// Used to obtain these contents from built-in resources when embedding JS and CSS in web pages
+// So, if the website address of the homepage is http://127.0.0.1:8721
+// So, embedded/static/js/jquery.min.js can be used in web pages to obtain built-in content
 setMuxHandler $muxT "/static/" "" `
 	// 去掉请求路由的前缀 /static/
+	// Remove prefix/static from request routing/
 	trimPrefix $shortNameT $reqNameG "/static/"
 
 	// 获取形如 js/jquery.min.js 形式的内置资源内容
+	// Obtain built-in resource content in the form of js/jquery.min.js
 	getResource $textT $shortNameT
 
 	// 根据内置资源的后缀名，获取其MIME类型，例如：text/javascript
+	// Obtain the MIME type of the built-in resource based on its suffix name, for example: text/JavaScript
 	getMimeType $mimeTypeT $shortNameT
 
 	// 拼装完整的mime类型字符串
+	// Assemble complete mime type strings
 	spr $mimeTypeT "%v; charset=utf-8" $mimeTypeT 
 
 	setRespHeader $responseG "Content-Type" $mimeTypeT
@@ -6905,11 +6936,13 @@ setMuxHandler $muxT "/static/" "" `
 
 // 设置/test路由处理函数，用于测试WEB API
 // 返回内容是JSON格式
+// Set '/test' routing processing function for testing WEB API
+// The returned content is in JSON format
 setMuxHandler $muxT "/test" 0 `
 	setRespHeader $responseG "Content-Type" "text/json; charset=utf-8"
 	writeRespHeader $responseG 200
 
-	spr $strT "[%v] 请求名: test，请求参数： %v，inputG：%v" ?(?nowStr) $paraMapG $inputG
+	spr $strT "[%v] Req: test，Parameters： %v，inputG：%v" @'{nowStr}' $paraMapG $inputG
 
 	var $resMapT map
 
@@ -6925,6 +6958,8 @@ setMuxHandler $muxT "/test" 0 `
 
 // htmlT中即为准备用于根路由访问时的网页
 // 其中 test、test1和test2函数分别演示了使用异步Ajax、fetch和同步Ajax方式来调用本地接口的例子
+// The webpage in HTMLT is prepared for root routing access
+// The test, test1, and test2 functions demonstrate examples of using asynchronous Ajax, fetch, and synchronous Ajax methods to call local interfaces, respectively
 = $htmlT `
 <!DOCTYPE html>
 <html>
@@ -7033,6 +7068,9 @@ setMuxHandler $muxT "/test" 0 `
 // 设置根路径访问时的返回内容
 // 即htmlT中存放的网页HTML
 // setMuxHandler中的第三个参数传入处理函数中即为可通过全局变量inputG访问的值
+// Set the return content when accessing the root path
+// The webpage HTML stored in htmlT
+// The third parameter in setMuxHandler passed into the processing function is the value that can be accessed through the global variable inputG
 setMuxHandler $muxT "/" $htmlT `
 	setRespHeader $responseG "Content-Type" "text/html; charset=utf-8"
 	writeRespHeader $responseG 200
@@ -7044,15 +7082,19 @@ setMuxHandler $muxT "/" $htmlT `
 
 
 // 获取一个随机的可用端口用于命令服务器与图形界面通信
+// Obtain a random available port for command server and graphical interface communication
 getRandomPort $portT
 
 // 启动一个线程来运行HTTP服务器
+// Start a thread to run the HTTP server
 startHttpServer $resultT $portT $muxT -go
 
 spr $urlT "http://127.0.0.1:%v" $portT
 
 // 让WebView2窗口访问本机的这个端口
 // URL地址类似http://127.0.0.1:8721
+// Enable the WebView2 window to access this port on the local machine
+// URL address is similar http://127.0.0.1:8721
 mt $rs $w navigate $urlT
 
 checkErrX $rs
@@ -7065,25 +7107,31 @@ mt $rs $w close
 
 exit
 
-
-
 ```
 
 &nbsp;
 
-#### 谢语言GUI编程的基础（SciterJS）
+#### **谢语言GUI编程的基础（SciterJS）**（The Fundamentals of GUI Programming in XieLang (SciterJS)）
 
 谢语言GUI图形编程的SciterJS方式，主要通过第三方图形界面库SciterJS来支持跨平台的GUI编程。以Windows系统下为例，除谢语言主程序文件外，只需要一个动态链接库文件（sciter.dll），即可完美支持图形界面编程。Sciter使用标准的HTML、CSS以及类似JavaScript的TiScript脚本语言，来实现图形界面的展示和操控，谢语言则负责后台逻辑的处理，两者之间可以互通，谢语言通过特定的接口方式可以调用TiScript中的函数传递数据并进行操作，反之亦然，TiScript也可以调用谢语言中的特定函数。基本熟悉网页编程的开发者都可以很方便地上手。
 
+The SciterJS method of GUI graphical programming in Xielang mainly supports cross platform GUI programming through the third-party graphical interface library SciterJS. Taking Windows as an example, in addition to the Xielang main program file, only one dynamic link library file (sciter. dll) is needed to perfectly support graphical interface programming. Sciter uses standard HTML, CSS, and TiScript scripting languages similar to JavaScript to display and manipulate graphical interfaces. Xielang is responsible for processing backend logic, and the two can communicate with each other. Xielang can call functions in TiScript through specific interface methods to transfer data and perform operations, and vice versa. TiScript can also call specific functions in Xielang. Developers who are basically familiar with web programming can easily get started.
+
 谢语言使用GUI功能时，均需使用initGui命令来初始化环境，如果此时系统中没有Sciter的动态链接库文件，将会自动下载到主程序相同的路径下（也可以自行在谢语言官网下载后放到该位置）。谢语言中还有一个预置全局变量\$guiG，用于作为调用GUI功能的接口对象。
 
-下面我们通过一些例子逐步说明谢语言中GUI编程的方法。
+When using GUI functions in Xielang, the initGui command is required to initialize the environment. If there is no Sciter's dynamic link library file in the system at this time, it will be automatically downloaded to the same path as the main program (you can also download it on Xielang's official website and put it in that location). There is also a preset global variable  $guiG in Xielang, which is used as an interface object for calling GUI functions.
+
+下面我们通过一些例子逐步说明谢语言中使用SciterJS库进行GUI编程的方法。
+
+Below, we will use some examples to gradually illustrate the method of using the SciterJS library for GUI programming in Xielang.
 
 &nbsp;
 
-##### - 简单的计算器
+##### - **简单的计算器**（A Simple Calculator）
 
-我们直接通过一个代码例子（calculator.xie）来了解：
+我们直接通过一个代码例子（calculatorSciter.xie）来了解：
+
+We can directly understand through a code example (calculatorSciter.xie):
 
 ```go
 // $guiG是预置的全局变量，作为GUI编程的接口对象
@@ -7092,47 +7140,63 @@ exit
 // 此时，如果在Windows下，如果系统中没有安装图形界面库，
 // init方法将自动下载所需的动态链接库文件到主程序路径下
 // 然后再进行环境初始化
+// $guiG is a preset global variable that serves as an interface object for GUI programming
+// General graphical interface operations are achieved by calling various methods of the object
+// All GUI programs should first call the init method of the guiG variable to initialize the graphical interface environment
+// At this point, if the graphical interface library is not installed in the system under Windows,
+// The init method will automatically download the required dynamic link library files to the main program path
+// Then perform environment initialization
 mt $rs $guiG init
 
+checkErrX $rs
+
 // 定义用于界面展示的HTML网页代码，放在htmlT变量中
-// HTML和CSS代码都是标准的，脚本语言是TiScript，类似JavaScript
+// HTML和CSS代码都是标准的，脚本语言也是Quick JS，与标准JavaScript基本类似
 // 本例中定义了一个文本输入框用于输入表达式算式
-// 以及“计算”和“关闭”两个按钮
+// 以及“Calculate”和“Close”两个按钮
 // 并定义了两个按钮对应的处理脚本函数
-// “确定”按钮将调用TiScript的eval函数来进行表达式计算
+// “Calculate”按钮将调用JavaScript的eval函数来进行表达式计算
 // 然后将计算结果传递给谢语言代码（通过调用谢语言预定义的delegateDo函数）
-// “关闭”按钮将关闭整个窗口
+// “Close”按钮将关闭整个窗口
+// Define HTML web page code for interface display, placed in the htmlT variable
+// HTML and CSS code are both standard, and the scripting language is also Quick JS, which is basically similar to standard JavaScript
+// In this example, a text input box is defined for inputting expression expressions
+// And the "Calculate" and "Close" buttons
+// And defined the processing script functions corresponding to the two buttons
+// The 'Calculate' button will call JavaScript's eval function for expression evaluation
+// Then pass the calculation results to Xie language code (by calling Xielang's predefined delegateDo function)
+//The 'Close' button will close the entire window
 assign $htmlT `
 <!DOCTYPE html>
 <html>
 <head>
 	<meta charset="utf-8">
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-    <title>计算器</title>
+    <title>Calculator</title>
 </head>
 <body>
 	<div style="margin-top: 10px; margin-bottom: 10px;">
-		<span>请输入算式：</span>
+		<span>Please enter the expression:</span>
 	</div>
 	<div style="margin-top: 10px; margin-bottom: 10px;">
 		<input id="mainInputID" type=text />
 	</div>
 	<div>
-		<button id="btnCal">计算</button>
-		<button id="btnClose">关闭</button>
+		<button id="btnCal">Calculate</button>
+		<button id="btnClose">Close</button>
 	</div>
 
-    <script type="text/tiscript">
-        $(#btnCal).on("click", function() {
-			var result = eval($(#mainInputID).value);
+    <script>
+        document.$("#btnCal").on("click", function() {
+			var result = eval(document.getElementById("mainInputID").value);
 
-			view.delegateDo(String.printf("%v", result));
+            Window.this.xcall("delegateDo", result);
 
-            $(#mainInputID).value = result;
+            document.$("#mainInputID").value = result;
         });
  
-        $(#btnClose).on("click", function() {
-            view.close();
+        document.$("#btnClose").on("click", function() {
+            Window.this.close();
         });
  
     </script>
@@ -7147,59 +7211,87 @@ assign $htmlT `
 // 第三个参数为用于界面展示的字符串
 // 结果放入变量windowT中，这是一个特殊类型的对象(后面暂称为window对象)
 // 后面我们还将调用该对象的一些方法进行进一步的界面控制
-mt $windowT $guiG newWindow 计算器 "" $htmlT
+// Calling guiG's newWindow method to create a window
+// The newWindow method requires three parameters, the first being the window title
+// The second value is in string form to specify the window size, and an empty string represents the default area
+// If a string similar to '[200,300,600,400]' is used, it indicates that the window is located at the screen coordinate (200,300), with a width of 600 * 400 in the high order
+// The third parameter is the string used for interface display
+// The result is placed in the variable windowT, which is a special type of object (later temporarily referred to as a window object)
+// In the future, we will also call some methods of this object for further interface control
+mt $windowT $guiG newWindowSciter "Simple Calculator" "" $htmlT
 
 plo $windowT
 
 // 用new指令创建一个快速代理函数（quickDelegate）对象dele1
 // 谢语言中quickDelegate是最常用的代理函数对象
-// 它创建时需要指定一个快速函数，本例中通过标号deleFast1指明
+// 它创建时需要指定一个快速函数，本例中通过源代码指明
 // 这样，当Sciter的网页中调用view对象的delegateDo函数时
-// 就将调用deleFast1标号处的快速函数代码
-new $dele1 quickDelegate :deleFast1
+// 就将调用该快速函数代码来处理
+// 约定该函数必须通过inputL变量来获取输入参数，并返回一个参数（通过outL变量）
+// 参数均为字符串类型
+// 如果传递复杂数据，常见的方法是传递JSON字符串
+// 此处该函数仅仅是将输入参数输出
+// Create a quickDelegate object dele1 using the new instruction
+// In Xielang, quickDelegate is the most commonly used proxy function object
+// When it is created, a fast function needs to be specified. In this example, the source code indicates
+// In this way, when Sciter's web page calls the delegateDo function of the view object
+// Call the fast function code to handle
+// The convention is that the function must obtain input parameters through the inputL variable and return a parameter (through the outL variable)
+// All parameters are of string type
+// If complex data is passed, a common method is to pass JSON strings
+// This function only outputs the input parameters here
+new $dele1 quickDelegate `
+    [] $resultL $inputL 0
+
+    pl "Result: %v" $resultL
+
+    // 函数返回前必须要有一个输出参数存入outL中
+    // 此处因为实际上无需返回参数，因此随便存入一个无用的数值
+    // There must be an output parameter stored in outL before the function returns
+    // Because there is actually no need to return parameters, a useless numerical value is randomly stored here
+    exitL $resultL
+`
 
 // 调用window对象的setDelegate方法将其接口代理指定为dele1
-mt $rs $windowT setDelegate $dele1
+// Call the setDelegate method of the window object to specify its interface proxy as dele1
+mt $rs $windowT setQuickDelegate $dele1
 
 // 调用window对象的show方法，此时才会真正显示界面窗口
 // 并开始响应用户的操作
+// Call the show method of the window object to truly display the interface window
+// And start responding to user actions
 mt $rs $windowT show
 
 plo $rs
 
 // 退出程序
+// Exit the program
 exit
 
-// 用于界面事件处理的快速函数
-// 约定该函数必须通过堆栈获取一个参数，并返回一个参数
-// 参数均为字符串类型
-// 如果传递复杂数据，常见的方法是传递JSON字符串
-// 此处该函数仅仅是将输入参数输出
-:deleFast1
-
-    pop $inputT
-
-    pl "计算结果为：%v" $inputT
-
-    // 函数返回前必须要压栈一个输出参数
-    // 此处因为实际上无需返回参数，因此随便压入一个无用的数值
-    push $inputT
-
-    fastRet
-    
+  
 ```
 
-代码展示了如何用谢语言实现一个简单的图形界面计算器，代码中有详细的解释，可以仔细阅读理解。TiScript整体接近于包含JQuery的JavaScript但略有不同（例如DOM对象的id可以不带引号括起等），具体的用法，可以去Sciter网站或者从谢语言官网下载“Windows版界面工具包”，其中含有详细的帮助文档；也可以通过看我们的示例快速了解。
+代码展示了如何用谢语言实现一个简单的图形界面计算器，代码中有详细的解释，可以仔细阅读理解。Quick JS整体接近于包含JQuery的JavaScript但略有不同（例如DOM对象的id可以不带引号括起等），具体的用法，可以去Sciter网站或者从谢语言官网下载“Windows版界面工具包”，其中含有详细的帮助文档；也可以通过看我们的示例快速了解。
+
+The code demonstrates how to implement a simple graphical interface calculator using Xie language. There are detailed explanations in the code, which can be read and understood carefully. Quick JS is generally similar to JavaScript that includes JQuery, but slightly different (such as DOM object IDs that can be enclosed without quotation marks). For specific usage, you can go to the Scitter website or download the "Windows version interface toolkit" from the Xie language official website, which contains detailed help documents; You can also quickly understand by looking at our examples.
 
 代码运行后，将得到类似下面的界面：
+
+After running the code, you will get an interface similar to the following:
 
 ![截图](http://xie.topget.org/example/xie/snap/snap5.png)
 
 在输入框中输入算式，然后点击“计算”按钮，框中就会计算出结果，并且后台也得到了计算结果并将其输出。点击“关闭”按钮则窗口将关闭并执行后续代码（此例中是用exit指令退出了程序运行）。
 
+Enter a formula in the input box, and then click the "Calculate" button. The result will be calculated in the box, and the calculation result will also be obtained in the background and output. Clicking the "Close" button will cause the window to close and execute subsequent code (in this case, the exit command was used to exit the program).
+
 &nbsp;
 
-##### - Linux系统中运行图形计算器代码
+##### - **Linux系统中运行图形计算器代码**（Running Graph Calculator Code in Linux System）
+
+*注：本节内容暂时无效，目前谢语言在Linux系统下暂不支持图形界面。*
+
+*Note: This section is temporarily invalid. Currently, Xie language does not support graphical interfaces on Linux systems.*
 
 谢语言的图形界面编程支持跨平台，上例中的图形界面计算器代码，无需改动就可以在Linux下运行，下面以Ubuntu为例进行说明：
 
@@ -7232,121 +7324,177 @@ xie -example calculator.xie
 
 &nbsp;
 
-##### - Windows编译不带命令行窗口的谢语言主程序
+##### - **Windows编译不带命令行窗口的谢语言主程序**（Compiling Xielang main program without command line window for Windows）
 
 用谢语言在Windows系统下进行图形界面编程时，如果程序运行时不希望显示命令窗口（CMD），可以在编译谢语言源码（Go语言版）时加上-ldflags="-H windowsgui"的编译参数即可。
 
+When using Xielang for graphical interface programming on Windows systems, if the program does not want to display a command window (CMD) during runtime, you can add the compilation parameter -ldflags="-H windowsgui" when compiling Xie language source code (Go language version).
+
 如果谢语言主程序是加了-ldflags="-H windowsgui"的编译参数编译出来的，则通过其编译谢语言代码后的可执行程序，也将没有命令行窗口，结合GUI编程，完全可以制作出标准的图形界面程序。如何编译谢语言代码，可以参见后面文档中说明。
+
+If the main program of Xielang is compiled with the compilation parameter of -ldflags="-H windowsgui", then the executable program compiled with Xielang code will also have no command line window. Combined with GUI programming, standard graphical interface programs can be produced. How to compile Xielang code can be explained in the following documents.
 
 &nbsp;
 
-##### - 制作一个登录框
+##### - **制作一个登录框**（Create a login box）
 
 本例继续介绍GUI编程，将实现一个常见的登录框，包含用户名和密码的输入框以及登录和关闭按钮，之间参看下面的代码（loginDialog.xie）：
 
+This example continues to introduce GUI programming, implementing a common login box that includes input boxes for username and password, as well as login and close buttons. Please refer to the following code (loginDialog.xie):
+
 ```go
 // 初始化GUI环境
+// Initialize GUI environment
 mt $rs $guiG init
 
 // 设定界面的HTML
 // 其中的moveToCenter函数，用于将窗口移动到屏幕正中并调整大小
-// 所有在TiScript与谢语言互通的函数都必须和moveToCenter函数这样
+// 所有在JavaScript与谢语言互通的函数都必须和moveToCenter函数这样
 // 接收一个字符串类型的输入参数，并输出一个字符串类型的输出参数
 // 如果想传递多于一个的数据，可以用JSON进行数据的封装
 // moveToCenter函数就接收一个包含两个参数（宽与高）的JSON字符串
 // 并输出一个表示屏幕宽高的字符串
+// HTML for setting the interface
+// The moveToCenter function is used to move the window to the center of the screen and adjust its size
+// All functions that communicate between JavaScript and Xie language must be like the moveToCenter function
+// Receive an input parameter of string type and output an output parameter of string type
+// If you want to transfer more than one data, you can use JSON for data encapsulation
+// The moveToCenter function receives a JSON string containing two parameters (width and height)
+// And output a string representing the width and height of the screen
 assign $htmlT `
 <!DOCTYPE html>
 <html>
 <head>
 	<meta charset="utf-8">
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-    <title>请登录……</title>
+    <title>Please login...</title>
 </head>
 <body >
 	<div style="margin-top: 10px; margin-bottom: 10px;">
-		<span>请输入用户名和密码登录……</span>
+		<span>Please enter the user name and password to login...</span>
 	</div>
 	<div style="margin-top: 10px; margin-bottom: 10px;">
-		<label for="userNameID" >用户名： </label><input id="userNameID" type=text />
+		<label for="userNameID" >User Name:&nbsp; </label><input id="userNameID" type=text />
 	</div>
 	<div style="margin-top: 10px; margin-bottom: 10px;">
-		<label for="userNameID" >密码： </label><input id="passwordID" type=password />
+		<label for="userNameID" >Password:&nbsp; </label><input id="passwordID" type=password />
 	</div>
 	<div>
-		<button id="btnLoginID">登录</button>
-		<button id="btnClose">关闭</button>
+		<button id="btnLoginID">Login</button>
+		<button id="btnClose">Close</button>
 	</div>
 
-    <script type="text/tiscript">
+    <script>
         function moveToCenter(jsonA) {
-            var (w, h) = view.screenBox(#frame, #dimension);
+            var wh = Window.this.screenBox("frame", "dimension");
+            console.log(wh);
 
             var obj = JSON.parse(jsonA);
+
+            var w = wh[0]
+            var h = wh[1]
 
             var w1n = obj.Width;
             var h1n = obj.Height;
 
-            view.move((w-w1n)/2, (h-h1n)/2, w1n, h1n);
+            Window.this.move((w-w1n)/2, (h-h1n)/2, w1n, h1n);
 
-            return String.printf("%v|%v", w, h);
+            return printf("%v|%v", w, h);
         }
 
-        $(#btnLoginID).on("click", function() {
-			var userNameT = $(#userNameID).value.trim();
-			var passwordT = $(#passwordID).value.trim();
+        document.$("#btnLoginID").on("click", function() {
+            var userNameT = document.getElementById("userNameID").value.trim();
+			var passwordT = document.getElementById("passwordID").value.trim();
 
-			view.delegateDo(JSON.stringify({"userName": userNameT, "password": passwordT}));
+            Window.this.xcall("delegateDo", JSON.stringify({"userName": userNameT, "password": passwordT}));
+
+			// view.delegateDo(JSON.stringify({"userName": userNameT, "password": passwordT}));
 			//view.close();
         });
  
-        $(#btnClose).on("click", function() {
-            view.close();
+        document.$("#btnClose").on("click", function() {
+            Window.this.close();
         });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("document loaded");
+
+   			// var buttonT = document.getElementById("btnClose");
+
+			// buttonT.addEventListener("click", closeWindow);
+
+            // document.on("click","button#btnLoadID", sendCmd);
+
+            globalThis.moveToCenter = moveToCenter;
+
+       }, false);
+
+
     </script>
 </body>
 </html>
 `
 
 // 新建窗口，第二个参数传入了JSON格式的表示左、上、宽、高的窗口位置与大小的字符串
-// 但实际上由于下面调用了TiScript中的moveToCenter函数，因此将会使这里定义的宽和高无效
-mt $windowT $guiG newWindow 测试 `[300,200,600,400]` $htmlT
+// 但实际上由于下面调用了JavaScript中的moveToCenter函数，因此将会使这里定义的宽和高无效
+// Create a new window, with the second parameter passing in a JSON format string representing the position and size of the window for left, top, width, and height
+// But in fact, due to the call to the moveToCenter function in JavaScript below, the width and height defined here will be invalidated
+mt $windowT $guiG newWindowSciter "Test" `[300,200,600,400]` $htmlT
 
-// 调用前面HTML代码中TiScript脚本内定义的moveToCenter函数，并传入表示宽与高的JSON字符串
+// 调用前面HTML代码中JavaScript脚本内定义的moveToCenter函数，并传入表示宽与高的JSON字符串
+// Call the moveToCenter function defined in the JavaScript script in the previous HTML code and pass in JSON strings representing width and height
 mt $rs $windowT call moveToCenter `{"Width":800, "Height":600}`
 
 // 输出moveToCenter函数的返回值
+// Output the return value of the moveToCenter function
 plo $rs
 
-// 创建并设定与界面之间的快速代理对象
-new $dele1 quickDelegate :deleFast1
-mt $rs $windowT setDelegate $dele1
+// 设置与界面之间的快速代理对象（注释中是另一种方法）
+// Set a quick proxy object between the GUI and backend (another method in the comments)
+
+// new $dele1 quickDelegate `
+//     [] $resultL $inputL 0
+
+//     pl "Result: %v" $resultL
+
+//     // 函数返回前必须要有一个输出参数存入outL中
+//     // 此处因为实际上无需返回参数，因此随便存入一个无用的数值
+//     // There must be an output parameter stored in outL before the function returns
+//     // Because there is actually no need to return parameters, a useless numerical value is randomly stored here
+//     exitL $resultL
+// `
+
+// mt $rs $windowT setQuickDelegate $dele1
+
+mt $rs $windowT setDelegate `
+
+    [] $resultL $inputL 0
+
+    pl "Result: %v" $resultL
+
+    exitL $resultL
+
+`
 
 // 运行图形界面
+// Run the GUI window
 mt $rs $windowT show
 
 plo $rs
 
 exit
 
-// 快速代理对象的代码
-:deleFast1
-
-    pop $inputT
-
-    pl "inputT: %v" $inputT
-
-    push "output1"
-
-    fastRet
-
 ```
 
 运行效果如下图所示：
 
+The operation effect is shown in the following figure:
+
 ![截图](http://xie.topget.org/example/xie/snap/snap7.png)
 
-可以看出，moveToCenter函数返回的是一个非JSON格式的字符串，表示屏幕的宽与高的像素数，而点击登录按钮后，接口代理函数deleFast1将输出一个JSON格式的包含输入的用户名和密码的字符串，可以用于后续处理。
+可以看出，moveToCenter函数返回的是一个非JSON格式的字符串，表示屏幕的宽与高的像素数，而点击登录按钮后，接口代理函数将输出一个JSON格式的包含输入的用户名和密码的字符串，可以用于后续处理。
+
+It can be seen that the moveToCenter function returns a non JSON formatted string representing the width and height of the screen in pixels. After clicking the login button, the interface proxy function will output a JSON formatted string containing the input username and password, which can be used for subsequent processing.
 
 &nbsp;
 
@@ -7494,11 +7642,13 @@ Generally, there are two ways to extend Xielang:
 
 - At present, Xielang is still actively developing. For convenience, the "replace github.com/topxeq/tk v1.0.1=>../tk" line in go.mod are used to use local tk libraries instead of the online one. Therefore, during compilation, it is necessary to "git clone" the library from github.com/topxeq/tk locally, or remove this line from go.mod.
 
-- **在Linux下如果出现类似“package gl was not found in the pkg-config search path.”的错误**：请执行 apt install libgl1-mesa-dev 命令安装依赖库。
+- 在Linux下如果出现类似“package gl was not found in the pkg-config search path.”的错误：请执行 apt install libgl1-mesa-dev 命令安装依赖库。
 
-- **出现类似“github.com/AllenDang/imgui-go@v1.12.1: replacement directory ../../../../../github.com/AllenDang/imgui-go does not exist”的错误**：由于Linux下使用github.com/AllenDang/imgui-go在Github上的库有小问题，因此需要本地git clone该库，并在作少许修改后使用（Windows下无需改动）。
+- Windows下如果使用SciterJS库进行GUI编程，请执行 go get github.com/sciter-sdk/go-sciter@sciter-api 命令确保使用了正确的Go-Sciter控制包。
 
-- **在Linux下如果出现类似“/usr/include/x86_64-linux-gnu/bits/stdio2.h:34:43: note: ‘__builtin___sprintf_chk’ output between 6 and 15 bytes into a destination of size 8”的错误**：删除本地github.com/AllenDang/imgui-go库中的implot_demo.cpp文件，或将其重命名为非程序文件，例如mv implot_demo.cpp implot_demo.cpp.bac，然后在编译即可。
+- 出现类似“github.com/AllenDang/imgui-go@v1.12.1: replacement directory ../../../../../github.com/AllenDang/imgui-go does not exist”的错误：由于Linux下使用github.com/AllenDang/imgui-go在Github上的库有小问题，因此需要本地git clone该库，并在作少许修改后使用（Windows下无需改动）。
+
+- 在Linux下如果出现类似“/usr/include/x86_64-linux-gnu/bits/stdio2.h:34:43: note: ‘__builtin___sprintf_chk’ output between 6 and 15 bytes into a destination of size 8”的错误：删除本地github.com/AllenDang/imgui-go库中的implot_demo.cpp文件，或将其重命名为非程序文件，例如mv implot_demo.cpp implot_demo.cpp.bac，然后在编译即可。
 
 &nbsp;
 
@@ -7508,7 +7658,7 @@ Generally, there are two ways to extend Xielang:
 
 *Note: For more examples, please refer to the cmd/scripts directory of source repository*
 
-- [三元操作符 ?](http://xie.topget.org/xc/c/xielang/example/operator3.xie)
+- [三元操作符 ?（ternary operator '?'）](http://xie.topget.org/xc/c/xielang/example/operator3.xie)
 - [MD5编码](http://xie.topget.org/xc/c/xielang/example/md5.xie)
 - [命令行获取用户输入及密码输入](http://xie.topget.org/xc/c/xielang/example/input.xie)
 - [文本加解密](http://xie.topget.org/xc/c/xielang/example/encryptText.xie)

@@ -2,13 +2,20 @@
 // 获取内置的JavaScript或CSS文本嵌入HTML中
 // 这样可以避免网络访问或者从附带文件中读取的麻烦
 // 另外，本例也演示了如何设置普通代理函数来更安全地进行网页与谢语言后台逻辑之间的互动
+// This example demonstrates using WebView2 as a graphical interface
+// Get built-in JavaScript or CSS text embedded in HTML
+// This can avoid the hassle of network access or reading from accompanying files
+// In addition, this example also demonstrates how to set a regular proxy function to more securely interact between web pages and Xielang backend logic
 
 // guiNewWindow是内置指令，与下面命令等效
+// guiNewWindow is a built-in instruction that is equivalent to the following commands
 // mt $w $guiG newWindow "-title=Test WebView2a" -width=1024 -height=768 -center -debug
 // -debug参数表示打开调试功能
+// The -debug parameter indicates that debugging is enabled
 guiNewWindow $w "-title=Test WebView2a" -width=1024 -height=768 -center -debug
 
 // 如果出错则停止执行
+// Stop execution if an error occurs
 checkErrX $w
 
 // 调用窗口对象的setDelegate方法来指定代理函数
@@ -18,7 +25,15 @@ checkErrX $w
 // 普通代理函数将在单独新建的虚拟机中运行
 // 传入的参数通过全局变量inputG传入，是一个参数数组
 // 传出的参数则应放于全局outG中返回
-// 与快速代理函数不同，普通代理函数不用fastRet指令来退出，而是直接用exit指令
+// 与快速代理函数不同，普通代理函数不用exitL指令来退出，而是直接用exit指令
+// Call the setDelegate method of the window object to specify the proxy(callback) function
+// The fast proxy function used in the previous example runs directly on the current virtual machine, which has a certain possibility of concurrency conflicts
+// Therefore, for safety reasons, it is more recommended to use regular proxy functions
+// A regular proxy function defines its code through a string
+// The regular proxy function will run in a newly created virtual machine separately
+// The passed in parameters are passed in through the global variable inputG, which is an array of parameters
+// The outgoing parameters should be placed in the global outG and returned
+// Unlike fast proxy functions, regular proxy functions do not use the exitL instruction to exit, but instead use the exit instruction directly
 mt $rs $w setDelegate `
      
     getArrayItem $cmdT $inputG 0
@@ -98,7 +113,6 @@ mt $rs $w setDelegate `
 	function test2() {
 		var rs = delegateDo("showNav", "userAgent", navigator.userAgent);
 
-		// 返回的结果是一个Promise，因此要用相应的方式获取
 		rs.then(res => {
 			alert("test2: "+res);
 		});
@@ -117,6 +131,7 @@ mt $rs $w setDelegate `
 `
 
 // 提示：使用getResourceList指令可以看到所有内置的资源
+// Tip: Use the getResourceList directive to see all built-in resources
 getResource $t1 "js/jquery.min.js"
 
 strReplace $htmlT $htmlT "TX_jquery.min.js_XT" $t1

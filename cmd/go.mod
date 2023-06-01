@@ -10,7 +10,7 @@ require (
 	github.com/kardianos/service v1.2.2
 	github.com/kbinani/screenshot v0.0.0-20210720154843-7d3a670d8329
 	github.com/ncruces/zenity v0.10.5
-	github.com/sciter-sdk/go-sciter v0.5.0
+	github.com/sciter-sdk/go-sciter v0.5.1-0.20210426171118-f5212dff3ad8
 	github.com/topxeq/dlgs v0.0.0-20220223083937-4d3036aff547
 	github.com/topxeq/tk v1.0.1
 	github.com/topxeq/xie v0.0.0

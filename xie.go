@@ -49,7 +49,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var VersionG string = "1.2.7"
+var VersionG string = "1.2.8"
 
 func Test() {
 	tk.Pl("test")
@@ -2682,6 +2682,58 @@ func (p *XieVM) ParseListInParams(r *RunningContext, paramsA []VarRef, fromA int
 			if addNotA {
 				list1T = append(list1T, p.GetVarValue(r, v))
 			}
+		}
+
+	}
+
+	return list1T
+}
+
+// 分析指令的所有参数，将其中的列表参数（类似 $list1... 这样的）展开，各个参数将取其值，最终返回一个值的列表
+func (p *XieVM) ExtractListInParams(r *RunningContext, paramsA []VarRef) []interface{} {
+	if r == nil {
+		r = p.Running
+	}
+
+	list1T := []interface{}{}
+
+	for _, v := range paramsA {
+
+		if v.Ref != -3 && v.IsList {
+			vv := p.GetVarValue(r, v)
+			// tk.Plo(vv)
+
+			switch nv := vv.(type) {
+			case []byte:
+				for _, v9 := range nv {
+					list1T = append(list1T, v9)
+				}
+
+			case []int:
+				for _, v9 := range nv {
+					list1T = append(list1T, v9)
+				}
+
+			case []rune:
+				for _, v9 := range nv {
+					list1T = append(list1T, v9)
+				}
+
+			case []string:
+				for _, v9 := range nv {
+					list1T = append(list1T, v9)
+				}
+
+			case []interface{}:
+				for _, v9 := range nv {
+					list1T = append(list1T, v9)
+				}
+
+			}
+		} else {
+			// tk.Pl("not slice: %v", v)
+			// tk.Pl("not slice value: %v", p.GetVarValue(v))
+			list1T = append(list1T, p.GetVarValue(r, v))
 		}
 
 	}
@@ -12546,7 +12598,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		list1T := p.ParseListInParams(r, instrT.Params, 1, false, true)
 
-		tk.Pl("list1T: %#v", list1T)
+		// tk.Pl("list1T: %#v", list1T)
 
 		// tk.Pl("instrT.Params: %v", instrT.Params)
 

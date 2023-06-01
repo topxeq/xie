@@ -544,6 +544,7 @@ func guiHandler(actionA string, objA interface{}, dataA interface{}, paramsA ...
 		if len(paramsA) < 3 {
 			return fmt.Errorf("参数不够")
 		}
+		// tk.Pl("paramsA: %#v", paramsA)
 
 		var paraArgsT []string = []string{}
 
@@ -634,8 +635,40 @@ func guiHandler(actionA string, objA interface{}, dataA interface{}, paramsA ...
 				w.Show()
 				w.Run()
 				return nil
-			case "setDelegate":
-				var deleT tk.QuickDelegate = paramsA[0].(tk.QuickDelegate)
+			case "setDelegate", "setQuickDelegate":
+				deleT, ok := paramsA[0].(tk.QuickVarDelegate)
+
+				if !ok {
+					var codeT interface{}
+
+					s1, ok := paramsA[0].(string)
+
+					if ok {
+						// s1 = strings.ReplaceAll(s1, "~~~", "`")
+						compiledT := xie.Compile(s1)
+
+						if tk.IsErrX(compiledT) {
+							return fmt.Errorf("failed to compile the quick delegate code: %v", compiledT)
+						}
+
+						codeT = compiledT
+					}
+
+					cp1, ok := codeT.(*xie.CompiledCode)
+
+					if !ok {
+						return fmt.Errorf("invalid compiled object: %v", codeT)
+					}
+
+					p := objA.(*xie.XieVM)
+
+					deleT = func(argsA ...interface{}) interface{} {
+						rs := xie.RunCodePiece(p, nil, cp1, argsA, true)
+
+						return rs
+					}
+
+				}
 
 				w.DefineFunction("delegateDo", func(args ...*sciter.Value) *sciter.Value {
 					// args是SciterJS中调用谢语言函数时传入的参数

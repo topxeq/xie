@@ -1,37 +1,45 @@
 // 初始化GUI环境
+// Initialize GUI environment
 mt $rs $guiG init
 
 // 设定界面的HTML
 // 其中的moveToCenter函数，用于将窗口移动到屏幕正中并调整大小
-// 所有在TiScript与谢语言互通的函数都必须和moveToCenter函数这样
+// 所有在JavaScript与谢语言互通的函数都必须和moveToCenter函数这样
 // 接收一个字符串类型的输入参数，并输出一个字符串类型的输出参数
 // 如果想传递多于一个的数据，可以用JSON进行数据的封装
 // moveToCenter函数就接收一个包含两个参数（宽与高）的JSON字符串
 // 并输出一个表示屏幕宽高的字符串
+// HTML for setting the interface
+// The moveToCenter function is used to move the window to the center of the screen and adjust its size
+// All functions that communicate between JavaScript and Xie language must be like the moveToCenter function
+// Receive an input parameter of string type and output an output parameter of string type
+// If you want to transfer more than one data, you can use JSON for data encapsulation
+// The moveToCenter function receives a JSON string containing two parameters (width and height)
+// And output a string representing the width and height of the screen
 assign $htmlT `
 <!DOCTYPE html>
 <html>
 <head>
 	<meta charset="utf-8">
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-    <title>请登录……</title>
+    <title>Please login...</title>
 </head>
 <body >
 	<div style="margin-top: 10px; margin-bottom: 10px;">
-		<span>请输入用户名和密码登录……</span>
+		<span>Please enter the user name and password to login...</span>
 	</div>
 	<div style="margin-top: 10px; margin-bottom: 10px;">
-		<label for="userNameID" >用户名： </label><input id="userNameID" type=text />
+		<label for="userNameID" >User Name:&nbsp; </label><input id="userNameID" type=text />
 	</div>
 	<div style="margin-top: 10px; margin-bottom: 10px;">
-		<label for="userNameID" >密码： </label><input id="passwordID" type=password />
+		<label for="userNameID" >Password:&nbsp; </label><input id="passwordID" type=password />
 	</div>
 	<div>
-		<button id="btnLoginID">登录</button>
-		<button id="btnClose">关闭</button>
+		<button id="btnLoginID">Login</button>
+		<button id="btnClose">Close</button>
 	</div>
 
-    <script type="text/javascript">
+    <script>
         function moveToCenter(jsonA) {
             var wh = Window.this.screenBox("frame", "dimension");
             console.log(wh);
@@ -46,32 +54,36 @@ assign $htmlT `
 
             Window.this.move((w-w1n)/2, (h-h1n)/2, w1n, h1n);
 
-            return String.printf("%v|%v", w, h);
+            return printf("%v|%v", w, h);
         }
 
-        function loginIt() {
-			var userNameT = document.getElementById("userNameID").value.trim();
+        document.$("#btnLoginID").on("click", function() {
+            var userNameT = document.getElementById("userNameID").value.trim();
 			var passwordT = document.getElementById("passwordID").value.trim();
 
             Window.this.xcall("delegateDo", JSON.stringify({"userName": userNameT, "password": passwordT}));
 
-       }
+			// view.delegateDo(JSON.stringify({"userName": userNameT, "password": passwordT}));
+			//view.close();
+        });
  
-        function closeWindow() {
+        document.$("#btnClose").on("click", function() {
             Window.this.close();
-        }
+        });
 
         document.addEventListener('DOMContentLoaded', function() {
-            console.log("文档加载完毕");
+            console.log("document loaded");
 
-   			var buttonT = document.getElementById("btnClose");
+   			// var buttonT = document.getElementById("btnClose");
 
-			buttonT.addEventListener("click", closeWindow);
+			// buttonT.addEventListener("click", closeWindow);
 
-			document.getElementById("btnLoginID").addEventListener("click", loginIt);
+            // document.on("click","button#btnLoadID", sendCmd);
 
             globalThis.moveToCenter = moveToCenter;
-        }, false);
+
+       }, false);
+
 
     </script>
 </body>
@@ -79,33 +91,50 @@ assign $htmlT `
 `
 
 // 新建窗口，第二个参数传入了JSON格式的表示左、上、宽、高的窗口位置与大小的字符串
-// 但实际上由于下面调用了TiScript中的moveToCenter函数，因此将会使这里定义的宽和高无效
-mt $windowT $guiG newWindow 测试 `[300,200,600,400]` $htmlT
+// 但实际上由于下面调用了JavaScript中的moveToCenter函数，因此将会使这里定义的宽和高无效
+// Create a new window, with the second parameter passing in a JSON format string representing the position and size of the window for left, top, width, and height
+// But in fact, due to the call to the moveToCenter function in JavaScript below, the width and height defined here will be invalidated
+mt $windowT $guiG newWindowSciter "Test" `[300,200,600,400]` $htmlT
 
-// 调用前面HTML代码中TiScript脚本内定义的moveToCenter函数，并传入表示宽与高的JSON字符串
+// 调用前面HTML代码中JavaScript脚本内定义的moveToCenter函数，并传入表示宽与高的JSON字符串
+// Call the moveToCenter function defined in the JavaScript script in the previous HTML code and pass in JSON strings representing width and height
 mt $rs $windowT call moveToCenter `{"Width":800, "Height":600}`
 
 // 输出moveToCenter函数的返回值
+// Output the return value of the moveToCenter function
 plo $rs
 
-// 创建并设定与界面之间的快速代理对象
-new $dele1 quickDelegate :deleFast1
-mt $rs $windowT setDelegate $dele1
+// 设置与界面之间的快速代理对象（注释中是另一种方法）
+// Set a quick proxy object between the GUI and backend (another method in the comments)
+
+// new $dele1 quickDelegate `
+//     [] $resultL $inputL 0
+
+//     pl "Result: %v" $resultL
+
+//     // 函数返回前必须要有一个输出参数存入outL中
+//     // 此处因为实际上无需返回参数，因此随便存入一个无用的数值
+//     // There must be an output parameter stored in outL before the function returns
+//     // Because there is actually no need to return parameters, a useless numerical value is randomly stored here
+//     exitL $resultL
+// `
+
+// mt $rs $windowT setQuickDelegate $dele1
+
+mt $rs $windowT setDelegate `
+
+    [] $resultL $inputL 0
+
+    pl "Result: %v" $resultL
+
+    exitL $resultL
+
+`
 
 // 运行图形界面
+// Run the GUI window
 mt $rs $windowT show
 
 plo $rs
 
 exit
-
-// 快速代理对象的代码
-:deleFast1
-
-    pop $inputT
-
-    pl "inputT: %v" $inputT
-
-    push "output1"
-
-    fastRet
