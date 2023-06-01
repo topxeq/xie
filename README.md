@@ -7338,9 +7338,9 @@ If the main program of Xielang is compiled with the compilation parameter of -ld
 
 ##### - **制作一个登录框**（Create a login box）
 
-本例继续介绍GUI编程，将实现一个常见的登录框，包含用户名和密码的输入框以及登录和关闭按钮，之间参看下面的代码（loginDialog.xie）：
+本例继续介绍GUI编程，将实现一个常见的登录框，包含用户名和密码的输入框以及登录和关闭按钮，之间参看下面的代码（loginDialogSciter.xie）：
 
-This example continues to introduce GUI programming, implementing a common login box that includes input boxes for username and password, as well as login and close buttons. Please refer to the following code (loginDialog.xie):
+This example continues to introduce GUI programming, implementing a common login box that includes input boxes for username and password, as well as login and close buttons. Please refer to the following code (loginDialogSciter.xie):
 
 ```go
 // 初始化GUI环境
