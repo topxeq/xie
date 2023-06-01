@@ -76,10 +76,10 @@ Xielang is a free, open-source, cross-platform, cross-language, ASM/SHELL-like, 
   - [- **动态网页服务器**（Dynamic Web Server）](#--动态网页服务器dynamic-web-server)
   - [- **博客系统**（Implementing a tiny blog system）](#--博客系统implementing-a-tiny-blog-system)
   - [- **嵌套运行谢语言代码**（Nested Run Xielang Code）](#--嵌套运行谢语言代码nested-run-xielang-code)
-- [谢语言做系统服务](#谢语言做系统服务)
-- [图形界面（GUI）编程](#图形界面gui编程)
-- [谢语言GUI编程的基础（WebView2）](#谢语言gui编程的基础webview2)
-  - [- 基本界面](#--基本界面)
+- [**谢语言做系统服务**（Write system services by Xielang）](#谢语言做系统服务write-system-services-by-xielang)
+- [**图形界面（GUI）编程**（GUI Programming）](#图形界面gui编程gui-programming)
+- [**谢语言GUI编程的基础（WebView2）** （Fundamentals of GUI Programming in Xielang (WebView2)）](#谢语言gui编程的基础webview2-fundamentals-of-gui-programming-in-xielang-webview2)
+  - [- **基本界面**（Basic GUI）](#--基本界面basic-gui)
   - [- 直接嵌入网页脚本](#--直接嵌入网页脚本)
   - [- 启动后台服务与前台配合](#--启动后台服务与前台配合)
 - [谢语言GUI编程的基础（SciterJS）](#谢语言gui编程的基础sciterjs)
@@ -6357,54 +6357,87 @@ result= 52
 
 &nbsp;
 
-#### 谢语言做系统服务
+#### **谢语言做系统服务**（Write system services by Xielang）
 
 谢语言可以作为系统服务启动，支持Windows和Linux等操作系统。只要加命令行参数-reinstallService运行谢语言主程序，即可在系统中安装一个名为xieService的系统服务（在Windows下可以用计算机管理中的服务管理模块看到）。注意，操作系统中安装服务，一般需要管理员权限才可以进行，Windows下需要以管理员身份打开CMD窗口执行该命令，Linux下需要以root用户或用sudo命令来执行。
 
+Xielang can be started as a system service and supports operating systems such as Windows and Linux. As long as you add the command line parameter '-reinstallService' to run the Xie language main program, you can install a system service called xieService in the system (which can be seen using the service management module in computer management under Windows). Note that installing services in the operating system generally requires administrator privileges. Under Windows, you need to open the CMD window as an administrator to execute this command, while under Linux, you need to execute it as root or with the sudo command.
+
 服务启动后会在服务根目录（Windows下为c:\xie，Linux下为/xie）下的文件中xieService.log记录日志。服务初次启动时，会在服务根目录下寻找所有名称类似taskXXX.xie的文件（例如task001.xie、taskAbc.xie等）逐个运行，并将其执行结果（通过全局变量outG返回）输出到日志。这种代码文件称为一次性运行任务文件，一般用于需要开机运行一次的情况，也可以通过手动执行xie -restartService命令来重启服务达到再次执行的目的。
+
+After the service is started, a log will be recorded in the file xieService.log in the service root directory (c:\xie in Windows and /xie in Linux). When the service starts for the first time, it will search for all files with names similar to taskXXX. xie in the service root directory (such as task001.xie, taskAbc.xie, etc.) and run them one by one, and output their execution results (returned through the global variable outG) to the log. This type of code file is called a one-time run task file, and is generally used in situations where it needs to be started and run once. It can also be manually run the command 'xie -restartService' to restart the service and achieve the goal of re-execution.
 
 另外，xieService服务在运行中，每隔5秒钟会检查服务根目录，如果其中有名称类似autoRemoveTaskXXX.xie的文件（例如autoRemoveTask001.xie、autoRemoveTaskAbc.xie等），将会立即执行这些文件中的代码，然后将这些文件删除。这种机制类似任务队列，允许我们随时将任务加入队列（放入服务根目录），谢语言服务会随时执行这些任务。并且由于执行后会立即删除，因此该任务不会被反复执行。
 
+In addition, during operation, the xieService service checks the service root directory every 5 seconds. If there are files with names similar to autoRemoveTaskXXX.xie (such as autoRemoveTask001.xie, autoRemoveTaskAbc.xie, etc.), the code in these files will be immediately executed and then deleted. This mechanism is similar to a task queue, allowing us to add tasks to the queue (placed in the service root directory) at any time, and Xielang service will execute these tasks at any time. And since the task will be deleted immediately after execution, it will not be executed repeatedly.
+
 与服务安装、移除、启动、停止、重新启动有关的谢语言主程序命令行参数还包括-installService、-removeService、-startService、-stopService、-restartService等。
+
+The command line parameters related to service installation, removal, start, stop, and restart of the Xielang main program also include '-installService', '-removeService', '-startService', '-stopService', '-restartService', and so on.
 
 任务代码可以参考例子中的task001.xie、autoRemoveTask001.xie等。
 
+The task code can refer to examples such as task001.xie, autoRemoveTask001.xie, etc.
+
 &nbsp;
 
-#### 图形界面（GUI）编程
+#### **图形界面（GUI）编程**（GUI Programming）
 
 谢语言支持方便的图形界面（GUI）编程，包含多种实现方式，各有各的优势和使用场景。
 
+Xielang supports convenient graphical interface (GUI) programming, including multiple implementation methods, each with its own advantages and usage scenarios.
+
 其中，Windows下使用WebView2系统控件是比较推荐的GUI编程方式，WebView2功能强大并且随时更新，在Windows 10及以上系统中已经内置，Windows 7等系统中也可以单独安装，谢语言无需附加任何文件即可用这种方式编写和分发图形界面应用。
+
+Among them, using WebView2 system controls under Windows is a recommended GUI programming method. WebView2 is powerful and constantly updated, and is already built-in in Windows 10 and above systems. It can also be installed separately in Windows 7 and other systems. Xie language can write and distribute graphical interface applications in this way without attaching any files.
 
 第二种方式是通过 [SciterJS](http://sciter.com) 这个第三方库实现，Windows下只需要一个动态链接库文件（sciter.dll），Linux下的配置请参考[这里](https://www.jianshu.com/p/b184826b9de1)。
 
+The second way is through [SciterJS](http://sciter.com). This third-party library implementation only requires a dynamic link library file (sciter.dll) under Windows. Please refer to [here](https://www.jianshu.com/p/b184826b9de1) for the configuration under Linux.
+
 第三种方式是使用一个外部的浏览器来访问谢语言启动的WEB服务器或API服务器，这样前端可以完全使用标准的HTML/CSS/JavaScript技术进行图形界面编程，通过Ajax方式访问谢语言编写的Web服务来使用谢语言的能力。这种方式的缺点是，一般的浏览器为安全考虑一般不允许通过代码调整浏览器的标题、大小和位置。
+
+The third way is to use an external browser to access the web server or API server launched by Xielang, so that the front-end can fully use standard HTML/CSS/JavaScript technology for graphical interface programming, and access the web services written in Xielang through Ajax to use Xielang's capabilities. The disadvantage of this approach is that general browsers do not allow code to adjust the title, size, and position of the browser for security reasons.
 
 第四种方式是在第三种方式的基础上，调用谢语言配套的浏览器，即可解决调整浏览器标题、大小和位置等问题。目前谢语言配套的浏览器包括一个基于IE11内核的浏览器和基于Chromium内核的浏览器，前者比较轻量级但IE11对新版JavaScript的支持有缺陷，后者较重（体积较大，初次使用初始化图形界面环境时下载慢）但功能更完善。
 
+The fourth method is based on the third method, calling the browser supporting Xielang can solve the problem of adjusting the browser title, size, and position. At present, the browsers supported by Xielang include a browser based on the IE11 kernel and a browser based on the Chromium kernel. The former is relatively lightweight but IE11 has defects in supporting the new version of JavaScript. The latter is heavier (larger in size and slower to load when initializing the graphical interface environment for the first time) but has more complete functions.
+
 谢语言中的图形界面编程通过下面的基本说明和几个例子可以快速地了解掌握。
+
+The graphical interface programming in Xie language can be quickly understood and mastered through the following basic explanations and a few examples.
 
 &nbsp;
 
-#### 谢语言GUI编程的基础（WebView2）
+#### **谢语言GUI编程的基础（WebView2）** （Fundamentals of GUI Programming in Xielang (WebView2)）
 
 谢语言GUI图形编程的WebView2方式，主要通过Windows自带的WebView2组件来支持GUI编程，仅适用于Windows系统，分发时无需附加文件（如果低版本Windows系统，可以自行下载安装WebView2）。WebView2使用标准的HTML、CSS以及JavaScript的进行编程，来实现图形界面的展示和操控，谢语言则负责后台逻辑的处理，两者之间可以互通，JavaScript中通过特定的接口方式可以调用谢语言中的函数传递数据并进行操作，反之亦然，谢语言也可以调用JavaScript中的特定函数。基本熟悉网页编程的开发者都可以很方便地上手。
 
+The WebView2 method of GUI graphical programming in Xielang mainly supports GUI programming through the built-in WebView2 component of Windows. It is only applicable to Windows systems and does not require additional files for distribution (if you have a lower version of Windows system, you can download and install WebView2 yourself). WebView2 uses standard HTML, CSS, and JavaScript programming to display and manipulate graphical interfaces, while Xie language is responsible for processing backend logic. The two can communicate with each other. JavaScript can call functions in Xie language to transmit data and perform operations through specific interface methods, and vice versa. Xielang can also call specific functions in JavaScript. Developers who are basically familiar with web programming can easily get started.
+
 谢语言中有一个预置全局变量\$guiG，用于作为调用GUI功能的接口对象。
+
+In Xielang, there is a preset global variable  $guiG used as an interface object for calling GUI functions.
 
 下面我们通过一些例子逐步说明谢语言中基于WebView2方式的GUI编程方法。
 
+Below, we will gradually illustrate the GUI programming method based on WebView2 in Xielang through some examples.
+
 &nbsp;
 
-##### - 基本界面
+##### - **基本界面**（Basic GUI）
 
-我们直接通过一个代码例子（webGui1.xie）来了解：、
+我们直接通过一个代码例子（webGui1.xie）来了解：
+
+We can directly understand through a code example (webGui1.xie):
 
 ```go
 // 本例演示使用Windows下的WebView2（Windows 10以上自带，Win 7等可以单独安装）来制作图形化界面程序
 // WebView2在Windows 10以上系统自带，Win 7等可以单独安装
 // 也因此本例只在Windows下有效
+// This example demonstrates using WebView2 under Windows (which comes with Windows 10 or above, and can be installed separately for Win 7 or other applications) to create a graphical interface program
+// WebView2 comes with Windows 10 and above systems, and Win 7 and others can be installed separately
+// Therefore, this example is only valid under Windows
 
 // 新建一个窗口，放入变量w中
 // guiG是全局预置变量，表示图形界面主控对象
@@ -6415,27 +6448,119 @@ result= 52
 // -fix参数表示窗口不允许调整大小
 // -center参数表示窗口居中
 // 还有-max、-min分别表示以最大或最小化的状态展示窗口
-
+// Create a new window and place it in the variable w
+// guiG is a global preset variable that represents the main control object of the graphical interface
+// Its newWindow method creates a new window based on the specified parameters
+// The width parameter represents the width of the window, which defaults to 800
+// The height parameter represents the height of the window, which defaults to 600
+// If there is a -debug parameter, it indicates whether debugging is allowed (the right-click menu has options such as "check")
+// The -fix parameter indicates that the window does not allow resizing
+// The -center parameter indicates that the window is centered
+// Also, -max and -min represent displaying windows in maximum or minimum states, respectively
 mt $w $guiG newWindow "-title=Test WebView2" -width=1024 -height=768 -center
 
 plo $w
 
+// 用于网页中的快速代理函数代码
+// 网页中的JavaScript代码中可以用quickDelegateDo函数来调用本函数
+// 快速代理函数将在新的运行上下文中执行
+// quickDelegateDo函数中所带的参数将被封装成一个列表（数组）放入$inputL变量中
+// 快速代理函数中可以对其按索引取值进行处理
+// 快速处理函数也可以使用虚拟机级的全局变量、寄存器或堆栈进行数据共享
+// Quick proxy function code for web pages
+// The quickDelegateDo function can be used in JavaScript code on web pages to call this function
+// The fast proxy function will be executed in the new runtime context
+// The parameters carried in the quickDelegateDo function will be encapsulated into a list (array) and placed in the $inputL variable
+// Fast proxy functions can be processed based on index values
+// Fast processing functions can also use virtual machine level global variables, registers, or stacks for data sharing
+= $dele1 `
+	// 输出变量inputL供参考
+	// Output variable inputL for reference
+    pl "%#v" $inputL
+    
+	// 本例中，第一个参数被约定为传递一个命令
+	// 后面的参数为该命令所需的参数，参数个数视该命令的需要而定
+	// 因此这里从参数数组中取出第一个参数放入变量cmdT中
+	// In this example, the first parameter is specified to pass a command
+	// The following parameters are required for the command, and the number of parameters depends on the needs of the command
+	// Therefore, the first parameter is taken from the parameter array and placed in the variable cmdT here
+    getArrayItem $cmdT $inputL 0
+
+	// 如果命令为showNav，则取后两个参数并输出其内容
+	// If the command is showNav, take the last two parameters and output their contents
+    ifEqual $cmdT "showNav" :+1 :inext1
+        getArrayItem $arg1 $inputL 1
+        getArrayItem $arg2 $inputL 2
+
+        pl "name: %v, value: %v" $arg1 $arg2
+
+		// 快速处理函数最后必须通过变量outL返回一个值，无论是否需要
+		// The fast processing function must ultimately return a value through the variable outL, regardless of whether it needs to be
+        = $outL "showNav result"
+
+		// 快速处理函数最后用exit指令返回
+		// Quickly process the function and return it with the exit instruction
+        exitL
+
+    :inext1
+	// 如果命令为pl，则类似pl指令（其他语言中的或printf）
+	// 取出后面第一个参数为格式化字串
+	// 再后面都是格式化字串中所需的填充值
+	// 然后输出到标准输出
+	// If the command is pl, it is similar to the pl instruction (in other languages as printf with an extra line-end)
+	// Take out the first parameter that follows as a formatted string
+	// The following are the required padding values in the formatted string
+	// Then output to standard output
+    ifEqual $cmdT "pl" :+1 :inext2
+        getArrayItem $formatT $inputL 1
+
+		// 截取inputL中第三项（序号为2）开始的所有项
+		// Get all items starting from the third item (sequence number 2) in inputL
+        slice $list1 $inputL 2 -
+
+		// 用pl指令输出指定的内容，注意“$list1...”写法表示展开其中的列表参数
+		// Use the pl instruction to output the specified content. Note that the notation '$list1...' indicates expanding the list parameters within it
+        pl $formatT $list1...
+
+		// 注意exitL指令后可以跟随一个参数，该参数将自动被放入$outL中，这是一种简化的函数返回的写法
+		// Note that the exitL instruction can be followed by a parameter that will automatically be placed in $outL, which is a simplified method of writing function returns
+        exitL "exit from pl"
+
+    :inext2
+	// 不支持的命令将输出错误信息
+	// Output error messages for unsupported commands
+    pl "unknown command: %v" $cmdT
+
+    exitL @'{spr $tmp "unknown command: %v" $cmdT}'
+`
+
 // 新建一个用于窗口事件处理的快速代理函数
-// 代码在标号dele1处开始
-// 快速代理函数必须以fastRet指令返回
-new $deleT quickDelegate :dele1
+// 代码存于变量$dele1中
+// 快速代理函数必须以exitL指令返回
+// Create a new fast proxy function for window event processing
+// Code stored in variable $dele1
+// The fast proxy function must return with the exitL instruction
+new $deleT quickDelegate $dele1
+
+checkErrX $deleT
 
 // 调用窗口对象的setQuickDelegate方法来指定代理函数
+// Call the setQuickDelegate method of the window object to specify the proxy function
 mt $rs $w setQuickDelegate $deleT
 
 plo $rs
 
 // 如果从网络加载网页，那么可以用下面的navigate方法
 // mt $rs $w navigate http://xie.topget.org
+// If you load a webpage from the network, you can use the navigate method below
+// mt $rs $w navigate http://xie.topget.org
 
 // 本例中使用从本地加载的网页代码
 // 设置准备在窗口中载入的HTML代码
 // 本例中HTML页面中引入的JavaScript和CSS代码均直接用网址形式加载
+// In this example, the webpage code loaded locally is used
+// Set the HTML code to be loaded in the window
+// In this example, the JavaScript and CSS code introduced in the HTML page are directly loaded in the form of website addresses
 = $htmlT `
 <!DOCTYPE html>
 <html>
@@ -6449,6 +6574,7 @@ plo $rs
 <title></title>
 <script>
 	// 页面加载完毕后，将用alert展示一个值，然后准备数据并显示一个报表
+	// After the page is loaded, an alert will be used to display a value, and then the data will be prepared and a report will be displayed
 	window.onload = function() {
 		var s1 = "a信b";
 
@@ -6482,22 +6608,32 @@ plo $rs
 
 	}
 
-	// 点击test1按钮后，将调用quickDelegateDo函数来调用谢语言中定义的快速代理函数，并传入需要的函数
+	// 点击test1按钮后，将调用quickDelegateDo函数来调用谢语言中定义的快速代理函数，并传入需要的参数，然后alert返回的值
+	// After clicking the test1 button, the quickDelegateDo function will be called to call the fast proxy function defined in Xielang, passing in the required parameters, and then the value returned by alert
 	function test1() {
-		quickDelegateDo("pl", "time: %v, navigator: %v", new Date(), navigator.userAgent);
+		var rs = quickDelegateDo("pl", "time: %v, navigator: %v", new Date(), navigator.userAgent);
+
+		// 返回的结果是一个Promise，因此要用相应的方式获取
+		// The returned result is a Promise, so it needs to be obtained in a corresponding way
+		rs.then(res => {
+			alert("test1: "+res);
+		});
 	}
 
 	// 点击test2按钮后，将调用quickDelegateDo函数来调用谢语言中定义的快速代理函数，并alert返回的值
+	// After clicking the test2 button, the quickDelegateDo function will be called to call the fast proxy function defined in Xie language, and the returned value will be alerted
 	function test2() {
 		var rs = quickDelegateDo("showNav", "userAgent", navigator.userAgent);
 
 		// 返回的结果是一个Promise，因此要用相应的方式获取
+		// The returned result is a Promise, so it needs to be obtained in a corresponding way
 		rs.then(res => {
 			alert("test2: "+res);
 		});
 	}
 
 	// 点击test按钮后，将用Ajax方式访问一个网络API，获取结果并显示
+	// After clicking the test button, a network API will be accessed using Ajax to obtain the results and display them
 	function test() {
 		$.ajax({
 			url: "http://topget.org/xms/test",
@@ -6531,6 +6667,7 @@ plo $rs
 `
 
 // 调用窗口对象的setHtml方法来设置其内容
+// Call the setHtml method of the window object to set its content
 mt $rs $w setHtml $htmlT
 
 plo $rs
@@ -6538,78 +6675,35 @@ plo $rs
 // 调用窗口对象的setHtml方法来展示窗口
 // 此时窗口才真正显示
 // 并且直至窗口关闭都将阻塞（即等待窗口关闭后才往下继续执行后面的代码）
+// Call the setHtml method of the window object to display the window
+// At this point, the window truly displays
+// And it will block until the window closes (i.e. wait for the window to close before continuing to execute the following code)
 mt $rs $w show
 
 plo $rs
 
 // 调用窗口对象的close方法关闭窗口
+// Calling the close method of the window object to close the window
 mt $rs $w close
 
 plo $rs
 
 // 结束程序的执行
-// 也是为了避免如果继续往下执行将误入后面的快速代理代码
+// End program execution
 exit
 
-// 用于网页中的快速代理函数
-// 网页中的JavaScript代码中可以用quickDelegateDo函数来调用本函数
-// quickDelegateDo函数中所带的参数将被封装成一个列表（数组）压入堆栈
-// 快速代理函数需要将其弹栈后进行处理
-:dele1
-	// 弹栈出参数数组
-    pop $argsT
-
-    # pl "%#v" $argsT
-    
-	// 本例中，第一个参数被约定为传递一个命令
-	// 后面的参数为该命令所需的参数，参数个数视该命令的需要而定
-	// 因此这里从参数数组中取出第一个参数放入变量cmdT中
-    getArrayItem $cmdT $argsT 0
-
-	// 如果命令为showNav，则取后两个参数并输出其内容
-    ifEqual $cmdT "showNav" :+1 :inext1
-        getArrayItem $arg1 $argsT 1
-        getArrayItem $arg2 $argsT 2
-
-        pl "name: %v, value: %v" $arg1 $arg2
-
-		// 快速处理函数最后必须返回一个值，无论是否需要
-        push "showNav result"
-
-		// 快速处理函数最后必须用fastRet指令返回
-        fastRet
-
-    :inext1
-	// 如果命令为pl，则类似pl指令（其他语言中的或printf）
-	// 取出后面第一个参数为格式化字串
-	// 再后面都是格式化字串中所需的填充值
-	// 然后输出输出
-    ifEqual $cmdT "pl" :+1 :inext2
-        getArrayItem $formatT $argsT 1
-
-        slice $list1 $argsT 2 -
-
-        pl $formatT $list1...
-
-        push ""
-
-        fastRet
-
-    :inext2
-	// 不支持的命令将输出错误信息
-    pl "unknown command: %v" $cmdT
-
-    push ""
-
-    fastRet
 
 ```
 
 代码运行后，将看到类似下面的界面：
 
-![截图](http://xie.topget.org/example/xie/snap/snap8.png)
+After running the code, you will see an interface similar to the following:
 
-代码中有详尽注释，我们可以看到，代码中展示了如何载入一个HTML页面作为窗口并显示出来，点击几个test按钮可以进行不同的操作，其中test1和test2都是与谢语言的后台逻辑进行互动，其中test2还从谢语言处理函数中获取了返回值并显示。test按钮则演示了如何通过Ajax方式获取一个网络API请求的结果并进行处理。
+![截图/snapshot](http://xie.topget.org/example/xie/snap/snap8.png)
+
+代码中有详尽注释，我们可以看到，代码中展示了如何载入一个HTML页面作为窗口并显示出来，点击几个test按钮可以进行不同的操作，其中test1和test2都是与谢语言的后台逻辑进行互动，其中test1、test2还从谢语言处理函数中获取了返回值并显示。test按钮则演示了如何通过Ajax方式获取一个网络API请求的结果并进行处理。
+
+There are detailed annotations in the code, which shows how to load an HTML page as a window and display it. Clicking a few test buttons can perform different operations. Among them, test1 and test2 interact with the backend logic of Xie language, and test1 and test2 also obtain return values from Xielang processing functions and display them. The test button demonstrates how to obtain the result of a network API request through Ajax and process it.
 
 &nbsp;
 

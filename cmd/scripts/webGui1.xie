@@ -1,6 +1,9 @@
 // 本例演示使用Windows下的WebView2（Windows 10以上自带，Win 7等可以单独安装）来制作图形化界面程序
 // WebView2在Windows 10以上系统自带，Win 7等可以单独安装
 // 也因此本例只在Windows下有效
+// This example demonstrates using WebView2 under Windows (which comes with Windows 10 or above, and can be installed separately for Win 7 or other applications) to create a graphical interface program
+// WebView2 comes with Windows 10 and above systems, and Win 7 and others can be installed separately
+// Therefore, this example is only valid under Windows
 
 // 新建一个窗口，放入变量w中
 // guiG是全局预置变量，表示图形界面主控对象
@@ -11,27 +14,119 @@
 // -fix参数表示窗口不允许调整大小
 // -center参数表示窗口居中
 // 还有-max、-min分别表示以最大或最小化的状态展示窗口
-
+// Create a new window and place it in the variable w
+// guiG is a global preset variable that represents the main control object of the graphical interface
+// Its newWindow method creates a new window based on the specified parameters
+// The width parameter represents the width of the window, which defaults to 800
+// The height parameter represents the height of the window, which defaults to 600
+// If there is a -debug parameter, it indicates whether debugging is allowed (the right-click menu has options such as "check")
+// The -fix parameter indicates that the window does not allow resizing
+// The -center parameter indicates that the window is centered
+// Also, -max and -min represent displaying windows in maximum or minimum states, respectively
 mt $w $guiG newWindow "-title=Test WebView2" -width=1024 -height=768 -center
 
 plo $w
 
+// 用于网页中的快速代理函数代码
+// 网页中的JavaScript代码中可以用quickDelegateDo函数来调用本函数
+// 快速代理函数将在新的运行上下文中执行
+// quickDelegateDo函数中所带的参数将被封装成一个列表（数组）放入$inputL变量中
+// 快速代理函数中可以对其按索引取值进行处理
+// 快速处理函数也可以使用虚拟机级的全局变量、寄存器或堆栈进行数据共享
+// Quick proxy function code for web pages
+// The quickDelegateDo function can be used in JavaScript code on web pages to call this function
+// The fast proxy function will be executed in the new runtime context
+// The parameters carried in the quickDelegateDo function will be encapsulated into a list (array) and placed in the $inputL variable
+// Fast proxy functions can be processed based on index values
+// Fast processing functions can also use virtual machine level global variables, registers, or stacks for data sharing
+= $dele1 `
+	// 输出变量inputL供参考
+	// Output variable inputL for reference
+    pl "%#v" $inputL
+    
+	// 本例中，第一个参数被约定为传递一个命令
+	// 后面的参数为该命令所需的参数，参数个数视该命令的需要而定
+	// 因此这里从参数数组中取出第一个参数放入变量cmdT中
+	// In this example, the first parameter is specified to pass a command
+	// The following parameters are required for the command, and the number of parameters depends on the needs of the command
+	// Therefore, the first parameter is taken from the parameter array and placed in the variable cmdT here
+    getArrayItem $cmdT $inputL 0
+
+	// 如果命令为showNav，则取后两个参数并输出其内容
+	// If the command is showNav, take the last two parameters and output their contents
+    ifEqual $cmdT "showNav" :+1 :inext1
+        getArrayItem $arg1 $inputL 1
+        getArrayItem $arg2 $inputL 2
+
+        pl "name: %v, value: %v" $arg1 $arg2
+
+		// 快速处理函数最后必须通过变量outL返回一个值，无论是否需要
+		// The fast processing function must ultimately return a value through the variable outL, regardless of whether it needs to be
+        = $outL "showNav result"
+
+		// 快速处理函数最后用exit指令返回
+		// Quickly process the function and return it with the exit instruction
+        exitL
+
+    :inext1
+	// 如果命令为pl，则类似pl指令（其他语言中的或printf）
+	// 取出后面第一个参数为格式化字串
+	// 再后面都是格式化字串中所需的填充值
+	// 然后输出到标准输出
+	// If the command is pl, it is similar to the pl instruction (in other languages as printf with an extra line-end)
+	// Take out the first parameter that follows as a formatted string
+	// The following are the required padding values in the formatted string
+	// Then output to standard output
+    ifEqual $cmdT "pl" :+1 :inext2
+        getArrayItem $formatT $inputL 1
+
+		// 截取inputL中第三项（序号为2）开始的所有项
+		// Get all items starting from the third item (sequence number 2) in inputL
+        slice $list1 $inputL 2 -
+
+		// 用pl指令输出指定的内容，注意“$list1...”写法表示展开其中的列表参数
+		// Use the pl instruction to output the specified content. Note that the notation '$list1...' indicates expanding the list parameters within it
+        pl $formatT $list1...
+
+		// 注意exitL指令后可以跟随一个参数，该参数将自动被放入$outL中，这是一种简化的函数返回的写法
+		// Note that the exitL instruction can be followed by a parameter that will automatically be placed in $outL, which is a simplified method of writing function returns
+        exitL "exit from pl"
+
+    :inext2
+	// 不支持的命令将输出错误信息
+	// Output error messages for unsupported commands
+    pl "unknown command: %v" $cmdT
+
+    exitL @'{spr $tmp "unknown command: %v" $cmdT}'
+`
+
 // 新建一个用于窗口事件处理的快速代理函数
-// 代码在标号dele1处开始
-// 快速代理函数必须以fastRet指令返回
-new $deleT quickDelegate :dele1
+// 代码存于变量$dele1中
+// 快速代理函数必须以exitL指令返回
+// Create a new fast proxy function for window event processing
+// Code stored in variable $dele1
+// The fast proxy function must return with the exitL instruction
+new $deleT quickDelegate $dele1
+
+checkErrX $deleT
 
 // 调用窗口对象的setQuickDelegate方法来指定代理函数
+// Call the setQuickDelegate method of the window object to specify the proxy function
 mt $rs $w setQuickDelegate $deleT
 
 plo $rs
 
 // 如果从网络加载网页，那么可以用下面的navigate方法
 // mt $rs $w navigate http://xie.topget.org
+// If you load a webpage from the network, you can use the navigate method below
+// mt $rs $w navigate http://xie.topget.org
 
 // 本例中使用从本地加载的网页代码
 // 设置准备在窗口中载入的HTML代码
 // 本例中HTML页面中引入的JavaScript和CSS代码均直接用网址形式加载
+// In this example, the webpage code loaded locally is used
+// Set the HTML code to be loaded in the window
+// In this example, the JavaScript and CSS code introduced in the HTML page are directly loaded in the form of website addresses
 = $htmlT `
 <!DOCTYPE html>
 <html>
@@ -45,6 +140,7 @@ plo $rs
 <title></title>
 <script>
 	// 页面加载完毕后，将用alert展示一个值，然后准备数据并显示一个报表
+	// After the page is loaded, an alert will be used to display a value, and then the data will be prepared and a report will be displayed
 	window.onload = function() {
 		var s1 = "a信b";
 
@@ -78,22 +174,32 @@ plo $rs
 
 	}
 
-	// 点击test1按钮后，将调用quickDelegateDo函数来调用谢语言中定义的快速代理函数，并传入需要的函数
+	// 点击test1按钮后，将调用quickDelegateDo函数来调用谢语言中定义的快速代理函数，并传入需要的参数，然后alert返回的值
+	// After clicking the test1 button, the quickDelegateDo function will be called to call the fast proxy function defined in Xielang, passing in the required parameters, and then the value returned by alert
 	function test1() {
-		quickDelegateDo("pl", "time: %v, navigator: %v", new Date(), navigator.userAgent);
+		var rs = quickDelegateDo("pl", "time: %v, navigator: %v", new Date(), navigator.userAgent);
+
+		// 返回的结果是一个Promise，因此要用相应的方式获取
+		// The returned result is a Promise, so it needs to be obtained in a corresponding way
+		rs.then(res => {
+			alert("test1: "+res);
+		});
 	}
 
 	// 点击test2按钮后，将调用quickDelegateDo函数来调用谢语言中定义的快速代理函数，并alert返回的值
+	// After clicking the test2 button, the quickDelegateDo function will be called to call the fast proxy function defined in Xie language, and the returned value will be alerted
 	function test2() {
 		var rs = quickDelegateDo("showNav", "userAgent", navigator.userAgent);
 
 		// 返回的结果是一个Promise，因此要用相应的方式获取
+		// The returned result is a Promise, so it needs to be obtained in a corresponding way
 		rs.then(res => {
 			alert("test2: "+res);
 		});
 	}
 
 	// 点击test按钮后，将用Ajax方式访问一个网络API，获取结果并显示
+	// After clicking the test button, a network API will be accessed using Ajax to obtain the results and display them
 	function test() {
 		$.ajax({
 			url: "http://topget.org/xms/test",
@@ -127,6 +233,7 @@ plo $rs
 `
 
 // 调用窗口对象的setHtml方法来设置其内容
+// Call the setHtml method of the window object to set its content
 mt $rs $w setHtml $htmlT
 
 plo $rs
@@ -134,67 +241,20 @@ plo $rs
 // 调用窗口对象的setHtml方法来展示窗口
 // 此时窗口才真正显示
 // 并且直至窗口关闭都将阻塞（即等待窗口关闭后才往下继续执行后面的代码）
+// Call the setHtml method of the window object to display the window
+// At this point, the window truly displays
+// And it will block until the window closes (i.e. wait for the window to close before continuing to execute the following code)
 mt $rs $w show
 
 plo $rs
 
 // 调用窗口对象的close方法关闭窗口
+// Calling the close method of the window object to close the window
 mt $rs $w close
 
 plo $rs
 
 // 结束程序的执行
-// 也是为了避免如果继续往下执行将误入后面的快速代理代码
+// End program execution
 exit
 
-// 用于网页中的快速代理函数
-// 网页中的JavaScript代码中可以用quickDelegateDo函数来调用本函数
-// quickDelegateDo函数中所带的参数将被封装成一个列表（数组）压入堆栈
-// 快速代理函数需要将其弹栈后进行处理
-:dele1
-	// 弹栈出参数数组
-    pop $argsT
-
-    # pl "%#v" $argsT
-    
-	// 本例中，第一个参数被约定为传递一个命令
-	// 后面的参数为该命令所需的参数，参数个数视该命令的需要而定
-	// 因此这里从参数数组中取出第一个参数放入变量cmdT中
-    getArrayItem $cmdT $argsT 0
-
-	// 如果命令为showNav，则取后两个参数并输出其内容
-    ifEqual $cmdT "showNav" :+1 :inext1
-        getArrayItem $arg1 $argsT 1
-        getArrayItem $arg2 $argsT 2
-
-        pl "name: %v, value: %v" $arg1 $arg2
-
-		// 快速处理函数最后必须返回一个值，无论是否需要
-        push "showNav result"
-
-		// 快速处理函数最后必须用fastRet指令返回
-        fastRet
-
-    :inext1
-	// 如果命令为pl，则类似pl指令（其他语言中的或printf）
-	// 取出后面第一个参数为格式化字串
-	// 再后面都是格式化字串中所需的填充值
-	// 然后输出输出
-    ifEqual $cmdT "pl" :+1 :inext2
-        getArrayItem $formatT $argsT 1
-
-        slice $list1 $argsT 2 -
-
-        pl $formatT $list1...
-
-        push ""
-
-        fastRet
-
-    :inext2
-	// 不支持的命令将输出错误信息
-    pl "unknown command: %v" $cmdT
-
-    push ""
-
-    fastRet

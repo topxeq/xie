@@ -49,7 +49,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var VersionG string = "1.2.6"
+var VersionG string = "1.2.7"
 
 func Test() {
 	tk.Pl("test")
@@ -346,7 +346,7 @@ var InstrNameSet map[string]int = map[string]int{
 	"setItem":      1124, // 修改数组中某一项的值
 	"setArrayItem": 1124,
 
-	"slice": 1130, // 对列表（数组）切片，如果没有指定结果参数，将改变原来的变量。用法示例：slice $list4 $list3 #i1 #i5，将list3进行切片，截取序号1（包含）至序号5（不包含）之间的项，形成一个新的列表，放入变量list4中
+	"slice": 1130, // 对列表（数组）切片，如果没有指定结果参数，将改变原来的变量。用法示例：slice $list4 $list3 #i1 #i5，将list3进行切片，截取序号1（包含）至序号5（不包含）之间的项，形成一个新的列表，放入变量list4中。可以使用“-”来表示省略某个数值，例如：slice $list1 $argsT 2 -，表示截取从序号2到后面所有的项。
 
 	// control related 代码逻辑控制相关
 	"continue": 1210, // continue the loop or range, PS "continue 2" means continue the upper loop in nested loop, "continue 1" means continue the upper of upper loop, default is 1 but could be omitted
@@ -977,13 +977,14 @@ var InstrNameSet map[string]int = map[string]int{
 // }
 
 type VarRef struct {
-	Ref   int // -99 - invalid, -31 - clipboard(text), -23 - slice of array/slice, -22 - map item, -21 - array/slice item, -18 - local reg, -17 - reg, -16 - label, -15 - ref, -12 - unref, -11 - seq, -10 - quickEval, -9 - eval, -8 - pop, -7 - peek, -6 - push, -5 - tmp, -4 - pln, -3 - value only, -2 - drop, -1 - debug, 3 normal vars
-	Value interface{}
+	Ref    int // -99 - invalid, -31 - clipboard(text), -23 - slice of array/slice, -22 - map item, -21 - array/slice item, -18 - local reg, -17 - reg, -16 - label, -15 - ref, -12 - unref, -11 - seq, -10 - quickEval, -9 - eval, -8 - pop, -7 - peek, -6 - push, -5 - tmp, -4 - pln, -3 - value only, -2 - drop, -1 - debug, 3 normal vars
+	Value  interface{}
+	IsList bool
 }
 
 func GetVarRefFromArray(aryA []VarRef, idxT int) VarRef {
 	if idxT < 0 || idxT >= len(aryA) {
-		return VarRef{Ref: -99, Value: nil}
+		return VarRef{Ref: -99, Value: nil, IsList: false}
 	}
 
 	return aryA[idxT]
@@ -1174,47 +1175,47 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 	if strings.HasPrefix(s1T, "`") && strings.HasSuffix(s1T, "`") {
 		s1T = s1T[1 : len(s1T)-1]
 
-		return VarRef{-3, s1T} // value(string)
+		return VarRef{-3, s1T, false} // value(string)
 	} else if strings.HasPrefix(s1T, "'") && strings.HasSuffix(s1T, "'") {
 		s1T = s1T[1 : len(s1T)-1]
 
-		return VarRef{-3, s1T} // value(string)
+		return VarRef{-3, s1T, false} // value(string)
 	} else if strings.HasPrefix(s1T, `"`) && strings.HasSuffix(s1T, `"`) { // quoted string
 		tmps, errT := strconv.Unquote(s1T)
 
 		if errT != nil {
-			return VarRef{-3, s1T}
+			return VarRef{-3, s1T, false}
 		}
 
-		return VarRef{-3, tmps} // value(string)
+		return VarRef{-3, tmps, false} // value(string)
 	} else {
 		if strings.HasPrefix(s1T, "$") {
-			var vv interface{} = nil
+			var vv bool = false
 
 			if strings.HasSuffix(s1T, "...") {
-				vv = "..."
+				vv = true
 
 				s1T = s1T[:len(s1T)-3]
 			}
 
 			if s1T == "$drop" || s1T == "_" {
-				return VarRef{-2, nil}
+				return VarRef{-2, nil, vv}
 			} else if s1T == "$debug" {
-				return VarRef{-1, nil}
+				return VarRef{-1, nil, vv}
 			} else if s1T == "$pln" {
-				return VarRef{-4, nil}
+				return VarRef{-4, nil, vv}
 			} else if s1T == "$pop" {
-				return VarRef{-8, vv}
+				return VarRef{-8, nil, vv}
 			} else if s1T == "$peek" {
-				return VarRef{-7, vv}
+				return VarRef{-7, nil, vv}
 			} else if s1T == "$push" {
-				return VarRef{-6, nil}
+				return VarRef{-6, nil, vv}
 			} else if s1T == "$tmp" {
-				return VarRef{-5, vv}
+				return VarRef{-5, nil, vv}
 			} else if s1T == "$seq" {
-				return VarRef{-11, nil}
+				return VarRef{-11, nil, vv}
 			} else if s1T == "$clip" {
-				return VarRef{-31, nil}
+				return VarRef{-31, nil, vv}
 			}
 
 			typeT := byte(0)
@@ -1228,49 +1229,49 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 				s1DT := s1T[2:] // tk.UrlDecode(s1T[2:])
 
 				if len(s1DT) < 1 {
-					return VarRef{-3, s1T}
+					return VarRef{-3, s1T, vv}
 				}
 
-				return VarRef{-17, tk.ToInt(s1DT, 0)}
+				return VarRef{-17, tk.ToInt(s1DT, 0), vv}
 			} else if typeT == '~' { // regs
 
 				s1DT := s1T[2:] // tk.UrlDecode(s1T[2:])
 
 				if len(s1DT) < 1 {
-					return VarRef{-3, s1T}
+					return VarRef{-3, s1T, vv}
 				}
 
-				return VarRef{-18, tk.ToInt(s1DT, 0)}
+				return VarRef{-18, tk.ToInt(s1DT, 0), vv}
 			}
 
-			return VarRef{3, s1T[1:]}
+			return VarRef{3, s1T[1:], vv}
 		} else if strings.HasPrefix(s1T, "&") { // ref
 			vNameT := s1T[1:]
 
 			if len(vNameT) < 1 {
-				return VarRef{-3, s1T}
+				return VarRef{-3, s1T, false}
 			}
 
-			return VarRef{-15, ParseVar(vNameT)}
+			return VarRef{-15, ParseVar(vNameT), false}
 		} else if strings.HasPrefix(s1T, "*") { // unref
 			vNameT := s1T[1:]
 
 			if len(vNameT) < 1 {
-				return VarRef{-3, s1T}
+				return VarRef{-3, s1T, false}
 			}
 
-			return VarRef{-12, ParseVar(vNameT)}
+			return VarRef{-12, ParseVar(vNameT), false}
 		} else if strings.HasPrefix(s1T, ":") { // labels
 			vNameT := s1T[1:]
 
 			if len(vNameT) < 1 {
-				return VarRef{-3, s1T}
+				return VarRef{-3, s1T, false}
 			}
 
-			return VarRef{-16, vNameT}
+			return VarRef{-16, vNameT, false}
 		} else if strings.HasPrefix(s1T, "#") { // values
 			if len(s1T) < 2 {
-				return VarRef{-3, s1T}
+				return VarRef{-3, s1T, false}
 			}
 
 			// remainsT := s1T[2:]
@@ -1281,34 +1282,34 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 				c1T, errT := tk.StrToIntQuick(s1T[2:])
 
 				if errT != nil {
-					return VarRef{-3, s1T}
+					return VarRef{-3, s1T, false}
 				}
 
-				return VarRef{-3, c1T}
+				return VarRef{-3, c1T, false}
 			} else if typeT == 'f' { // float
 				c1T, errT := tk.StrToFloat64E(s1T[2:])
 
 				if errT != nil {
-					return VarRef{-3, s1T}
+					return VarRef{-3, s1T, false}
 				}
 
-				return VarRef{-3, c1T}
+				return VarRef{-3, c1T, false}
 			} else if typeT == 'b' { // bool
-				return VarRef{-3, tk.ToBool(s1T[2:])}
+				return VarRef{-3, tk.ToBool(s1T[2:]), false}
 			} else if typeT == 'y' { // byte
-				return VarRef{-3, tk.ToByte(s1T[2:])}
+				return VarRef{-3, tk.ToByte(s1T[2:]), false}
 			} else if typeT == 'x' { // byte in hex from
-				return VarRef{-3, byte(tk.HexToInt(s1T[2:]))}
+				return VarRef{-3, byte(tk.HexToInt(s1T[2:])), false}
 			} else if typeT == 'B' { // single rune (same as in Golang, like 'a'), only first character in string is used
 				runesT := []rune(s1T[2:])
 
 				if len(runesT) < 1 {
-					return VarRef{-3, s1T[2:]}
+					return VarRef{-3, s1T[2:], false}
 				}
 
-				return VarRef{-3, runesT[0]}
+				return VarRef{-3, runesT[0], false}
 			} else if typeT == 'r' { // rune
-				return VarRef{-3, tk.ToRune(s1T[2:])}
+				return VarRef{-3, tk.ToRune(s1T[2:]), false}
 			} else if typeT == 's' { // string
 				s1DT := s1T[2:]
 
@@ -1320,14 +1321,14 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 					tmps, errT := strconv.Unquote(s1DT)
 
 					if errT != nil {
-						return VarRef{-3, s1DT}
+						return VarRef{-3, s1DT, false}
 					}
 
 					s1DT = tmps
 
 				}
 
-				return VarRef{-3, s1DT}
+				return VarRef{-3, s1DT, false}
 				// } else if typeT == '~' { // string, but replace ~~~ to `(back quote)
 				// 	s1DT := s1T[2:]
 
@@ -1337,7 +1338,7 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 
 				// 	s1DT = strings.ReplaceAll(s1DT, "~~~", "`")
 
-				// 	return VarRef{-3, s1DT}
+				// 	return VarRef{-3, s1DT, false}
 			} else if typeT == 'e' { // error
 				s1DT := s1T[2:]
 
@@ -1349,14 +1350,14 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 					tmps, errT := strconv.Unquote(s1DT)
 
 					if errT != nil {
-						return VarRef{-3, s1DT}
+						return VarRef{-3, s1DT, false}
 					}
 
 					s1DT = tmps
 
 				}
 
-				return VarRef{-3, fmt.Errorf("%v", s1DT)}
+				return VarRef{-3, fmt.Errorf("%v", s1DT), false}
 			} else if typeT == 't' { // time
 				s1DT := s1T[2:]
 
@@ -1368,7 +1369,7 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 					tmps, errT := strconv.Unquote(s1DT)
 
 					if errT != nil {
-						return VarRef{-3, s1DT}
+						return VarRef{-3, s1DT, false}
 					}
 
 					s1DT = tmps
@@ -1378,16 +1379,16 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 				tmps := strings.TrimSpace(s1DT)
 
 				if tmps == "" || tmps == "now" {
-					return VarRef{-3, time.Now()}
+					return VarRef{-3, time.Now(), false}
 				}
 
 				rsT := tk.ToTime(tmps)
 
 				if tk.IsError(rsT) {
-					return VarRef{-3, s1T}
+					return VarRef{-3, s1T, false}
 				}
 
-				return VarRef{-3, rsT}
+				return VarRef{-3, rsT, false}
 			} else if typeT == 'J' { // value from JSON
 				var objT interface{}
 
@@ -1401,7 +1402,7 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 					tmps, errT := strconv.Unquote(s1DT)
 
 					if errT != nil {
-						return VarRef{-3, s1DT}
+						return VarRef{-3, s1DT, false}
 					}
 
 					s1DT = tmps
@@ -1414,11 +1415,11 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 				errT := json.Unmarshal([]byte(s1DT), &objT)
 				// tk.Plv(errT)
 				if errT != nil {
-					return VarRef{-3, s1T}
+					return VarRef{-3, s1T, false}
 				}
 
 				// tk.Plv(listT)
-				return VarRef{-3, objT}
+				return VarRef{-3, objT, false}
 			} else if typeT == 'L' { // list/array
 				var listT []interface{}
 
@@ -1432,7 +1433,7 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 					tmps, errT := strconv.Unquote(s1DT)
 
 					if errT != nil {
-						return VarRef{-3, s1DT}
+						return VarRef{-3, s1DT, false}
 					}
 
 					s1DT = tmps
@@ -1445,11 +1446,11 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 				errT := json.Unmarshal([]byte(s1DT), &listT)
 				// tk.Plv(errT)
 				if errT != nil {
-					return VarRef{-3, s1T}
+					return VarRef{-3, s1T, false}
 				}
 
 				// tk.Plv(listT)
-				return VarRef{-3, listT}
+				return VarRef{-3, listT, false}
 			} else if typeT == 'Y' { // byteList
 				var listT []byte
 
@@ -1463,7 +1464,7 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 					tmps, errT := strconv.Unquote(s1DT)
 
 					if errT != nil {
-						return VarRef{-3, s1DT}
+						return VarRef{-3, s1DT, false}
 					}
 
 					s1DT = tmps
@@ -1476,11 +1477,11 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 				errT := json.Unmarshal([]byte(s1DT), &listT)
 				// tk.Plv(errT)
 				if errT != nil {
-					return VarRef{-3, s1T}
+					return VarRef{-3, s1T, false}
 				}
 
 				// tk.Plv(listT)
-				return VarRef{-3, listT}
+				return VarRef{-3, listT, false}
 			} else if typeT == 'R' { // runeList
 				var listT []rune
 
@@ -1494,7 +1495,7 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 					tmps, errT := strconv.Unquote(s1DT)
 
 					if errT != nil {
-						return VarRef{-3, s1DT}
+						return VarRef{-3, s1DT, false}
 					}
 
 					s1DT = tmps
@@ -1507,11 +1508,11 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 				errT := json.Unmarshal([]byte(s1DT), &listT)
 				// tk.Plv(errT)
 				if errT != nil {
-					return VarRef{-3, s1T}
+					return VarRef{-3, s1T, false}
 				}
 
 				// tk.Plv(listT)
-				return VarRef{-3, listT}
+				return VarRef{-3, listT, false}
 			} else if typeT == 'S' { // strList/stringList
 				var listT []string
 
@@ -1525,7 +1526,7 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 					tmps, errT := strconv.Unquote(s1DT)
 
 					if errT != nil {
-						return VarRef{-3, s1DT}
+						return VarRef{-3, s1DT, false}
 					}
 
 					s1DT = tmps
@@ -1538,11 +1539,11 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 				errT := json.Unmarshal([]byte(s1DT), &listT)
 				// tk.Plv(errT)
 				if errT != nil {
-					return VarRef{-3, s1T}
+					return VarRef{-3, s1T, false}
 				}
 
 				// tk.Plv(listT)
-				return VarRef{-3, listT}
+				return VarRef{-3, listT, false}
 			} else if typeT == 'M' { // map
 				var mapT map[string]interface{}
 
@@ -1556,7 +1557,7 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 					tmps, errT := strconv.Unquote(s1DT)
 
 					if errT != nil {
-						return VarRef{-3, s1DT}
+						return VarRef{-3, s1DT, false}
 					}
 
 					s1DT = tmps
@@ -1569,17 +1570,17 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 				errT := json.Unmarshal([]byte(s1DT), &mapT)
 				// tk.Plv(errT)
 				if errT != nil {
-					return VarRef{-3, s1T}
+					return VarRef{-3, s1T, false}
 				}
 
 				// tk.Plv(listT)
-				return VarRef{-3, mapT}
+				return VarRef{-3, mapT, false}
 			}
 
-			return VarRef{-3, s1T}
+			return VarRef{-3, s1T, false}
 		} else if strings.HasPrefix(s1T, "@") { // quickEval
 			if len(s1T) < 2 {
-				return VarRef{-3, s1T}
+				return VarRef{-3, s1T, false}
 			}
 
 			s1T = strings.TrimSpace(s1T[1:])
@@ -1587,22 +1588,22 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 			if strings.HasPrefix(s1T, "`") && strings.HasSuffix(s1T, "`") {
 				s1T = s1T[1 : len(s1T)-1]
 
-				return VarRef{-10, s1T} // quick eval value
+				return VarRef{-10, s1T, false} // quick eval value
 			} else if strings.HasPrefix(s1T, "'") && strings.HasSuffix(s1T, "'") {
 				s1T = s1T[1 : len(s1T)-1]
 
-				return VarRef{-10, s1T} // quick eval value
+				return VarRef{-10, s1T, false} // quick eval value
 			} else if strings.HasPrefix(s1T, `"`) && strings.HasSuffix(s1T, `"`) {
 				tmps, errT := strconv.Unquote(s1T)
 
 				if errT != nil {
-					return VarRef{-10, s1T}
+					return VarRef{-10, s1T, false}
 				}
 
-				return VarRef{-10, tmps}
+				return VarRef{-10, tmps, false}
 			}
 
-			return VarRef{-10, s1T}
+			return VarRef{-10, s1T, false}
 			// } else if strings.HasPrefix(s1T, "^") { // regs
 			// 	if len(s1T) < 2 {
 			// 		return VarRef{-3, s1T}
@@ -1613,7 +1614,7 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 			// 	return VarRef{-17, tk.ToInt(s1T, 0)}
 		} else if strings.HasPrefix(s1T, "%") { // compiled
 			if len(s1T) < 2 {
-				return VarRef{-3, s1T}
+				return VarRef{-3, s1T, false}
 			}
 
 			s1T = strings.TrimSpace(s1T[1:])
@@ -1624,32 +1625,32 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 				nc := Compile(s1T)
 
 				// if tk.IsError(nc) {
-				// 	return VarRef{-3, nc}
+				// 	return VarRef{-3, nc, false}
 				// }
 
-				return VarRef{-3, nc} // compiled
+				return VarRef{-3, nc, false} // compiled
 			} else if strings.HasPrefix(s1T, "'") && strings.HasSuffix(s1T, "'") {
 				s1T = s1T[1 : len(s1T)-1]
 
 				nc := Compile(s1T)
 
-				return VarRef{-3, nc} // compiled
+				return VarRef{-3, nc, false} // compiled
 			} else if strings.HasPrefix(s1T, `"`) && strings.HasSuffix(s1T, `"`) {
 				tmps, errT := strconv.Unquote(s1T)
 
 				if errT != nil {
-					return VarRef{-3, errT}
+					return VarRef{-3, errT, false}
 				}
 
 				nc := Compile(tmps)
 
-				return VarRef{-3, nc} // compiled
+				return VarRef{-3, nc, false} // compiled
 			}
 
-			return VarRef{-3, Compile(s1T)}
+			return VarRef{-3, Compile(s1T), false}
 		} else if strings.HasPrefix(s1T, "[") && strings.HasSuffix(s1T, "]") { // array/slice item
 			if len(s1T) < 3 {
-				return VarRef{-3, s1T}
+				return VarRef{-3, s1T, false}
 			}
 
 			s1aT := strings.TrimSpace(s1T[1 : len(s1T)-1])
@@ -1689,7 +1690,7 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 					}
 				}
 
-				return VarRef{-23, []interface{}{vT, ParseVar(itemKeyT), ParseVar(itemKeyEndT)}}
+				return VarRef{-23, []interface{}{vT, ParseVar(itemKeyT), ParseVar(itemKeyEndT)}, false}
 
 			}
 
@@ -1697,7 +1698,7 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 				listT = strings.SplitN(s1aT, "|", 2)
 
 				if len(listT) < 2 {
-					return VarRef{-3, s1T}
+					return VarRef{-3, s1T, false}
 				}
 			}
 
@@ -1717,10 +1718,10 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 				}
 			}
 
-			return VarRef{-21, []interface{}{vT, ParseVar(itemKeyT)}}
+			return VarRef{-21, []interface{}{vT, ParseVar(itemKeyT)}, false}
 		} else if strings.HasPrefix(s1T, "{") && strings.HasSuffix(s1T, "}") { // map item
 			if len(s1T) < 3 {
-				return VarRef{-3, s1T}
+				return VarRef{-3, s1T, false}
 			}
 
 			s1aT := strings.TrimSpace(s1T[1 : len(s1T)-1])
@@ -1731,7 +1732,7 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 				listT = strings.SplitN(s1aT, "|", 2)
 
 				if len(listT) < 2 {
-					return VarRef{-3, s1T}
+					return VarRef{-3, s1T, false}
 				}
 			}
 
@@ -1753,11 +1754,11 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 
 			// tk.Pl("itemKeyT: %v", itemKeyT)
 
-			return VarRef{-22, []interface{}{vT, ParseVar(itemKeyT)}}
+			return VarRef{-22, []interface{}{vT, ParseVar(itemKeyT)}, false}
 		}
 	}
 
-	return VarRef{-3, s1T}
+	return VarRef{-3, s1T, false}
 }
 
 func Compile(codeA string) interface{} {
@@ -1844,7 +1845,7 @@ func Compile(codeA string) interface{} {
 		codeT, ok := InstrNameSet[instrNameT]
 
 		if !ok {
-			instrT := Instr{Code: codeT, Cmd: instrNameT, ParamLen: 1, Params: []VarRef{VarRef{Ref: -3, Value: v}}, Line: lineT} //&([]VarRef{})}
+			instrT := Instr{Code: codeT, Cmd: instrNameT, ParamLen: 1, Params: []VarRef{VarRef{Ref: -3, Value: v, IsList: false}}, Line: lineT} //&([]VarRef{})}
 			p.InstrList = append(p.InstrList, instrT)
 
 			return fmt.Errorf("编译错误(行 %v/%v %v): 未知指令", i, p.CodeSourceMap[i]+1, tk.LimitString(p.Source[p.CodeSourceMap[i]], 50))
@@ -2620,10 +2621,72 @@ func (p *RunningContext) PopFunc() error {
 
 func GetVarRefInParams(varRefsA []VarRef, idxA int) VarRef {
 	if idxA < 0 || idxA >= len(varRefsA) {
-		return VarRef{Ref: -99, Value: nil}
+		return VarRef{Ref: -99, Value: nil, IsList: false}
 	}
 
 	return varRefsA[idxA]
+}
+
+// 分析指令参数中的列表参数（类似 $list1... 这样的）返回一个展开后的列表，fromA表示从序号为几的开始，addBeforeA表示fromA前的是否加入列表，addNotA表示非列表的变量是否要加入结果中
+func (p *XieVM) ParseListInParams(r *RunningContext, paramsA []VarRef, fromA int, addBeforeA bool, addNotA bool) []interface{} {
+	if r == nil {
+		r = p.Running
+	}
+
+	list1T := []interface{}{}
+
+	for i, v := range paramsA {
+		// tk.Pl("[%v]: %v %#v", i, v, v)
+
+		if i < fromA {
+			if addBeforeA {
+				list1T = append(list1T, p.GetVarValue(r, v))
+			}
+			continue
+		}
+
+		if v.Ref != -3 && v.IsList {
+			vv := p.GetVarValue(r, v)
+			// tk.Plo(vv)
+
+			switch nv := vv.(type) {
+			case []byte:
+				for _, v9 := range nv {
+					list1T = append(list1T, v9)
+				}
+
+			case []int:
+				for _, v9 := range nv {
+					list1T = append(list1T, v9)
+				}
+
+			case []rune:
+				for _, v9 := range nv {
+					list1T = append(list1T, v9)
+				}
+
+			case []string:
+				for _, v9 := range nv {
+					list1T = append(list1T, v9)
+				}
+
+			case []interface{}:
+				for _, v9 := range nv {
+					list1T = append(list1T, v9)
+				}
+
+			}
+		} else {
+			// tk.Pl("not slice: %v", v)
+			// tk.Pl("not slice value: %v", p.GetVarValue(v))
+			if addNotA {
+				list1T = append(list1T, p.GetVarValue(r, v))
+			}
+		}
+
+	}
+
+	return list1T
 }
 
 func (p *XieVM) GetVarValue(runA *RunningContext, vA VarRef) interface{} {
@@ -2936,12 +2999,12 @@ func (p *XieVM) SetVar(runA *RunningContext, refA interface{}, setValueA interfa
 	c1, ok := refA.(int)
 
 	if ok {
-		refT = VarRef{Ref: c1, Value: nil}
+		refT = VarRef{Ref: c1, Value: nil, IsList: false}
 	} else {
 		s1, ok := refA.(string)
 
 		if ok {
-			refT = VarRef{Ref: 3, Value: s1}
+			refT = VarRef{Ref: 3, Value: s1, IsList: false}
 		} else {
 			r1, ok := refA.(VarRef)
 
@@ -3069,12 +3132,12 @@ func (p *XieVM) SetVarLocal(runA *RunningContext, refA interface{}, setValueA in
 	c1, ok := refA.(int)
 
 	if ok {
-		refT = VarRef{Ref: c1, Value: nil}
+		refT = VarRef{Ref: c1, Value: nil, IsList: false}
 	} else {
 		s1, ok := refA.(string)
 
 		if ok {
-			refT = VarRef{Ref: 3, Value: s1}
+			refT = VarRef{Ref: 3, Value: s1, IsList: false}
 		} else {
 			r1, ok := refA.(VarRef)
 
@@ -3178,12 +3241,12 @@ func (p *XieVM) SetVarGlobal(refA interface{}, setValueA interface{}) error {
 	c1, ok := refA.(int)
 
 	if ok {
-		refT = VarRef{Ref: c1, Value: nil}
+		refT = VarRef{Ref: c1, Value: nil, IsList: false}
 	} else {
 		s1, ok := refA.(string)
 
 		if ok {
-			refT = VarRef{Ref: 3, Value: s1}
+			refT = VarRef{Ref: 3, Value: s1, IsList: false}
 		} else {
 			r1, ok := refA.(VarRef)
 
@@ -6031,7 +6094,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		// } else {
 		// 	switch v1 {
 		// 	case "gui":
-		// 		objT := p.GetVarValue(r, VarRef{Ref: 3, Value: "guiG"})
+		// 		objT := p.GetVarValue(r, VarRef{Ref: 3, Value: "guiG", IsList: false})
 		// 		p.SetVarGlobal(pr, objT)
 		// 	case "quickDelegate":
 		// 		if instrT.ParamLen < 2 {
@@ -12473,57 +12536,65 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		return ""
 
 	case 10420: // pl
-		list1T := []interface{}{}
+		// list1T := []interface{}{}
 
 		formatT := ""
 
+		if len(instrT.Params) > 0 {
+			formatT = tk.ToStr(p.GetVarValue(r, instrT.Params[0]))
+		}
+
+		list1T := p.ParseListInParams(r, instrT.Params, 1, false, true)
+
+		tk.Pl("list1T: %#v", list1T)
+
 		// tk.Pl("instrT.Params: %v", instrT.Params)
 
-		for i, v := range instrT.Params {
-			// tk.Pl("[%v]: %v %#v", i, v, v)
-			if i == 0 {
-				formatT = tk.ToStr(p.GetVarValue(r, v))
-				continue
-			}
+		// for i, v := range instrT.Params {
+		// 	// tk.Pl("[%v]: %v %#v", i, v, v)
+		// 	if i == 0 {
+		// 		formatT = tk.ToStr(p.GetVarValue(r, v))
+		// 		continue
+		// 	}
 
-			if v.Ref != -3 && v.Value == "..." {
-				vv := p.GetVarValue(r, v)
-				// tk.Plo(vv)
+		// 	if v.Ref != -3 && v.IsList {
+		// 		vv := p.GetVarValue(r, v)
+		// 		// tk.Plo(vv)
 
-				switch nv := vv.(type) {
-				case []byte:
-					for _, v9 := range nv {
-						list1T = append(list1T, v9)
-					}
+		// 		switch nv := vv.(type) {
+		// 		case []byte:
+		// 			for _, v9 := range nv {
+		// 				list1T = append(list1T, v9)
+		// 			}
 
-				case []int:
-					for _, v9 := range nv {
-						list1T = append(list1T, v9)
-					}
+		// 		case []int:
+		// 			for _, v9 := range nv {
+		// 				list1T = append(list1T, v9)
+		// 			}
 
-				case []rune:
-					for _, v9 := range nv {
-						list1T = append(list1T, v9)
-					}
+		// 		case []rune:
+		// 			for _, v9 := range nv {
+		// 				list1T = append(list1T, v9)
+		// 			}
 
-				case []string:
-					for _, v9 := range nv {
-						list1T = append(list1T, v9)
-					}
+		// 		case []string:
+		// 			for _, v9 := range nv {
+		// 				list1T = append(list1T, v9)
+		// 			}
 
-				case []interface{}:
-					for _, v9 := range nv {
-						list1T = append(list1T, v9)
-					}
+		// 		case []interface{}:
+		// 			for _, v9 := range nv {
+		// 				list1T = append(list1T, v9)
+		// 			}
 
-				}
-			} else {
-				// tk.Pl("not slice: %v", v)
-				// tk.Pl("not slice value: %v", p.GetVarValue(v))
-				list1T = append(list1T, p.GetVarValue(r, v))
-			}
+		// 		}
+		// 	} else {
+		// 		// tk.Pl("not slice: %v", v)
+		// 		// tk.Pl("not slice value: %v", p.GetVarValue(v))
+		// 		list1T = append(list1T, p.GetVarValue(r, v))
+		// 	}
 
-		}
+		// }
 
 		fmt.Printf(formatT+"\n", list1T...)
 
