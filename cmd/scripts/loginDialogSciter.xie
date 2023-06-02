@@ -104,15 +104,15 @@ mt $rs $windowT call moveToCenter `{"Width":800, "Height":600}`
 // Output the return value of the moveToCenter function
 plo $rs
 
-// 设置与界面之间的快速代理对象（注释中是另一种方法）
-// Set a quick proxy object between the GUI and backend (another method in the comments)
+// 设置与界面之间的代理或快速代理对象（之后的注释中是另几种方法）
+// Set a proxy or quick proxy object between the GUI and backend (and then other methods in the following comments)
 
 // new $dele1 quickDelegate `
 //     [] $resultL $inputL 0
 
 //     pl "Result: %v" $resultL
 
-//     // 函数返回前必须要有一个输出参数存入outL中
+//     // 快速代理函数返回前必须要有一个输出参数存入outL中
 //     // 此处因为实际上无需返回参数，因此随便存入一个无用的数值
 //     // There must be an output parameter stored in outL before the function returns
 //     // Because there is actually no need to return parameters, a useless numerical value is randomly stored here
@@ -121,15 +121,47 @@ plo $rs
 
 // mt $rs $windowT setQuickDelegate $dele1
 
-mt $rs $windowT setDelegate `
+// 设置代理函数，与快速代理函数不同，代理函数将运行在不同的虚拟机中，相对更安全
+// 与快速代理对象的区别是其中使用inputG和outG变量来传递输入参数和输出参数
+new $dele1 delegate `
+    [] $resultT $inputG 0
 
-    [] $resultL $inputL 0
+    pl "Result: %v" $resultT
 
-    pl "Result: %v" $resultL
-
-    exitL $resultL
-
+    // 代理函数返回前必须要有一个输出参数存入outG中
+    // 此处因为实际上无需返回参数，因此随便存入一个无用的数值
+    // There must be an output parameter stored in outG before the function returns
+    // Because there is actually no need to return parameters, a useless numerical value is randomly stored here
+    exit $resultT
 `
+
+mt $rs $windowT setDelegate $dele1
+
+
+// 使用setDelegate设置代理对象，与快速代理对象的区别是其中使用inputG和outG变量来传递输入参数和输出参数
+// mt $rs $windowT setDelegate `
+
+//     [] $resultT $inputG 0
+
+//     pl "Result: %v" $resultT
+
+//     exit $resultT
+
+// `
+
+// 下面注释中是使用快速代理对象的方法，需要用inputL和outL变量来传递输入参数和输出参数
+// 并且用setQuickDelegate来设置窗体的快速代理对象
+// mt $rs $windowT setQuickDelegate `
+
+//     [] $resultT $inputL 0
+
+//     pl "Result: %v" $resultT
+
+//     exitL $resultT
+
+// `
+
+plo $rs $windowT
 
 // 运行图形界面
 // Run the GUI window

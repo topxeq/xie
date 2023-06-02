@@ -225,7 +225,7 @@ func newWindowWebView2(objA interface{}, paramsA []interface{}) interface{} {
 
 				vmT.SetVar(p.Running, "guiG", guiHandler)
 
-				lrs := vmT.Load(vmT.Running, sv1)
+				lrs := vmT.Load(nil, sv1) // vmT.Running
 
 				if tk.IsError(lrs) {
 					return lrs
@@ -236,7 +236,7 @@ func newWindowWebView2(objA interface{}, paramsA []interface{}) interface{} {
 					// 可以是多个，谢语言中按位置索引进行访问
 					// strT := args[0].String()
 
-					vmT.SetVar(p.Running, "inputG", argsA)
+					vmT.SetVar(nil, "inputG", argsA) // p.Running
 
 					rs := vmT.Run()
 
@@ -627,6 +627,8 @@ func guiHandler(actionA string, objA interface{}, dataA interface{}, paramsA ...
 			w.LoadHtml(htmlT, baseUrlT)
 		}
 
+		// p := objA.(*xie.XieVM)
+
 		var handlerT tk.TXDelegate
 
 		handlerT = func(actionA string, objA interface{}, dataA interface{}, paramsA ...interface{}) interface{} {
@@ -635,7 +637,94 @@ func guiHandler(actionA string, objA interface{}, dataA interface{}, paramsA ...
 				w.Show()
 				w.Run()
 				return nil
-			case "setDelegate", "setQuickDelegate":
+			case "setDelegate":
+				len1T := len(paramsA)
+				if len1T < 1 {
+					return fmt.Errorf("not enough parameters")
+				}
+
+				var codeT = paramsA[0]
+
+				tk.Plo(codeT)
+
+				dv1, ok := codeT.(tk.QuickVarDelegate)
+
+				if ok {
+					// w.Bind("delegateDo", dv1)
+					w.DefineFunction("delegateDo", func(args ...*sciter.Value) *sciter.Value {
+						// args是SciterJS中调用谢语言函数时传入的参数
+						// 可以是多个，谢语言中按位置索引进行访问
+						// strT := args[0].String()
+						tk.Pln(21)
+						argsA := make([]interface{}, 0)
+
+						for _, v := range args {
+							argsA = append(argsA, v.String())
+						}
+
+						rsT := dv1(argsA...)
+						tk.Pln(22)
+
+						tk.Plo(rsT)
+						tk.Plo(sciter.NewValue(rsT))
+						tk.Pln(23)
+
+						// 最后一定要返回一个值，空字符串也可以
+						return sciter.NewValue(rsT)
+					})
+
+					return nil
+				}
+
+				sv1, ok := codeT.(string)
+
+				if ok {
+					sv1 = strings.ReplaceAll(sv1, "~~~", "`")
+
+					vmT := xie.NewVMQuick()
+
+					vmT.SetVar(nil, "guiG", guiHandler) // p.Running
+
+					lrs := vmT.Load(nil, sv1)
+
+					if tk.IsError(lrs) {
+						return lrs
+					}
+
+					w.DefineFunction("delegateDo", func(args ...*sciter.Value) *sciter.Value {
+						// args是SciterJS中调用谢语言函数时传入的参数
+						// 可以是多个，谢语言中按位置索引进行访问
+						argsA := make([]interface{}, 0)
+
+						for _, v := range args {
+							argsA = append(argsA, v.String())
+						}
+
+						vmT.SetVar(nil, "inputG", argsA) // p.Running
+
+						rsT := vmT.Run()
+
+						// if !tk.IsErrX(rs) {
+						// 	outIndexT, ok := vmT.VarIndexMapM["outG"]
+						// 	if !ok {
+						// 		return tk.ErrStrf("no result")
+						// 	}
+
+						// 	return tk.ToStr((*vmT.FuncContextM.VarsM)[vmT.FuncContextM.VarsLocalMapM[outIndexT]])
+						// }
+
+						// 最后一定要返回一个值，空字符串也可以
+						return sciter.NewValue(rsT)
+					})
+
+					return nil
+				}
+
+				// p := objA.(*xie.XieVM)
+
+				return fmt.Errorf("invalid type: %T(%v)", codeT, codeT)
+
+			case "setQuickDelegate":
 				deleT, ok := paramsA[0].(tk.QuickVarDelegate)
 
 				if !ok {
@@ -673,9 +762,15 @@ func guiHandler(actionA string, objA interface{}, dataA interface{}, paramsA ...
 				w.DefineFunction("delegateDo", func(args ...*sciter.Value) *sciter.Value {
 					// args是SciterJS中调用谢语言函数时传入的参数
 					// 可以是多个，谢语言中按位置索引进行访问
-					strT := args[0].String()
+					// strT := args[0].String()
 
-					rsT := deleT(strT)
+					argsA := make([]interface{}, 0)
+
+					for _, v := range args {
+						argsA = append(argsA, v.String())
+					}
+
+					rsT := deleT(argsA...)
 
 					// 最后一定要返回一个值，空字符串也可以
 					return sciter.NewValue(rsT)
