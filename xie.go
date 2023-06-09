@@ -49,7 +49,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var VersionG string = "1.2.8"
+var VersionG string = "1.3.0"
 
 func Test() {
 	tk.Pl("test")
@@ -732,6 +732,10 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"getAllNodesTextFromXML": 22301, // 从XML文本中获取所有文本节点形成文本数组
 
+	// simple map related simple map相关
+	"toSimpleMap":   22401, // 将对象编码为Simple Map字符串（每行一个键值对，以第一个等号分隔，例如：name=Zhang San）
+	"fromSimpleMap": 22403, // 将Simple Map字符串解码为映射对象
+
 	// random related 随机数相关
 
 	"randomize": 23000, // 初始化随机种子
@@ -764,7 +768,9 @@ var InstrNameSet map[string]int = map[string]int{
 	"htmlDecode": 24503, // HTML解码
 
 	"hexEncode": 24601, // 十六进制编码，仅针对字符串
+	"strToHex":  24601,
 	"hexDecode": 24603, // 十六进制解码，仅针对字符串
+	"hexToStr":  24603,
 
 	"toUtf8": 24801, // 转换字符串或字节列表为UTF-8编码，结果参数不可省略，第一个参数为要转换的源字符串或字节列表，第二个参数表示原始编码（默认为GBK）
 	"toUTF8": 24801,
@@ -15730,6 +15736,42 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		v2 := p.GetVarValue(r, instrT.Params[v1p+1])
 
 		p.SetVar(r, pr, tk.GetNodesStringFromXML(tk.ToStr(v1), tk.ToStr(v2)))
+
+		return ""
+
+	case 22401: // toSimpleMap
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+		if instrT.ParamLen > 0 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		vT := tk.SimpleMapToString(p.GetVarValue(r, instrT.Params[v1p]))
+
+		p.SetVar(r, pr, vT)
+
+		return ""
+
+	case 22403: // fromSimpleMap
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+		if instrT.ParamLen > 0 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		vT := tk.LoadSimpleMapFromString(tk.ToStr(p.GetVarValue(r, instrT.Params[v1p])))
+
+		p.SetVar(r, pr, vT)
 
 		return ""
 

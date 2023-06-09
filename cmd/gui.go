@@ -645,7 +645,7 @@ func guiHandler(actionA string, objA interface{}, dataA interface{}, paramsA ...
 
 				var codeT = paramsA[0]
 
-				tk.Plo(codeT)
+				// tk.Plo(codeT)
 
 				dv1, ok := codeT.(tk.QuickVarDelegate)
 
@@ -655,7 +655,6 @@ func guiHandler(actionA string, objA interface{}, dataA interface{}, paramsA ...
 						// args是SciterJS中调用谢语言函数时传入的参数
 						// 可以是多个，谢语言中按位置索引进行访问
 						// strT := args[0].String()
-						tk.Pln(21)
 						argsA := make([]interface{}, 0)
 
 						for _, v := range args {
@@ -663,11 +662,6 @@ func guiHandler(actionA string, objA interface{}, dataA interface{}, paramsA ...
 						}
 
 						rsT := dv1(argsA...)
-						tk.Pln(22)
-
-						tk.Plo(rsT)
-						tk.Plo(sciter.NewValue(rsT))
-						tk.Pln(23)
 
 						// 最后一定要返回一个值，空字符串也可以
 						return sciter.NewValue(rsT)

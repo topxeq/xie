@@ -7406,10 +7406,13 @@ assign $htmlT `
             var userNameT = document.getElementById("userNameID").value.trim();
 			var passwordT = document.getElementById("passwordID").value.trim();
 
-            Window.this.xcall("delegateDo", JSON.stringify({"userName": userNameT, "password": passwordT}));
+            let result = Window.this.xcall("delegateDo", JSON.stringify({"userName": userNameT, "password": passwordT}));
 
-			// view.delegateDo(JSON.stringify({"userName": userNameT, "password": passwordT}));
-			//view.close();
+            result = "login result: " + result;
+
+            // 弹框提示函数返回结果
+            // show the result message
+            Window.this.modal(<info>{result}</info>);
         });
  
         document.$("#btnClose").on("click", function() {
@@ -7418,12 +7421,6 @@ assign $htmlT `
 
         document.addEventListener('DOMContentLoaded', function() {
             console.log("document loaded");
-
-   			// var buttonT = document.getElementById("btnClose");
-
-			// buttonT.addEventListener("click", closeWindow);
-
-            // document.on("click","button#btnLoadID", sendCmd);
 
             globalThis.moveToCenter = moveToCenter;
 
@@ -7449,15 +7446,24 @@ mt $rs $windowT call moveToCenter `{"Width":800, "Height":600}`
 // Output the return value of the moveToCenter function
 plo $rs
 
-// 设置与界面之间的快速代理对象（注释中是另一种方法）
-// Set a quick proxy object between the GUI and backend (another method in the comments)
+// 设置与界面之间的代理或快速代理对象
+// 这里演示了4种调用代理函数的方法，推荐未注释的方法，但其他方法也可以选用
+// Set delegate or quick delegate objects between the GUI and backend
+// Here are four methods for calling delegate functions demonstrated. The uncommented method is recommended, but other methods can also be used
+
+// 第一种方法：采用new指令创建快速代理函数，然后使用setQuickDelegate指令设置
+// 快速代理对象使用inputL和outL变量来传递输入参数和输出参数
+// 函数退出时使用exitL指令（这里带参数表示退出前将outL赋值为该参数代表的值）
+// The first method is to use the new instruction to create a quick delegate function, and then use the setQuickDelegate instruction to set it
+// Quick delegate objects use inputL and outL variables to pass input and output parameters
+// When the function exits, use the exitL instruction (where a parameter indicates assigning outL to the value represented by the parameter before exiting)
 
 // new $dele1 quickDelegate `
 //     [] $resultL $inputL 0
 
 //     pl "Result: %v" $resultL
 
-//     // 函数返回前必须要有一个输出参数存入outL中
+//     // 快速代理函数返回前必须要有一个输出参数存入outL中
 //     // 此处因为实际上无需返回参数，因此随便存入一个无用的数值
 //     // There must be an output parameter stored in outL before the function returns
 //     // Because there is actually no need to return parameters, a useless numerical value is randomly stored here
@@ -7466,15 +7472,55 @@ plo $rs
 
 // mt $rs $windowT setQuickDelegate $dele1
 
-mt $rs $windowT setDelegate `
+// 第二种方法：用new指令新建代理函数，然后用setDelegate指令来设置
+// 与快速代理函数不同，代理函数将运行在不同的虚拟机中，相对更安全
+// 代理函数与快速代理对象的区别是其中使用inputG和outG变量来传递输入参数和输出参数，并用exit指令退出
+// The second method: Use the new instruction to create a new delegate function, and then use the setDelegate instruction to set it
+// Unlike quick delegate functions, delegate functions will run on different virtual machines and are relatively safer
+// The difference between delegate functions and quick delegate objects is that they use inputG and outG variables to pass input and output parameters, and exit with the exit command
 
-    [] $resultL $inputL 0
+new $dele1 delegate `
+    [] $resultT $inputG 0
 
-    pl "Result: %v" $resultL
+    pl "Result: %v" $resultT
 
-    exitL $resultL
-
+    // 代理函数返回前必须要有一个输出参数存入outG中
+    // 此处因为实际上无需返回参数，因此随便存入一个无用的数值
+    // There must be an output parameter stored in outG before the function returns
+    // Because there is actually no need to return parameters, a useless numerical value is randomly stored here
+    exit $resultT
 `
+
+mt $rs $windowT setDelegate $dele1
+
+
+// 第三种方法：直接使用字符串设置快速代理函数
+// The third method: Directly use a string to set up a quick delegate function
+
+// mt $rs $windowT setQuickDelegate `
+
+//     [] $resultT $inputL 0
+
+//     pl "Result: %v" $resultT
+
+//     exitL $resultT
+
+// `
+
+// 第四种方法：直接使用字符串设置代理函数
+// Fourth method: Directly use a string to set the delegate function
+
+// mt $rs $windowT setDelegate `
+
+//     [] $resultT $inputG 0
+
+//     pl "Result: %v" $resultT
+
+//     exit $resultT
+
+// `
+
+plo $rs $windowT
 
 // 运行图形界面
 // Run the GUI window
@@ -7483,6 +7529,7 @@ mt $rs $windowT show
 plo $rs
 
 exit
+
 
 ```
 
