@@ -49,7 +49,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var VersionG string = "1.3.0"
+var VersionG string = "1.3.1"
 
 func Test() {
 	tk.Pl("test")
@@ -489,6 +489,11 @@ var InstrNameSet map[string]int = map[string]int{
 	"ceil":  2111, // 向上取整
 	"floor": 2113, // 向下取整
 	"round": 2115, // 四舍五入
+
+	"max":  2121, // 取多个数的最大值，结果参数不可省略
+	"maxX": 2121,
+	"min":  2122, // 取多个数的最小值，结果参数不可省略
+	"minX": 2122,
 
 	// command-line related 命令行相关
 	"getParam": 10001, // 获取指定序号的命令行参数，结果参数外第一个参数为list或strList类型，第二个为整数，第三个为默认值（字符串类型），例：getParam $result $argsG 2 ""
@@ -12369,6 +12374,34 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		v1 := p.GetVarValue(r, instrT.Params[v1p])
 
 		p.SetVar(r, pr, tk.Round(v1))
+
+		return ""
+
+	case 2121: // max
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough paramters")
+		}
+
+		pr := instrT.Params[0]
+		v1p := 1
+
+		vs := p.ParamsToList(r, instrT, v1p)
+
+		p.SetVar(r, pr, tk.Max(vs...))
+
+		return ""
+
+	case 2122: // min
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough paramters")
+		}
+
+		pr := instrT.Params[0]
+		v1p := 1
+
+		vs := p.ParamsToList(r, instrT, v1p)
+
+		p.SetVar(r, pr, tk.Min(vs...))
 
 		return ""
 
