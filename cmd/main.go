@@ -17,6 +17,7 @@ import (
 	"github.com/kardianos/service"
 	"github.com/topxeq/tk"
 	"github.com/topxeq/xie"
+	// "tinygo.org/x/bluetooth"
 )
 
 // func main() {
@@ -861,6 +862,14 @@ func RunServer() {
 }
 
 func main() {
+	// var bluetoothAdapter = bluetooth.DefaultAdapter
+
+	// errT := bluetoothAdapter.Enable()
+
+	// if errT != nil {
+	// 	tk.Pl("enable Bluetooth function failed: %v", errT)
+	// 	// exit()
+	// }
 
 	// tk.Pln(os.Args[1])
 	argsT := os.Args
