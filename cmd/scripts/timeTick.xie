@@ -7,8 +7,14 @@ pln $rs
 timeToTick $tick1 $t1
 pln tick1: $tick1
 
+timeToTickInt $tick1 $t1
+pln tick1Int: $tick1
+
 mt $tick2 $t1 toTick
 pln tick2: $tick2
+
+mt $tick2 $t1 toTickInt
+pln tick2Int: $tick2
 
 toTime $t2 $tick1
 pln t2: $t2

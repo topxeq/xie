@@ -461,7 +461,7 @@ var InstrNameSet map[string]int = map[string]int{
 	"nowStrCompact": 1911, // 获取简化的当前时间字符串，如20220501080930
 	"nowStr":        1912, // 获取当前时间字符串的正式表达
 	"nowStrFormal":  1912, // 获取当前时间字符串的正式表达
-	"nowTick":       1913, // 获取当前时间的Unix时间戳形式
+	"nowTick":       1913, // 获取当前时间的Unix时间戳形式，为13位字符串形式（最后三位是毫秒）
 	"timestamp":     1913,
 
 	"nowUTC": 1918,
@@ -480,8 +480,10 @@ var InstrNameSet map[string]int = map[string]int{
 
 	// "toTime": 1981, // 参看10871， 将任意数值（可为字符串、时间戳字符串、时间等）转换为时间，字符串格式可以类似now、2006-01-02 15:04:05、20060102150405、2006-01-02 15:04:05.000，或10位或13位的Unix时间戳，可带可选参数-global、-defaultNow、-defaultErr、-defaultErrStr、-format=2006-01-02等，
 
-	"timeToTick": 1991, // 时间转时间戳，时间可为toTime指令中参数的格式
-	"tickToTime": 1993, // 时间戳转时间，时间戳可为整数或字符串
+	"timeToTick":    1991, // 时间转时间戳，时间可为toTime指令中参数的格式，结果为13位字符串（毫秒级）
+	"timeToTickInt": 1992, // 时间转时间戳，时间可为toTime指令中参数的格式，结果为整数（纳秒级）
+	"tickToTime":    1993, // 时间戳转换为时间，如果参数是nil则返回当前时间，如果参数是整数，则按纳秒转换，如果是字符串，则可转换13位（毫秒）或10位（秒）的时间戳，此时如果转换失败则返回时间的零值（1970年...）
+	"tickIntToTime": 1993, // 时间戳转换为时间，输入为纳秒单位的整数
 
 	// math related 数学相关
 	"abs": 2100, // 取绝对值
@@ -10659,6 +10661,9 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 			case "toTick":
 				p.SetVar(r, pr, tk.GetTimeStampMid(nv))
 				return ""
+			case "toTickInt":
+				p.SetVar(r, pr, nv.UnixNano())
+				return ""
 			case "getInfo":
 				zoneT, offsetT := nv.Zone()
 
@@ -12280,6 +12285,27 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		return ""
 
+	case 1992: // timeToTickInt
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		pr := instrT.Params[0]
+		v1p := 1
+
+		v1 := tk.ToTime(p.GetVarValue(r, instrT.Params[v1p]), p.ParamsToList(r, instrT, v1p+1)...)
+
+		if tk.IsErrX(v1) {
+			p.SetVar(r, pr, v1)
+			return ""
+		}
+
+		t := int((v1.(time.Time)).UnixNano())
+
+		p.SetVar(r, pr, t)
+
+		return ""
+
 	case 1993: // tickToTime
 		if instrT.ParamLen < 2 {
 			return p.Errf(r, "not enough parameters(参数不够)")
@@ -12288,14 +12314,9 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		pr := instrT.Params[0]
 		v1p := 1
 
-		v1 := tk.ToInt(p.GetVarValue(r, instrT.Params[v1p]))
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
 
-		if v1 == -1 {
-			p.SetVar(r, pr, fmt.Errorf("转换时间戳失败：%v", p.GetVarValue(r, instrT.Params[v1p])))
-			return ""
-		}
-
-		t := time.Unix(int64(v1), 0)
+		t := tk.TimeStampToTime(v1)
 
 		p.SetVar(r, pr, t)
 
@@ -12967,6 +12988,10 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 				v3 = nv
 			case string:
 				v3 = tk.ToTime(nv, p.ParamsToList(r, instrT, v1p+2)...)
+			case int:
+				v3 = tk.TickToTime(nv)
+			case int64:
+				v3 = tk.TickToTime(nv)
 			default:
 				tmps := tk.ToStr(v1)
 				v3 = tk.ToTime(tmps, p.ParamsToList(r, instrT, v1p+2)...)
@@ -12996,6 +13021,14 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 			switch nv := v1.(type) {
 			case time.Time:
 				v3 = tk.GetTimeStampMid(nv)
+			default:
+				p.Errf(r, "类型不匹配：%v", v1)
+			}
+		} else if s2 == "tickInt" {
+
+			switch nv := v1.(type) {
+			case time.Time:
+				v3 = nv.UnixNano()
 			default:
 				p.Errf(r, "类型不匹配：%v", v1)
 			}
