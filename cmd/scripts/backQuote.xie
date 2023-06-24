@@ -1,4 +1,4 @@
-backQuote
+backQuote $push
 
 pln $pop
 
@@ -8,9 +8,9 @@ pln $b
 
 assign $c ` $abc `
 
-strAdd $b $c
+strAdd $push $b $c
 
-strAdd $pop $b
+strAdd $push $pop $b
 
 pln $pop
 

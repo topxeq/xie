@@ -1,11 +1,25 @@
+// 赋值一个字节列表
+// #后面跟随类型Y表示后接一个JSON表示的字节数组
+// Assign a byte list
+// # with a type indicator Y means the following is a byte array represented by a JSON string
 assign $b #Y`[11,22,33]`
 
 plo $b
 
+// 赋值一个字符串
+// Assign a string
 assign $s abc123天气很好
 
 plo $s
 
+// 将字符串转换为字节列表
+// Convert the string to a byte list
 convert $y $s byteList
 
 plo $y
+
+// 将字节列表转换回字符串
+// Convert the byte list back to string
+convert $s1 $y str
+
+plo $s1

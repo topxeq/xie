@@ -2,6 +2,14 @@ systemCmd $rs "xie" "-gopath" "basic.xie"
 
 test $rs "5.6\n10\n" $seq "basic.xie"
 
+systemCmd $rs "xie" "-gopath" "bitwise.xie"
+
+test $rs "163 -> a3 -> 10100011\n92 -> 5c -> 01011100\n00001100\n01011111\n01010011\n" $seq "bitwise.xie"
+
+systemCmd $rs "xie" "-gopath" "byteList.xie"
+
+test $rs "([]uint8)[]byte{0xb, 0x16, 0x21}\n(string)\"abc123天气很好\"\n([]uint8)[]byte{0x61, 0x62, 0x63, 0x31, 0x32, 0x33, 0xe5, 0xa4, 0xa9, 0xe6, 0xb0, 0x94, 0xe5, 0xbe, 0x88, 0xe5, 0xa5, 0xbd}\n(string)\"abc123天气很好\"\n" $seq "byteList.xie"
+
 systemCmd $rs "xie" "-gopath" "assign.xie"
 
 test $rs "(string)\"abc\"\n(string)\"abc 123\"\n(string)\"abc 123\\nand this\"\n(int)3\n(int)3\n(float64)3\n" $seq "assign.xie"
@@ -17,6 +25,10 @@ test $rs "(int)7\n(float64)4.1\n(string)\"abc123 456\"\n(string)\"9.18abc123 456
 systemCmd $rs "xie" "-gopath" "adds.xie"
 
 test $rs "(string)\"abc\\\"123\\\"3.8\\\"递四方dsgive it to \\n    them\\n\"\n(int)48\n" $seq "adds.xie"
+
+systemCmd $rs "xie" "-gopath" "backQuote.xie"
+
+test $rs "`\n`\n` $abc `\n" $seq "backQuote.xie"
 
 systemCmd $rs "xie" "-gopath" "goto.xie"
 

@@ -1,37 +1,63 @@
 // 新建一个字节指针
 // new指令还会为其分配空间
 // 因此可以为其赋值
+// Create a new byte pointer
+// The new instruction also allocates space for it
+// Therefore, it can be assigned a value
 new $a byte 
 
 // sscanf指令类似于其他语言中的sscanf函数
 // 将从第一个参数（这里是字符串“a3”）中扫描符合
 // 第二个参数“%x”格式符的内容放到后面的变量a中
 // 由于a是类型为字节的指针，因为会将a3认为是16进制小写的一个字节的整数，即163
-sscanf a3 %x $a
+// The sscanf instruction is similar to the sscanf function in other languages
+// Will scan from the first parameter (here is the string "a3") to match
+// The content of the second parameter '% x' format character is placed in the following variable a
+// Since a is a pointer of type byte, a3 is considered a byte integer in hexadecimal lowercase, i.e. 163
+sscanf a3 "%x" $a
 
 // 解引用变量a中的值，放入变量b中
+// Dereference the value in variable a and place it in variable b
 unref $b $a
 
 // 分别以值、16进制值、二进制值的形式输出b中的数字
+// Output the numbers in b as values, hexadecimal values, and binary values respectively
 pl "%v -> %x -> %b" $b $b $b
 
 // 将b中的数据按位取反放入变量c中
+// Invert the data in b bit by bit and place it in variable c
 not $c $b
 
 // 分别以值、16进制值、二进制值的形式输出c中的数字
 // %08b表示输出二进制数值，如果不够8位则在前面补0
+// Output the numbers in c as values, hexadecimal values, and binary values respectively
+// %08b represents the output of binary values. If there are less than 8 bits, 0 will be added before it
 pl "%v -> %x -> %08b" $c $c $c
 
 // 将c中的数据与16进制的0F（即十进制的15，二进制的00001111）进行按位与计算并输出
 // 这里用到了复杂表达式计算
-// ?作为一个参数的开始，表示后面是一个表达式，可以用反引号括起来以便允许空格字符被正确解析
+// @作为一个参数的开始，表示后面是一个表达式，可以用反引号括起来以便允许空格字符被正确解析
 // unhex指令将把一个字符串按16进制解码为字节列表
 // 再用getItem指令取出列表中第一个（序号为0的）字节的值
 // 由于0F就是一个字节，因此第一个字节就是整个数的值
-pl %08b ?`($c & (? getItem (?unhex 0F) #i0 ) )`
+// Calculate and output the data in c and hexadecimal 0F (that is, 15 in Decimal, 00001111 in binary) bit by bit
+// Complex expression calculation is used here
+// As the beginning of a parameter, @ represents an expression that can be enclosed in back quotes to allow the space character to be parsed correctly
+// The unhex instruction will decode a string into a byte list in hexadecimal format
+// Use the getItem instruction to retrieve the value of the first byte (with sequence number 0) in the list
+// Since 0F is a byte, the first byte is the value of the entire number
+unhex $tmp 0F
+getArrayItem $tmp $tmp #i0
+pl "%08b" @`$c & $tmp`
 
 // 将c中的数据与16进制的0F（即十进制的15，二进制的00001111）进行按位或计算并输出
-pl %08b ?`($c | (? getItem (?unhex 0F) #i0 ) )`
+// The data in c and hexadecimal 0F (that is, 15 in Decimal, 00001111 in binary) are bitwise or calculated and output
+unhex $tmp 0F
+getArrayItem $tmp $tmp #i0
+pl "%08b" @`$c | $tmp`
 
 // 将c中的数据与16进制的0F（即十进制的15，二进制的00001111）进行按位异或计算并输出
-pl %08b ?`($c ^ (? getItem (?unhex 0F) #i0 ) )`
+// The data in c and hexadecimal 0F (that is, 15 in Decimal, 00001111 in binary) are calculated by bit XOR and output
+unhex $tmp 0F
+getArrayItem $tmp $tmp #i0
+pl "%08b" @`$c ^ $tmp`
