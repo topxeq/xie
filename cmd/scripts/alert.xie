@@ -1,5 +1,11 @@
+// 显示一个提示信息对话框（只有确认按钮）
+// Display a prompt message dialog box (only the confirmation button)
 alert "This is a test."
 
+// 做一个加法
+// Make an addition
 add $a1 #i3 #i8
 
+// 将结果在一个提示信息对话框中显示
+// Display the results in a prompt message dialog box
 alert $a1

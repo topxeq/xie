@@ -18751,7 +18751,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		v1 := p.GetVarValue(r, instrT.Params[v1p])
 
 		rs := v0("showInfo", p, nil, "", fmt.Sprintf("%v", v1))
-		tk.Plv(rs)
+		// tk.Plv(rs)
 
 		if tk.IsErrX(rs) {
 			return p.Errf(r, tk.GetErrStrX(rs))
