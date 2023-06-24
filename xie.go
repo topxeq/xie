@@ -462,7 +462,10 @@ var InstrNameSet map[string]int = map[string]int{
 	"nowStr":        1912, // 获取当前时间字符串的正式表达
 	"nowStrFormal":  1912, // 获取当前时间字符串的正式表达
 	"nowTick":       1913, // 获取当前时间的Unix时间戳形式，为13位字符串形式（最后三位是毫秒）
+	"getNowTick":    1913,
 	"timestamp":     1913,
+	"nowTickInt":    1915, // 获取当前时间的Unix时间戳形式，为整数形式，单位纳秒
+	"getNowTickInt": 1915,
 
 	"nowUTC": 1918,
 
@@ -12092,6 +12095,20 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		}
 
 		errT := p.SetVar(r, pr, tk.GetTimeStampMid(time.Now()))
+
+		if errT != nil {
+			return p.Errf(r, "%v", errT)
+		}
+
+		return ""
+	case 1915: // nowTickInt
+		var pr interface{} = -5
+
+		if instrT.ParamLen > 0 {
+			pr = instrT.Params[0]
+		}
+
+		errT := p.SetVar(r, pr, time.Now().UnixNano())
 
 		if errT != nil {
 			return p.Errf(r, "%v", errT)
