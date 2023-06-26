@@ -3764,12 +3764,12 @@ func NewObject(p *XieVM, r *RunningContext, typeA string, argsA ...interface{}) 
 	case "xieStr", "xieString":
 		if makeT {
 			objT := XieString{}
-			objT.Init(p.ParamsToList(r, instrT, 2)...)
+			objT.Init(argsT...)
 
 			rs = objT
 		} else {
 			objT := &XieString{}
-			objT.Init(p.ParamsToList(r, instrT, 2)...)
+			objT.Init(argsT...)
 
 			rs = objT
 		}
