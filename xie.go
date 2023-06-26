@@ -49,7 +49,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var VersionG string = "1.3.2"
+var VersionG string = "1.3.3"
 
 func Test() {
 	tk.Pl("test")
@@ -277,6 +277,8 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"?":          990, // 三元操作符，用法示例：? $result $a $s1 "abc"，表示判断变量$a中的布尔值，如果为true，则结果为$s1，否则结果值为字符串abc，结果值将放入结果变量result中，如果省略结果参数，结果值将会存入$tmp
 	"ifThenElse": 990,
+
+	"flexEval": 997, // 计算一个表达式，支持普通语法，结果参数不可省略，之后第一个参数是表达式字符串，然后是0个或多个参数，在表达式中可以用v1、v2……来指代
 
 	// "eval":      998, // 计算一个表达式
 
@@ -3759,6 +3761,19 @@ func NewObject(p *XieVM, r *RunningContext, typeA string, argsA ...interface{}) 
 		} else {
 			rs = new(float32)
 		}
+	case "xieStr", "xieString":
+		if makeT {
+			objT := XieString{}
+			objT.Init(p.ParamsToList(r, instrT, 2)...)
+
+			rs = objT
+		} else {
+			objT := &XieString{}
+			objT.Init(p.ParamsToList(r, instrT, 2)...)
+
+			rs = objT
+		}
+
 	case "str", "string":
 		if makeT {
 			rs = ""
@@ -8516,6 +8531,26 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 			p.SetVar(r, pr, v3)
 		}
 
+		return ""
+
+	case 997: // flexEval
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough paramters")
+		}
+
+		// var pr interface{} = -5
+		// v1p := 0
+
+		// if instrT.ParamLen > 1 {
+		pr := instrT.Params[0]
+		v1p := 1
+		// }
+
+		v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+
+		vs := p.ParamsToList(r, instrT, v1p+1)
+
+		p.SetVar(r, pr, tk.FlexEval(v1, vs...))
 		return ""
 
 	case 999: // eval/quickEval
