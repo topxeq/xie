@@ -1,6 +1,8 @@
-// 新建一个string对象，赋以初值字符串“abc 123”，放入变量s中
-// Create a new string object, assign the initial string 'abc 123', and place it in the variable 's'
-newObj $s string `abc 123`
+// 新建一个xieString对象，赋以初值字符串“abc 123”，放入变量s中
+// Create a new xieString object, assign the initial string 'abc 123', and place it in the variable 's'
+new $s xieString `abc 123`
+
+checkErrX $s
 
 // 获取对象本体值，结果压栈
 // Obtain the object's inner value and push the results into the stack

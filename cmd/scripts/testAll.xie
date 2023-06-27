@@ -2,6 +2,14 @@ systemCmd $rs "xie" "-gopath" "basic.xie"
 
 test $rs "5.6\n10\n" $seq "basic.xie"
 
+systemCmd $rs "xie" "-gopath" "flexEval.xie"
+
+test $rs "result1=228.85\nresult2=\"abc789\"\nresult3=19.4399\nresult4=\"[18.5,44]\"\n" $seq "flexEval.xie"
+
+systemCmd $rs "xie" "-gopath" "object.xie"
+
+test $rs "abc 123天气很好\nvery\nvery nice\nry nic\n" $seq "object.xie"
+
 systemCmd $rs "xie" "-gopath" "bitwise.xie"
 
 test $rs "163 -> a3 -> 10100011\n92 -> 5c -> 01011100\n00001100\n01011111\n01010011\n" $seq "bitwise.xie"

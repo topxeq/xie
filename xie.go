@@ -49,7 +49,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var VersionG string = "1.3.3"
+var VersionG string = "1.3.5"
 
 func Test() {
 	tk.Pl("test")
@@ -278,7 +278,8 @@ var InstrNameSet map[string]int = map[string]int{
 	"?":          990, // 三元操作符，用法示例：? $result $a $s1 "abc"，表示判断变量$a中的布尔值，如果为true，则结果为$s1，否则结果值为字符串abc，结果值将放入结果变量result中，如果省略结果参数，结果值将会存入$tmp
 	"ifThenElse": 990,
 
-	"flexEval": 997, // 计算一个表达式，支持普通语法，结果参数不可省略，之后第一个参数是表达式字符串，然后是0个或多个参数，在表达式中可以用v1、v2……来指代
+	"flexEval":    997, // 计算一个表达式，支持普通语法，结果参数不可省略，之后第一个参数是表达式字符串，然后是0个或多个参数，在表达式中可以用v1、v2……来指代，表达式采用 github.com/antonmedv/expr 提供的表达式计算引擎，相关进一步文档也可以从这里获取，并可参照例子 flexEval.xie
+	"flexEvalMap": 998, // 类似flexEval指令，区别是：flexEval后从第二个参数开始可以接受多个参数，并在表达式中以v1、v2这样来指代，而flexEvalMap则只允许有一个参数，需要是映射类型，这样可以直接用键名在表达式中引用这些变量
 
 	// "eval":      998, // 计算一个表达式
 
@@ -378,7 +379,7 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"mbSet": 1407, // 设置某个成员变量
 
-	"newObj": 1410, // 新建一个对象，第一个参数为结果放入的变量，第二个为字符串格式的对象名，后面是可选的0-n个参数，目前支持string、any等
+	"newObj": 1401, // 注：已废弃，合入new指令。新建一个对象，第一个参数为结果放入的变量，第二个为字符串格式的对象名，后面是可选的0-n个参数，目前支持string、any等
 
 	"setObjValue": 1411, // 设置对象本体值
 	"getObjValue": 1412, // 获取对象本体值
@@ -3713,6 +3714,20 @@ func NewObject(p *XieVM, r *RunningContext, typeA string, argsA ...interface{}) 
 		} else {
 			rs = new(interface{})
 		}
+	case "xieany":
+		if makeT {
+			objT := XieAny{}
+
+			objT.Init(argsT...)
+
+			rs = objT
+		} else {
+			objT := &XieAny{}
+
+			objT.Init(argsT...)
+
+			rs = objT
+		}
 	case "bool":
 		if makeT {
 			rs = false
@@ -3761,7 +3776,7 @@ func NewObject(p *XieVM, r *RunningContext, typeA string, argsA ...interface{}) 
 		} else {
 			rs = new(float32)
 		}
-	case "xieStr", "xieString":
+	case "xiestr", "xiestring":
 		if makeT {
 			objT := XieString{}
 			objT.Init(argsT...)
@@ -8553,9 +8568,43 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		p.SetVar(r, pr, tk.FlexEval(v1, vs...))
 		return ""
 
+	case 998: // flexEvalMap
+		if instrT.ParamLen < 3 {
+			return p.Errf(r, "not enough paramters")
+		}
+
+		// var pr interface{} = -5
+		// v1p := 0
+
+		// if instrT.ParamLen > 1 {
+		pr := instrT.Params[0]
+		v1p := 1
+		// }
+
+		v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+
+		v2 := p.GetVarValue(r, instrT.Params[v1p+1])
+
+		nv, ok := v2.(map[string]interface{})
+
+		if !ok {
+			nv1, ok := v2.(map[string]string)
+
+			if ok {
+				nv = tk.MSS2MSI(nv1)
+			} else {
+				p.SetVar(r, pr, fmt.Errorf("parameter type not supported（不支持的参数类型）"))
+				return ""
+
+			}
+		}
+
+		p.SetVar(r, pr, tk.FlexEvalMap(v1, nv))
+		return ""
+
 	case 999: // eval/quickEval
 		if instrT.ParamLen < 1 {
-			return p.Errf(r, "not enough paramters")
+			return p.Errf(r, "not enough paramters（参数不够）")
 		}
 
 		var pr interface{} = -5
@@ -11163,39 +11212,39 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		p.SetVar(r, pr, "")
 		return ""
-	case 1410: // newObj
-		if instrT.ParamLen < 2 {
-			return p.Errf(r, "not enough parameters(参数不够)")
-		}
+	// case 1410: // newObj
+	// 	if instrT.ParamLen < 2 {
+	// 		return p.Errf(r, "not enough parameters(参数不够)")
+	// 	}
 
-		pr := instrT.Params[0]
+	// 	pr := instrT.Params[0]
 
-		v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[1]))
+	// 	v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[1]))
 
-		switch v1 {
-		case "string":
-			objT := &XieString{}
+	// 	switch v1 {
+	// 	case "string":
+	// 		objT := &XieString{}
 
-			objT.Init(p.ParamsToList(r, instrT, 2)...)
+	// 		objT.Init(p.ParamsToList(r, instrT, 2)...)
 
-			p.SetVar(r, pr, objT)
-		case "any":
-			objT := &XieAny{}
+	// 		p.SetVar(r, pr, objT)
+	// 	case "any":
+	// 		objT := &XieAny{}
 
-			objT.Init(p.ParamsToList(r, instrT, 2)...)
+	// 		objT.Init(p.ParamsToList(r, instrT, 2)...)
 
-			p.SetVar(r, pr, objT)
-		case "mux":
-			p.SetVar(r, pr, http.NewServeMux())
-		case "int":
-			p.SetVar(r, pr, new(int))
-		case "byte":
-			p.SetVar(r, pr, new(byte))
-		default:
-			return p.Errf(r, "未知对象")
-		}
+	// 		p.SetVar(r, pr, objT)
+	// 	case "mux":
+	// 		p.SetVar(r, pr, http.NewServeMux())
+	// 	case "int":
+	// 		p.SetVar(r, pr, new(int))
+	// 	case "byte":
+	// 		p.SetVar(r, pr, new(byte))
+	// 	default:
+	// 		return p.Errf(r, "未知对象")
+	// 	}
 
-		return ""
+	// 	return ""
 	case 1411: // setObjValue
 		if instrT.ParamLen < 2 {
 			return p.Errf(r, "not enough parameters(参数不够)")

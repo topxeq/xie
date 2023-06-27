@@ -1,0 +1,86 @@
+// 本例介绍flexEval和flexEvalMap指令的各种主要用法
+
+// ----- 案例1：使用flexEval指令计算表达式，并传入多个参数
+
+// 赋值一个浮点数变量f1和一个整数变量c1
+= $f1 #f19.9
+= $c1 #i23
+
+// 使用flexEval指令计算两者的和
+// flexEval指令用于计算较复杂的表达式，并可以进行自定义与扩展
+// flexEval后的结果参数不可省略，然后第一个参数为字符串形式的表达式
+// 表达式中可以用v1、v2等虚拟变量表示从第二个参数开始的各个值
+// 因此这里是将变量f1和c1中的值进行求和
+// 此时如果两个变量数据类型不同（例如这里一个是浮点数，一个是整数），会进行适当的转换
+flexEval $result1 `v1 * v2 / 2` $f1 $c1
+
+// 输出结果作为参考
+pl "result1=%#v" $result1
+
+// ----- 案例2：使用flexEvalMap指令计算表达式，并传入一个列表参数来代替多个参数
+
+// 定义一个映射变量map1
+var $map1 map
+
+// 设置其中两个键值对，均为字符串类型
+setMapItem $map1 "s1" "abc"
+setMapItem $map1 "s2" "789"
+
+// flexEvalMap与flexEval的不同是：flexEval后从第二个参数开始可以接受多个参数，并在表达式中以v1、v2这样来指代
+// 而flexEvalMap则只允许有一个参数，需要是映射类型，这样可以直接用键名在表达式中引用这些变量
+flexEvalMap $result2 `s1 + s2` $map1
+
+// 输出结果作为参考
+pl "result2=%#v" $result2
+
+// ----- 案例3：表达式中使用自定义函数
+
+// 定义一个实现简单字符串trim功能的函数dele1，注意这里是快速代理函数
+new $dele1 quickDelegate `
+    getArrayItem $param1 $inputL 0
+
+    trim $outL $param1
+
+    exitL 
+`
+
+// 定义一个实现截断浮点数到小数点后2位功能的函数dele2，注意这里是普通代理函数
+new $dele2 delegate `
+    getArrayItem $param1 $inputG 0
+
+    spr $outG "%.02f" $param1
+
+    exit 
+`
+
+// 定义一个映射变量map2
+var $map2 map
+
+// 设置其中几个键值对，包括列表，映射、自定义函数几种类型
+setMapItem $map2 "a1" #L`[68, 37, 76]`
+setMapItem $map2 "m1" #M`{"value1": -3.5, "value2": 9.2}`
+setMapItem $map2 "trim" $dele1
+setMapItem $map2 "toFixed" $dele2
+
+// abs函数是表达式引擎内置的函数，功能是取绝对值，float也是内置函数，将字符串转换为浮点数
+// trim和toFixed都是自定义函数
+// 注意对于列表和映射使用的索引方法，与一般语言中的一样
+// 计算结果应为19.4399
+flexEvalMap $result3 `abs(float(trim("   "+toFixed(a1[0] / m1.value1)+"99  ")))` $map2
+
+pl "result3=%#v" $result3
+
+// ----- 案例4：表达式中使用缺省函数实现过滤和枚举
+
+// 赋值一个整数列表（数组）a2
+= $a2 #L`[68, 37, 16, 9, 88, 76]`
+
+// 将a2代入表达式中计算（注意在表达式中将由v1代表它）
+// v1[1:5]表示对数组进行切片，取序号为1开始，到序号为5之前的数据项，其结果应为[37, 16, 9, 88]
+// filter函数是表达式引擎内置函数，表示将某个数组以指定条件过滤，这里的条件是要求值大于20（“#”表示过滤时的每一项），过滤后结果应为[37, 88]
+// map函数也是内置函数，表示将数组中每一项做一个操作后形成新的数组，这里是将每一项除以2，最终结果应为[18.5, 44]
+flexEval $result4 `map(filter(v1[1:5], {# > 20}), {# / 2})` $a2
+
+// 以JSON格式输出变量result4中结果供参考
+pl "result4=%#v" @`{toJson $tmp $result4}`
+
