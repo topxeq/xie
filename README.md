@@ -33,6 +33,7 @@ Xielang is a free, open-source, cross-platform, cross-language, ASM/SHELL-like, 
   - [- **复杂表达式运算**（Complex expression operation）](#--复杂表达式运算complex-expression-operation)
   - [- **复杂表达式做参数**](#--复杂表达式做参数)
   - [- **表达式的另一个例子**（Another example of an expression）](#--表达式的另一个例子another-example-of-an-expression)
+  - [- **灵活表达式**（Flex expression）](#--灵活表达式flex-expression)
   - [- **goto语句**（The goto instr）](#--goto语句the-goto-instr)
   - [- **一般循环结构**（Loop cycle structure）](#--一般循环结构loop-cycle-structure)
   - [- **条件分支**（Conditional branch）](#--条件分支conditional-branch)
@@ -1522,6 +1523,140 @@ plv @`{toStr $tmp #i123456} + " {ab 123 c}"`
 条件判断指令if中，可以直接带字符串类型的快速表达式，方便代码书写。
 
 In the conditional judgment instruction if, you can directly take a string type of fast expression, which is convenient for code writing.
+
+&nbsp;
+
+##### - **灵活表达式**（Flex expression）
+
+谢语言还支持接近其他语言中的语法的表达式，称作“灵活表达式”（Flex Expression），使用flexEval或flexEvalMap指令进行运算，具体用法请参看下面的例子（flexEval.xie）：
+
+Xielang also supports expressions that are similar to the syntax in other languages, called "Flex Expressions", using the flexEval or flexEvalMap instructions for operations. For specific usage, please refer to the following example (flexEval.xie):
+
+```go
+// 本例介绍flexEval和flexEvalMap指令的各种主要用法
+// This example introduces the various main uses of the flexEval and flexEvalMap instructions
+
+// ----- 案例1：使用flexEval指令计算表达式，并传入多个参数
+// Case 1: Using the flexEval instruction to evaluate an expression and passing in multiple parameters
+
+// 赋值一个浮点数变量f1和一个整数变量c1
+// Assign a Floating-point arithmetic variable f1 and an integer variable c1
+= $f1 #f19.9
+= $c1 #i23
+
+// 使用flexEval指令计算两者的和
+// flexEval指令用于计算较复杂的表达式，并可以进行自定义与扩展
+// flexEval后的结果参数不可省略，然后第一个参数为字符串形式的表达式
+// 表达式中可以用v1、v2等虚拟变量表示从第二个参数开始的各个值
+// 因此这里是将变量f1和c1中的值进行求和
+// 此时如果两个变量数据类型不同（例如这里一个是浮点数，一个是整数），会进行适当的转换
+// Calculate the sum of the two using the flexEval instruction
+// The flexEval instruction is used to calculate more complex expressions and can be customized and extended
+// The result parameter after flexEval cannot be omitted, and the first parameter is an expression in string form
+// Virtual variables such as v1 and v2 can be used in expressions to represent various values starting from the second parameter
+// Therefore, here we sum the values in variables f1 and c1
+// At this time, if the data types of two variables are different (for example, one is a Floating-point arithmetic number and the other is an integer), appropriate conversion will be performed
+flexEval $result1 `v1 * v2 / 2` $f1 $c1
+
+// 输出结果作为参考
+// Output the result as a reference
+pl "result1=%#v" $result1
+
+// ----- 案例2：使用flexEvalMap指令计算表达式，并传入一个列表参数来代替多个参数
+// Case 2: Using the flexEvalMap instruction to evaluate an expression and passing in a list parameter instead of multiple parameters
+
+// 定义一个映射变量map1
+// Define a mapping variable map1
+var $map1 map
+
+// 设置其中两个键值对，均为字符串类型
+// Set two key value pairs, both of which are of string type
+setMapItem $map1 "s1" "abc"
+setMapItem $map1 "s2" "789"
+
+// flexEvalMap与flexEval的不同是：flexEval后从第二个参数开始可以接受多个参数，并在表达式中以v1、v2这样来指代
+// 而flexEvalMap则只允许有一个参数，需要是映射类型，这样可以直接用键名在表达式中引用这些变量
+// The difference between flexEvalMap and flexEval is that after flexEval, it can accept multiple parameters starting from the second parameter and refer to them as v1 and v2 in the expression
+// And flexEvalMap only allows one parameter, which needs to be a mapping type, so that these variables can be directly referenced in the expression using the key name
+flexEvalMap $result2 `s1 + s2` $map1
+
+// 输出结果作为参考
+// Output the result as a reference
+pl "result2=%#v" $result2
+
+// ----- 案例3：表达式中使用自定义函数
+// Case 3: Using Custom Functions in Expressions
+
+// 定义一个实现简单字符串trim功能的函数dele1，注意这里是快速代理函数
+// Define a function dele1 that implements the simple string trim function, and note that this is the fast proxy function
+new $dele1 quickDelegate `
+    getArrayItem $param1 $inputL 0
+
+    trim $outL $param1
+
+    exitL 
+`
+
+// 定义一个实现截断浮点数到小数点后2位功能的函数dele2，注意这里是普通代理函数
+// Define a function dele2 that implements the function of truncating floating point numbers to 2 digits after the Decimal separator. Note that this is a general proxy function
+new $dele2 delegate `
+    getArrayItem $param1 $inputG 0
+
+    spr $outG "%.02f" $param1
+
+    exit 
+`
+
+// 定义一个映射变量map2
+// Define a mapping variable map2
+var $map2 map
+
+// 设置其中几个键值对，包括列表，映射、自定义函数几种类型
+// Set several key value pairs, including lists, mappings, and custom function types
+setMapItem $map2 "a1" #L`[68, 37, 76]`
+setMapItem $map2 "m1" #M`{"value1": -3.5, "value2": 9.2}`
+setMapItem $map2 "trim" $dele1
+setMapItem $map2 "toFixed" $dele2
+
+// abs函数是表达式引擎内置的函数，功能是取绝对值，float也是内置函数，将字符串转换为浮点数
+// trim和toFixed都是自定义函数
+// 注意对于列表和映射使用的索引方法，与一般语言中的一样
+// 计算结果应为19.4399
+// The abs function is a built-in function of the expression engine, which takes absolute values. Float is also a Intrinsic function, which converts strings into Floating-point arithmetic numbers
+// trim and toFixed are both custom functions
+// Note that the indexing method used for lists and mappings is the same as in general languages
+// The calculation result should be 19.4399
+flexEvalMap $result3 `abs(float(trim("   "+toFixed(a1[0] / m1.value1)+"99  ")))` $map2
+
+pl "result3=%#v" $result3
+
+// ----- 案例4：表达式中使用缺省函数实现过滤和枚举
+// Case 4: Using default functions in expressions to implement filtering and enumeration
+
+// 赋值一个整数列表（数组）a2
+// Assign an integer list (array) a2
+= $a2 #L`[68, 37, 16, 9, 88, 76]`
+
+// 将a2代入表达式中计算（注意在表达式中将由v1代表它）
+// v1[1:5]表示对数组进行切片，取序号为1开始，到序号为5之前的数据项，其结果应为[37, 16, 9, 88]
+// filter函数是表达式引擎内置函数，表示将某个数组以指定条件过滤，这里的条件是要求值大于20（“#”表示过滤时的每一项），过滤后结果应为[37, 88]
+// map函数也是内置函数，表示将数组中每一项做一个操作后形成新的数组，这里是将每一项除以2，最终结果应为[18.5, 44]
+// Substitute a2 into the expression for calculation (note that v1 will represent it in the expression)
+// v1 [1:5] represents slicing an array, starting with sequence number 1 and ending with data items before sequence number 5. The result should be [37, 16, 9, 88]
+// The filter function is the Intrinsic function of the expression engine, which means to filter an array with specified conditions. The condition here is that the value is required to be greater than 20 ("#" means each item during filtering). The filtered result should be [37, 88]
+// The map function is also a Intrinsic function, which means that each item in the array is formed into a new array after an operation. Here, each item is divided by 2, and the final result should be [18.5, 44]
+flexEval $result4 `map(filter(v1[1:5], {# > 20}), {# / 2})` $a2
+
+// 以JSON格式输出变量result4中结果供参考
+// Output the results in variable result4 in JSON format for reference
+pl "result4=%#v" @`{toJson $tmp $result4}`
+
+
+```
+
+内置函数如果某些情况下出现问题，可以编写同名的自定义函数来代替。
+
+If there is a problem with the Intrinsic function in some cases, you can write a user-defined function with the same name to replace it.
 
 &nbsp;
 
