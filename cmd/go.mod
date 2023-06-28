@@ -99,3 +99,7 @@ require (
 )
 
 replace github.com/topxeq/tk v1.0.1 => ../../tk
+
+// replace github.com/topxeq/expr v0.0.0 => ../../expr
+
+// replace github.com/antonmedv/expr v1.12.5 => ../../../antonmedv/expr
