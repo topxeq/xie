@@ -83,9 +83,7 @@ Xielang is a free, open-source, cross-platform, cross-language, ASM/SHELL-like, 
   - [- **基本界面**（Basic GUI）](#--基本界面basic-gui)
   - [- **直接嵌入网页脚本**（Directly embed JavaScript file in WEB pages）](#--直接嵌入网页脚本directly-embed-javascript-file-in-web-pages)
   - [- **启动后台服务与前台配合**（Start the backend service and cooperate with the front end）](#--启动后台服务与前台配合start-the-backend-service-and-cooperate-with-the-front-end)
-- [**谢语言GUI编程的基础（SciterJS）**（The Fundamentals of GUI Programming in XieLang (SciterJS)）](#谢语言gui编程的基础sciterjsthe-fundamentals-of-gui-programming-in-xielang-sciterjs)
-  - [- **简单的计算器**（A Simple Calculator）](#--简单的计算器a-simple-calculator)
-  - [- **Linux系统中运行图形计算器代码**（Running Graph Calculator Code in Linux System）](#--linux系统中运行图形计算器代码running-graph-calculator-code-in-linux-system)
+  - [- **简单的图形计算器**（A Simple GUI Calculator）](#--简单的图形计算器a-simple-gui-calculator)
   - [- **Windows编译不带命令行窗口的谢语言主程序**（Compiling Xielang main program without command line window for Windows）](#--windows编译不带命令行窗口的谢语言主程序compiling-xielang-main-program-without-command-line-window-for-windows)
   - [- **制作一个登录框**（Create a login box）](#--制作一个登录框create-a-login-box)
 - [编译运行谢语言代码（Compile and run Xielang code）](#编译运行谢语言代码compile-and-run-xielang-code)
@@ -6526,17 +6524,13 @@ Xielang supports convenient graphical interface (GUI) programming, including mul
 
 Among them, using WebView2 system controls under Windows is a recommended GUI programming method. WebView2 is powerful and constantly updated, and is already built-in in Windows 10 and above systems. It can also be installed separately in Windows 7 and other systems. Xielang can write and distribute graphical interface applications in this way without attaching any files.
 
-第二种方式是通过 [SciterJS](http://sciter.com) 这个第三方库实现，Windows下只需要一个动态链接库文件（sciter.dll），Linux下的配置请参考[这里](https://www.jianshu.com/p/b184826b9de1)。
+另一种方式是使用一个外部的浏览器来访问谢语言启动的WEB服务器或API服务器，这样前端可以完全使用标准的HTML/CSS/JavaScript技术进行图形界面编程，通过Ajax方式访问谢语言编写的Web服务来使用谢语言的能力。这种方式的缺点是，一般的浏览器为安全考虑一般不允许通过代码调整浏览器的标题、大小和位置。
 
-The second way is through [SciterJS](http://sciter.com). This third-party library implementation only requires a dynamic link library file (sciter.dll) under Windows. Please refer to [here](https://www.jianshu.com/p/b184826b9de1) for the configuration under Linux.
+The other way is to use an external browser to access the web server or API server launched by Xielang, so that the front-end can fully use standard HTML/CSS/JavaScript technology for graphical interface programming, and access the web services written in Xielang through Ajax to use Xielang's capabilities. The disadvantage of this approach is that general browsers do not allow code to adjust the title, size, and position of the browser for security reasons.
 
-第三种方式是使用一个外部的浏览器来访问谢语言启动的WEB服务器或API服务器，这样前端可以完全使用标准的HTML/CSS/JavaScript技术进行图形界面编程，通过Ajax方式访问谢语言编写的Web服务来使用谢语言的能力。这种方式的缺点是，一般的浏览器为安全考虑一般不允许通过代码调整浏览器的标题、大小和位置。
+还有种方式是在第二种方式的基础上，调用谢语言配套的浏览器，即可解决调整浏览器标题、大小和位置等问题。目前谢语言配套的浏览器包括一个基于WebView2控件的浏览器，可在Windows 7以上的系统中运行（Windows 7中需要单独安装WebView2控件）。
 
-The third way is to use an external browser to access the web server or API server launched by Xielang, so that the front-end can fully use standard HTML/CSS/JavaScript technology for graphical interface programming, and access the web services written in Xielang through Ajax to use Xielang's capabilities. The disadvantage of this approach is that general browsers do not allow code to adjust the title, size, and position of the browser for security reasons.
-
-第四种方式是在第三种方式的基础上，调用谢语言配套的浏览器，即可解决调整浏览器标题、大小和位置等问题。目前谢语言配套的浏览器包括一个基于IE11内核的浏览器和基于Chromium内核的浏览器，前者比较轻量级但IE11对新版JavaScript的支持有缺陷，后者较重（体积较大，初次使用初始化图形界面环境时下载慢）但功能更完善。
-
-The fourth method is based on the third method, calling the browser supporting Xielang can solve the problem of adjusting the browser title, size, and position. At present, the browsers supported by Xielang include a browser based on the IE11 kernel and a browser based on the Chromium kernel. The former is relatively lightweight but IE11 has defects in supporting the new version of JavaScript. The latter is heavier (larger in size and slower to load when initializing the graphical interface environment for the first time) but has more complete functions.
+Another method is based on the 2nd method, calling the browser supporting Xielang can solve the problem of adjusting the browser title, size, and position. At present, the browsers supported by Xielang include a browser based on the WebView2 control. It can run on systems from Windows 7 and later.
 
 谢语言中的图形界面编程通过下面的基本说明和几个例子可以快速地了解掌握。
 
@@ -7246,60 +7240,28 @@ exit
 
 &nbsp;
 
-#### **谢语言GUI编程的基础（SciterJS）**（The Fundamentals of GUI Programming in XieLang (SciterJS)）
+##### - **简单的图形计算器**（A Simple GUI Calculator）
 
-谢语言GUI图形编程的SciterJS方式，主要通过第三方图形界面库SciterJS来支持跨平台的GUI编程。以Windows系统下为例，除谢语言主程序文件外，只需要一个动态链接库文件（sciter.dll），即可完美支持图形界面编程。Sciter使用标准的HTML、CSS以及类似JavaScript的TiScript脚本语言，来实现图形界面的展示和操控，谢语言则负责后台逻辑的处理，两者之间可以互通，谢语言通过特定的接口方式可以调用TiScript中的函数传递数据并进行操作，反之亦然，TiScript也可以调用谢语言中的特定函数。基本熟悉网页编程的开发者都可以很方便地上手。
+我们直接通过一个代码例子（calculatorGui.xie）来了解：
 
-The SciterJS method of GUI graphical programming in Xielang mainly supports cross platform GUI programming through the third-party graphical interface library SciterJS. Taking Windows as an example, in addition to the Xielang main program file, only one dynamic link library file (sciter. dll) is needed to perfectly support graphical interface programming. Sciter uses standard HTML, CSS, and TiScript scripting languages similar to JavaScript to display and manipulate graphical interfaces. Xielang is responsible for processing backend logic, and the two can communicate with each other. Xielang can call functions in TiScript through specific interface methods to transfer data and perform operations, and vice versa. TiScript can also call specific functions in Xielang. Developers who are basically familiar with web programming can easily get started.
-
-谢语言使用GUI功能时，均需使用initGui命令来初始化环境，如果此时系统中没有Sciter的动态链接库文件，将会自动下载到主程序相同的路径下（也可以自行在谢语言官网下载后放到该位置）。谢语言中还有一个预置全局变量\$guiG，用于作为调用GUI功能的接口对象。
-
-When using GUI functions in Xielang, the initGui command is required to initialize the environment. If there is no Sciter's dynamic link library file in the system at this time, it will be automatically downloaded to the same path as the main program (you can also download it on Xielang's official website and put it in that location). There is also a preset global variable  $guiG in Xielang, which is used as an interface object for calling GUI functions.
-
-下面我们通过一些例子逐步说明谢语言中使用SciterJS库进行GUI编程的方法。
-
-Below, we will use some examples to gradually illustrate the method of using the SciterJS library for GUI programming in Xielang.
-
-&nbsp;
-
-##### - **简单的计算器**（A Simple Calculator）
-
-我们直接通过一个代码例子（calculatorSciter.xie）来了解：
-
-We can directly understand through a code example (calculatorSciter.xie):
+We can directly understand through a code example (calculatorGui.xie):
 
 ```go
-// $guiG是预置的全局变量，作为GUI编程的接口对象
-// 一般的图形界面操作，都通过调用该对象的各种方法来实现
-// 所有GUI程序，都应该先调用guiG变量的init方法来进行图形界面环境的初始化
-// 此时，如果在Windows下，如果系统中没有安装图形界面库，
-// init方法将自动下载所需的动态链接库文件到主程序路径下
-// 然后再进行环境初始化
-// $guiG is a preset global variable that serves as an interface object for GUI programming
-// General graphical interface operations are achieved by calling various methods of the object
-// All GUI programs should first call the init method of the guiG variable to initialize the graphical interface environment
-// At this point, if the graphical interface library is not installed in the system under Windows,
-// The init method will automatically download the required dynamic link library files to the main program path
-// Then perform environment initialization
-mt $rs $guiG init
-
-checkErrX $rs
-
 // 定义用于界面展示的HTML网页代码，放在htmlT变量中
-// HTML和CSS代码都是标准的，脚本语言也是Quick JS，与标准JavaScript基本类似
+// HTML和CSS代码都是标准的，脚本语言也是标准的JavaScript
 // 本例中定义了一个文本输入框用于输入表达式算式
 // 以及“Calculate”和“Close”两个按钮
 // 并定义了两个按钮对应的处理脚本函数
 // “Calculate”按钮将调用JavaScript的eval函数来进行表达式计算
-// 然后将计算结果传递给谢语言代码（通过调用谢语言预定义的delegateDo函数）
+// 然后将计算结果传递给谢语言代码（通过调用谢语言预定义的quickDelegateDo函数）
 // “Close”按钮将关闭整个窗口
 // Define HTML web page code for interface display, placed in the htmlT variable
-// HTML and CSS code are both standard, and the scripting language is also Quick JS, which is basically similar to standard JavaScript
+// HTML and CSS code are both standard, and the scripting language is also standard JavaScript
 // In this example, a text input box is defined for inputting expression expressions
 // And the "Calculate" and "Close" buttons
 // And defined the processing script functions corresponding to the two buttons
 // The 'Calculate' button will call JavaScript's eval function for expression evaluation
-// Then pass the calculation results to Xie language code (by calling Xielang's predefined delegateDo function)
+// Then pass the calculation results to Xielang code (by calling Xielang's predefined quickDelegateDo function)
 //The 'Close' button will close the entire window
 assign $htmlT `
 <!DOCTYPE html>
@@ -7318,21 +7280,24 @@ assign $htmlT `
 	</div>
 	<div>
 		<button id="btnCal">Calculate</button>
-		<button id="btnClose">Close</button>
+		<button id="btnClose" onclick="javascript:closeWindowClick();">Close</button>
 	</div>
 
     <script>
-        document.$("#btnCal").on("click", function() {
+        document.getElementById("btnCal").addEventListener("click", function() {
 			var result = eval(document.getElementById("mainInputID").value);
 
-            Window.this.xcall("delegateDo", result);
+            quickDelegateDo(result);
 
-            document.$("#mainInputID").value = result;
+            document.getElementById("mainInputID").value = result;
         });
+
+        function closeWindowClick() {
+            quickDelegateDo("closeWindow");
+        }
  
-        document.$("#btnClose").on("click", function() {
-            Window.this.close();
-        });
+        window.onload = function() {
+        };
  
     </script>
 </body>
@@ -7342,7 +7307,7 @@ assign $htmlT `
 // 调用guiG的newWindow方法创建一个窗口
 // newWindow方法需要有三个参数，第一个是窗口标题
 // 第二个是字符串形式的值用于指定窗口大小，空字符串表示按默认区域
-// 如果使用类似“[200,300,600,400]”的字符串，则表明窗口位于屏幕坐标（200,300）处，宽高位600*400
+// 如果使用类似“[200,300,600,400]”的字符串，则表明窗口位于屏幕坐标（200,300）处，宽高为600*400
 // 第三个参数为用于界面展示的字符串
 // 结果放入变量windowT中，这是一个特殊类型的对象(后面暂称为window对象)
 // 后面我们还将调用该对象的一些方法进行进一步的界面控制
@@ -7353,14 +7318,14 @@ assign $htmlT `
 // The third parameter is the string used for interface display
 // The result is placed in the variable windowT, which is a special type of object (later temporarily referred to as a window object)
 // In the future, we will also call some methods of this object for further interface control
-mt $windowT $guiG newWindowSciter "Simple Calculator" "" $htmlT
+mt $windowT $guiG newWindow "-title=Simple Calculator" -width=640 -height=480 -center
 
 plo $windowT
 
 // 用new指令创建一个快速代理函数（quickDelegate）对象dele1
 // 谢语言中quickDelegate是最常用的代理函数对象
 // 它创建时需要指定一个快速函数，本例中通过源代码指明
-// 这样，当Sciter的网页中调用view对象的delegateDo函数时
+// 这样，当网页代码中调用view对象的quickDelegateDo函数时
 // 就将调用该快速函数代码来处理
 // 约定该函数必须通过inputL变量来获取输入参数，并返回一个参数（通过outL变量）
 // 参数均为字符串类型
@@ -7369,7 +7334,7 @@ plo $windowT
 // Create a quickDelegate object dele1 using the new instruction
 // In Xielang, quickDelegate is the most commonly used proxy function object
 // When it is created, a fast function needs to be specified. In this example, the source code indicates
-// In this way, when Sciter's web page calls the delegateDo function of the view object
+// In this way, when the web page calls the quickDelegateDo function of the view object
 // Call the fast function code to handle
 // The convention is that the function must obtain input parameters through the inputL variable and return a parameter (through the outL variable)
 // All parameters are of string type
@@ -7378,6 +7343,11 @@ plo $windowT
 new $dele1 quickDelegate `
     [] $resultL $inputL 0
 
+    ifEqual $resultL "closeWindow" :+1 :next1L
+        mt $drop $windowT close
+        exitL $resultL
+
+    :next1L
     pl "Result: %v" $resultL
 
     // 函数返回前必须要有一个输出参数存入outL中
@@ -7387,9 +7357,17 @@ new $dele1 quickDelegate `
     exitL $resultL
 `
 
+checkErrX $dele1
+
 // 调用window对象的setDelegate方法将其接口代理指定为dele1
 // Call the setDelegate method of the window object to specify its interface proxy as dele1
 mt $rs $windowT setQuickDelegate $dele1
+
+checkErrX $rs
+
+mt $rs $windowT setHtml $htmlT
+
+checkErrX $rs
 
 // 调用window对象的show方法，此时才会真正显示界面窗口
 // 并开始响应用户的操作
@@ -7397,65 +7375,30 @@ mt $rs $windowT setQuickDelegate $dele1
 // And start responding to user actions
 mt $rs $windowT show
 
-plo $rs
+checkErrX $rs
+
+mt $rs $windowT close
+
+checkErrX $rs
 
 // 退出程序
 // Exit the program
 exit
 
-  
+
 ```
 
-代码展示了如何用谢语言实现一个简单的图形界面计算器，代码中有详细的解释，可以仔细阅读理解。Quick JS整体接近于包含JQuery的JavaScript但略有不同（例如DOM对象的id可以不带引号括起等），具体的用法，可以去Sciter网站或者从谢语言官网下载“Windows版界面工具包”，其中含有详细的帮助文档；也可以通过看我们的示例快速了解。
-
-The code demonstrates how to implement a simple graphical interface calculator using Xie language. There are detailed explanations in the code, which can be read and understood carefully. Quick JS is generally similar to JavaScript that includes JQuery, but slightly different (such as DOM object IDs that can be enclosed without quotation marks). For specific usage, you can go to the Scitter website or download the "Windows version interface toolkit" from the Xie language official website, which contains detailed help documents; You can also quickly understand by looking at our examples.
+代码展示了如何用谢语言实现一个简单的图形界面计算器，代码中有详细的解释，可以仔细阅读理解。
 
 代码运行后，将得到类似下面的界面：
 
 After running the code, you will get an interface similar to the following:
 
-![截图](http://xie.topget.org/example/xie/snap/snap5.png)
+![截图](http://xie.topget.org/example/xie/snap/snap9.png)
 
-在输入框中输入算式，然后点击“计算”按钮，框中就会计算出结果，并且后台也得到了计算结果并将其输出。点击“关闭”按钮则窗口将关闭并执行后续代码（此例中是用exit指令退出了程序运行）。
+在输入框中输入算式，然后点击“Calculate”按钮，框中就会计算出结果，并且后台也得到了计算结果并将其输出。点击“关闭”按钮则窗口将关闭并执行后续代码（此例中是用exit指令退出了程序运行）。
 
 Enter a formula in the input box, and then click the "Calculate" button. The result will be calculated in the box, and the calculation result will also be obtained in the background and output. Clicking the "Close" button will cause the window to close and execute subsequent code (in this case, the exit command was used to exit the program).
-
-&nbsp;
-
-##### - **Linux系统中运行图形计算器代码**（Running Graph Calculator Code in Linux System）
-
-*注：本节内容暂时无效，目前谢语言在Linux系统下暂不支持图形界面。*
-
-*Note: This section is temporarily invalid. Currently, Xie language does not support graphical interfaces on Linux systems.*
-
-谢语言的图形界面编程支持跨平台，上例中的图形界面计算器代码，无需改动就可以在Linux下运行，下面以Ubuntu为例进行说明：
-
-- 首先在[谢语言官网](http://xie.topget.org)下载Ubuntu下的谢语言压缩包（[xie.tar.gz](http://xie.topget.org/pub/xie.tar.gz)），解压后获得谢语言主程序xie，将其权限设置为可执行后将其放置在某个执行路径（PATH变量指明的）中；
-- 如果Ubuntu还没有安装GTK3图形环境，则通过 apt install libgtk-3-dev 命令安装该依赖项；
-- 此时应该可以运行谢语言主程序，可通过 xie -version 命令查看版本号，并验证谢语言已可顺利运行；
-- 到Sciter官网下载4.4.6.6版本的SDK压缩包，或在谢语言官网页面下载“界面工具包”中也有，解压后，将其中bin.lnx\x64中的所有文件复制出来拷贝到某个目录下，例如放到/tools目录下；
-- 然后进入到/tools目录下依次执行下面的命令：
-  ```shell
-  export LIBRARY_PATH=$PWD
-  echo $PWD >> libsciter.conf
-  sudo cp libsciter.conf /etc/ld.so.conf.d/
-  sudo ldconfig
-  ldconfig -p | grep sciter
-  ```
-
-至此，谢语言语言所需的图形界面环境已经配置好，可以用下面的命令行：
-
-```shell
-xie -example calculator.xie
-```
-
-即可运行在线的计算器例子程序。运行效果类似下图：
-
-![截图](http://xie.topget.org/example/xie/snap/snap6.png)
-
-注意，如果中文显示有问题，请自行搜索如何在Ubuntu系统下安装中文字体，也有可能是环境变量LANG等的设置问题（应为en_US.UTF-8）。
-
-如果按上述步骤仍然无法运行，请确保Linux系统安装好了X11图形界面环境。另外，如果在云服务器或者虚拟机上运行，客户端如果在Windows上，建议在Windows下安装Xming，并运行起来，然后使用支持X11 Forwarding的SSH客户端（如Terminus或Bitvise SSH Client，两者均免费），并打开X11 Forwarding选项后，即可在Windows下运行Gox图形界面程序了，没有什么多余的配置，非常简单。也可以使用内置支持X11的终端软件（如WindTerm等）。
 
 &nbsp;
 

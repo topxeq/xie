@@ -1,18 +1,18 @@
 // 定义用于界面展示的HTML网页代码，放在htmlT变量中
-// HTML和CSS代码都是标准的，脚本语言也是Quick JS，与标准JavaScript基本类似
+// HTML和CSS代码都是标准的，脚本语言也是标准的JavaScript
 // 本例中定义了一个文本输入框用于输入表达式算式
 // 以及“Calculate”和“Close”两个按钮
 // 并定义了两个按钮对应的处理脚本函数
 // “Calculate”按钮将调用JavaScript的eval函数来进行表达式计算
-// 然后将计算结果传递给谢语言代码（通过调用谢语言预定义的delegateDo函数）
+// 然后将计算结果传递给谢语言代码（通过调用谢语言预定义的quickDelegateDo函数）
 // “Close”按钮将关闭整个窗口
 // Define HTML web page code for interface display, placed in the htmlT variable
-// HTML and CSS code are both standard, and the scripting language is also Quick JS, which is basically similar to standard JavaScript
+// HTML and CSS code are both standard, and the scripting language is also standard JavaScript
 // In this example, a text input box is defined for inputting expression expressions
 // And the "Calculate" and "Close" buttons
 // And defined the processing script functions corresponding to the two buttons
 // The 'Calculate' button will call JavaScript's eval function for expression evaluation
-// Then pass the calculation results to Xie language code (by calling Xielang's predefined delegateDo function)
+// Then pass the calculation results to Xie language code (by calling Xielang's predefined quickDelegateDo function)
 //The 'Close' button will close the entire window
 assign $htmlT `
 <!DOCTYPE html>
@@ -31,21 +31,24 @@ assign $htmlT `
 	</div>
 	<div>
 		<button id="btnCal">Calculate</button>
-		<button id="btnClose">Close</button>
+		<button id="btnClose" onclick="javascript:closeWindowClick();">Close</button>
 	</div>
 
     <script>
-        document.$("#btnCal").on("click", function() {
+        document.getElementById("btnCal").addEventListener("click", function() {
 			var result = eval(document.getElementById("mainInputID").value);
 
-            Window.this.xcall("delegateDo", result);
+            quickDelegateDo(result);
 
-            document.$("#mainInputID").value = result;
+            document.getElementById("mainInputID").value = result;
         });
+
+        function closeWindowClick() {
+            quickDelegateDo("closeWindow");
+        }
  
-        document.$("#btnClose").on("click", function() {
-            Window.this.close();
-        });
+        window.onload = function() {
+        };
  
     </script>
 </body>
@@ -55,7 +58,7 @@ assign $htmlT `
 // 调用guiG的newWindow方法创建一个窗口
 // newWindow方法需要有三个参数，第一个是窗口标题
 // 第二个是字符串形式的值用于指定窗口大小，空字符串表示按默认区域
-// 如果使用类似“[200,300,600,400]”的字符串，则表明窗口位于屏幕坐标（200,300）处，宽高位600*400
+// 如果使用类似“[200,300,600,400]”的字符串，则表明窗口位于屏幕坐标（200,300）处，宽高为600*400
 // 第三个参数为用于界面展示的字符串
 // 结果放入变量windowT中，这是一个特殊类型的对象(后面暂称为window对象)
 // 后面我们还将调用该对象的一些方法进行进一步的界面控制
@@ -66,14 +69,14 @@ assign $htmlT `
 // The third parameter is the string used for interface display
 // The result is placed in the variable windowT, which is a special type of object (later temporarily referred to as a window object)
 // In the future, we will also call some methods of this object for further interface control
-mt $windowT $guiG newWindow "-title=Simple Calculator" -width=1024 -height=768 -center
+mt $windowT $guiG newWindow "-title=Simple Calculator" -width=640 -height=480 -center
 
 plo $windowT
 
 // 用new指令创建一个快速代理函数（quickDelegate）对象dele1
 // 谢语言中quickDelegate是最常用的代理函数对象
 // 它创建时需要指定一个快速函数，本例中通过源代码指明
-// 这样，当Sciter的网页中调用view对象的delegateDo函数时
+// 这样，当网页代码中调用view对象的quickDelegateDo函数时
 // 就将调用该快速函数代码来处理
 // 约定该函数必须通过inputL变量来获取输入参数，并返回一个参数（通过outL变量）
 // 参数均为字符串类型
@@ -82,7 +85,7 @@ plo $windowT
 // Create a quickDelegate object dele1 using the new instruction
 // In Xielang, quickDelegate is the most commonly used proxy function object
 // When it is created, a fast function needs to be specified. In this example, the source code indicates
-// In this way, when Sciter's web page calls the delegateDo function of the view object
+// In this way, when the web page calls the quickDelegateDo function of the view object
 // Call the fast function code to handle
 // The convention is that the function must obtain input parameters through the inputL variable and return a parameter (through the outL variable)
 // All parameters are of string type
@@ -91,6 +94,11 @@ plo $windowT
 new $dele1 quickDelegate `
     [] $resultL $inputL 0
 
+    ifEqual $resultL "closeWindow" :+1 :next1L
+        mt $drop $windowT close
+        exitL $resultL
+
+    :next1L
     pl "Result: %v" $resultL
 
     // 函数返回前必须要有一个输出参数存入outL中
