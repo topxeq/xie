@@ -1,0 +1,178 @@
+// 本例演示使用WebView2搭建一个登录对话框
+//This example demonstrates using WebView2 to build a login dialog box
+
+// 设定界面的HTML
+// 其中Javascript代码中delegateDo函数是默认约定的使用setDelegate设置代理函数后与谢语言进行互通的函数
+// 它接收一个字符串类型的输入参数，并输出一个字符串类型的输出参数
+// 如果想传递多于一个的数据，可以用JSON进行数据的封装
+// set HTML for GUI
+// The delegateDo function in Javascript code is the default function to communicate with Xielang after using setDelegate instruction to set the delegate function in Xielang
+// It receives an input parameter of string type and outputs an output parameter of string type
+// If you want to transfer more than one data, you can use JSON for data encapsulation
+assign $htmlT `
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <title>Please login...</title>
+</head>
+<body >
+	<div style="margin-top: 10px; margin-bottom: 10px;">
+		<span>Please enter the user name and password to login...</span>
+	</div>
+	<div style="margin-top: 10px; margin-bottom: 10px;">
+		<label for="userNameID" >User Name:&nbsp; </label><input id="userNameID" type=text />
+	</div>
+	<div style="margin-top: 10px; margin-bottom: 10px;">
+		<label for="userNameID" >Password:&nbsp; </label><input id="passwordID" type=password />
+	</div>
+	<div>
+		<button id="btnLoginID">Login</button>
+		<button id="btnClose">Close</button>
+	</div>
+
+    <script>
+        document.getElementById("btnLoginID").onclick = function() {
+            var userNameT = document.getElementById("userNameID").value.trim();
+			var passwordT = document.getElementById("passwordID").value.trim();
+
+            // 调用代理函数与谢语言通信，传入参数并获取结果
+            // 如果是使用setQuickDelegate指令设置的快速代理函数，则应该调用quickDelegateDo函数
+            // Calling delegate functions to communicate with Xielang, passing in parameters and obtaining results
+            // If the quick delegate function is set using the setQuickDelegate instruction, the quickDelegateDo function should be called
+            let result = delegateDo(JSON.stringify({"userName": userNameT, "password": passwordT}));
+            // let result = quickDelegateDo(JSON.stringify({"userName": userNameT, "password": passwordT}));
+
+            result.then((r) => {
+                // 弹框提示函数返回结果
+                // show the result message
+                alert("result: " + r);
+            });
+
+        };
+ 
+        document.getElementById("btnClose").addEventListener("click", function() {
+            // delegateCloseWindow函数是默认约定的关闭窗口的函数
+            // The delegateCloseWindow function is the default convention for closing windows
+            delegateCloseWindow();
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("document loaded");
+        });
+
+
+    </script>
+</body>
+</html>
+`
+
+// 新建WebView2窗口，并指定宽、高，以及位置居中，并打开调试模式（可用右键检查）
+// Create a new WebView2 window, specify the width, height, and center position, and open debug menu (right click to check)
+mt $windowT $guiG newWindow "-title=Test" -width=600 -height=400 -center -debug
+
+// 设置与界面之间的代理或快速代理对象
+// 这里演示了4种调用代理函数的方法，推荐未注释的方法，但其他方法也可以选用
+// Set delegate or quick delegate objects between the GUI and backend
+// Here are four methods for calling delegate functions demonstrated. The uncommented method is recommended, but other methods can also be used
+
+// 第一种方法：采用new指令创建快速代理函数，然后使用setQuickDelegate指令设置
+// 快速代理对象使用inputL和outL变量来传递输入参数和输出参数
+// 函数退出时使用exitL指令（这里带参数表示退出前将outL赋值为该参数代表的值）
+// 快速代理函数需要在JavaScript代码中用quickDelegateDo函数来调用，这是个约定好的函数名字
+// The first method is to use the new instruction to create a quick delegate function, and then use the setQuickDelegate instruction to set it
+// Quick delegate objects use inputL and outL variables to pass input and output parameters
+// When the function exits, use the exitL instruction (where a parameter indicates assigning outL to the value represented by the parameter before exiting)
+// The quick delegate function needs to be called in JavaScript code using the quickDelegateDo function, which is a predetermined function name
+
+// pln "method1"
+// new $dele1 quickDelegate `
+//     [] $resultL $inputL 0
+
+//     pl "Result: %v" $resultL
+
+//     // 快速代理函数返回前必须要有一个输出参数存入outL中
+//     // 此处因为实际上无需返回参数，因此随便存入一个无用的数值
+//     // There must be an output parameter stored in outL before the function returns
+//     // Because there is actually no need to return parameters, a useless numerical value is randomly stored here
+//     exitL $resultL
+// `
+
+// mt $rs $windowT setQuickDelegate $dele1
+
+// 第二种方法：用new指令新建代理函数，然后用setDelegate指令来设置
+// 与快速代理函数不同，代理函数将运行在不同的虚拟机中，相对更安全
+// 代理函数与快速代理对象的区别是其中使用inputG和outG变量来传递输入参数和输出参数，并用exit指令退出
+// 并且代理函数在JavsScript中用delegateDo来调用，而快速代理函数是用quickDelegateDo来调用
+// The 2nd method: Use the new instruction to create a new delegate function, and then use the setDelegate instruction to set it
+// Unlike quick delegate functions, delegate functions will run on different virtual machines and are relatively safer
+// The difference between delegate functions and quick delegate objects is that they use inputG and outG variables to pass input and output parameters, and exit with the exit command
+// And the delegate function is called with delegateDo in JavsScript, while the fast delegate function is called with quickDelegateDo
+
+pln "method2"
+new $dele1 delegate `
+    [] $resultT $inputG 0
+
+    pl "Result: %v" $resultT
+
+    // 代理函数返回前必须要有一个输出参数存入outG中
+    // 此处因为实际上无需返回参数，因此随便存入一个无用的数值
+    // There must be an output parameter stored in outG before the function returns
+    // Because there is actually no need to return parameters, a useless numerical value is randomly stored here
+    exit $resultT
+`
+
+mt $rs $windowT setDelegate $dele1
+
+// 第三种方法：直接使用字符串设置快速代理函数
+// The third method: directly use a string to set up a quick delegate function
+
+// pln "method3"
+// mt $rs $windowT setQuickDelegate `
+
+//     [] $resultT $inputL 0
+
+//     pl "Result: %v" $resultT
+
+//     exitL $resultT
+
+// `
+
+// // 第四种方法：直接使用字符串设置代理函数
+// // The 4th method: directly use a string to set the delegate function
+
+// pln "method4"
+// mt $rs $windowT setDelegate `
+
+//     [] $resultT $inputG 0
+
+//     // ifEqual $resultT "closeWindow" :+1 :next1
+//     //     mt $drop $windowT close
+//     //     exit $resultT
+
+//     pl "Result: %v" $resultT
+
+//     exit $resultT
+
+// `
+
+// 设置窗口中使用的HTML
+// Set the HTML used in the window
+mt $rs $windowT setHtml $htmlT
+
+plo $rs $windowT
+
+// 运行图形界面
+// 这是阻塞执行的，窗口被关闭才会执行后面的语句
+// Run the GUI window
+// This is blocking execution, and subsequent statements will only be executed when the window is closed
+mt $rs $windowT show
+
+plo $rs
+
+// 关闭图形窗口
+// Close the GUI window
+mt $rs $windowT close
+
+exit
