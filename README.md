@@ -7428,11 +7428,11 @@ This example continues to introduce GUI programming, implementing a common login
 
 The operation effect is shown in the following figure:
 
-![截图](http://xie.topget.org/example/xie/snap/snap7.png)
+![截图](http://xie.topget.org/example/xie/snap/snap10.png)
 
-可以看出，moveToCenter函数返回的是一个非JSON格式的字符串，表示屏幕的宽与高的像素数，而点击登录按钮后，接口代理函数将输出一个JSON格式的包含输入的用户名和密码的字符串，可以用于后续处理。
+可以看出，点击登录按钮后，接口代理函数将输出一个JSON格式的包含输入的用户名和密码的字符串，可以用于后续处理。
 
-It can be seen that the moveToCenter function returns a non JSON formatted string representing the width and height of the screen in pixels. After clicking the login button, the interface proxy function will output a JSON formatted string containing the input username and password, which can be used for subsequent processing.
+It can be seen that after clicking the login button, the interface delegate function will output a JSON formatted string containing the input username and password, which can be used for subsequent processing.
 
 &nbsp;
 
