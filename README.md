@@ -7660,11 +7660,11 @@ For now, please refer to each Xie... object in the in-code document description 
 
 谢语言中的指令，可以没有任何参数（0个参数），即不需要输出也不需要输入参数，例如pass。也有可能只有一个结果参数，例如getNowStr，此时可以省略结果参数以表示将结果存入全局变量\$tmp。当然，也有可能既有结果参数，也有其他一个或多个输入参数。当输入参数是可变个数的时候，结果参数是不可省略的。输入参数固定的情况下，一般结果参数也可以省略来表示压栈。一般情况下，为了避免混淆，对于有结果参数的指令，建议总是写上结果参数。
 
+Instructions in Xielang can have no parameters (0 parameters), that is, no output or input parameters are required, such as pass. It is also possible that there is only one result parameter, such as getNowStr. At this time, the result parameter can be omitted to indicate that the result will be saved to the global variable \$tmp. Of course, it is also possible to have both result parameters and one or more other input parameters. When the input parameters are variable, the result parameters cannot be omitted. When the input parameter is fixed, the general result parameter can also be omitted to indicate the stack pressing. In general, in order to avoid confusion, it is recommended to always write the result parameters for instructions with result parameters.
+
 * 注：少数指令可以带有多个结果参数，例如getIter。
 
 *Note: A few instructions can have multiple result parameters, such as getIter.
-
-Instructions in Xielang can have no parameters (0 parameters), that is, no output or input parameters are required, such as pass. It is also possible that there is only one result parameter, such as getNowStr. At this time, the result parameter can be omitted to indicate that the result will be saved to the global variable \$tmp. Of course, it is also possible to have both result parameters and one or more other input parameters. When the input parameters are variable, the result parameters cannot be omitted. When the input parameter is fixed, the general result parameter can also be omitted to indicate the stack pressing. In general, in order to avoid confusion, it is recommended to always write the result parameters for instructions with result parameters.
 
 &nbsp;
 
@@ -7734,6 +7734,7 @@ The goal of Xielang is to use simple syntax structure to reduce the syntax parsi
 #### 嵌入式使用谢语言（以虚拟机的方式在其他语言中调用）（Embedded Xielang in other languages）
 
 - **在Go语言（Golang）中如何嵌入**：请参看cmd目录下的main.go，这是谢语言的主程序，里面既是以嵌入式的方法创建谢语言虚拟机并执行代码的。
+
 - **How to embed Xielang in Go language (Golang)**: please refer to main.go under cmd directory, which is the main program of Xielang. It is used to create Xielang virtual machine and execute code in an embedded way.
 
 &nbsp;
@@ -7745,9 +7746,11 @@ The goal of Xielang is to use simple syntax structure to reduce the syntax parsi
 Generally, there are two ways to extend Xielang:
 
 - **增加内置指令**：请fork本库，参考xie.go中的源代码，参看各个指令的写法编写自己的新指令，然后编译出可执行代码即可。
+
 - **Add built-in instructions**: Please fork this library, refer to the source code in xie.go, and write your own new instructions according to the writing method of each instruction, and then compile the executable code.
 
 - **增加内置对象**：请fork本库，参考xie.go中的源代码，各个Xie...对象（如XieString）的代码内文档说明，重点是实现XieObject接口，然后编译出可执行代码即可。
+
 - **Add built-in objects**: Please fork this library, refer to the source code in xie.go, and the in-code documentation of each XieObject object (such as XieString). The key point is to implement the XieObject interface, and then compile the executable code.
 
 &nbsp;
@@ -7760,11 +7763,7 @@ Generally, there are two ways to extend Xielang:
 
 - 在Linux下如果出现类似“package gl was not found in the pkg-config search path.”的错误：请执行 apt install libgl1-mesa-dev 命令安装依赖库。
 
-- Windows下如果使用SciterJS库进行GUI编程，请执行 go get github.com/sciter-sdk/go-sciter@sciter-api 命令确保使用了正确的Go-Sciter控制包。
-
-- 出现类似“github.com/AllenDang/imgui-go@v1.12.1: replacement directory ../../../../../github.com/AllenDang/imgui-go does not exist”的错误：由于Linux下使用github.com/AllenDang/imgui-go在Github上的库有小问题，因此需要本地git clone该库，并在作少许修改后使用（Windows下无需改动）。
-
-- 在Linux下如果出现类似“/usr/include/x86_64-linux-gnu/bits/stdio2.h:34:43: note: ‘__builtin___sprintf_chk’ output between 6 and 15 bytes into a destination of size 8”的错误：删除本地github.com/AllenDang/imgui-go库中的implot_demo.cpp文件，或将其重命名为非程序文件，例如mv implot_demo.cpp implot_demo.cpp.bac，然后在编译即可。
+- If an error similar to 'package gl was not found in the pkg config search path.' appears under Linux, please execute the 'apt install libgl1 mesa dev' command to install the dependent library.
 
 &nbsp;
 

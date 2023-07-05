@@ -49,7 +49,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var VersionG string = "1.3.6"
+var VersionG string = "1.3.7"
 
 func Test() {
 	tk.Pl("test")
@@ -673,7 +673,8 @@ var InstrNameSet map[string]int = map[string]int{
 	"writeStr":  21201, // 写入字符串，可以向文件、字节数组、字符串等写入
 	"writeStrf": 21202, // 写入字符串，可以向文件、字节数组、字符串等写入，类似printf后的可变参数
 
-	"readStr": 21203, // 读出字符串，可以从文件、字节数组、字符串等读取，读取所有能读取的
+	"readStr":    21203, // 读出字符串，可以从文件、字节数组、字符串等读取，读取所有能读取的
+	"readAllStr": 21203, // 读出字符串，可以从文件、字节数组、字符串等读取，读取所有能读取的
 
 	"createFile": 21501, // 新建文件，如果带-return参数，将在成功时返回FILE对象，失败时返回error对象，否则返回error对象，成功为nil，-overwrite有重复文件不会提示。如果需要指定文件标志位等，用openFile指令
 
@@ -13736,6 +13737,15 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		v1 := p.GetVarValue(r, instrT.Params[v1p])
 
+		nv1, ok := v1.(io.Closer)
+
+		if ok {
+			errT := nv1.Close()
+
+			p.SetVar(r, pr, errT)
+			return ""
+		}
+
 		switch nv := v1.(type) {
 		case *os.File:
 			errT := nv.Close()
@@ -14855,7 +14865,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		return ""
 
-	case 21203: // readStr
+	case 21203: // readStr/readAllStr
 		if instrT.ParamLen < 2 {
 			return p.Errf(r, "not enough parameters(参数不够)")
 		}
@@ -14864,6 +14874,20 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		v1p := 1
 
 		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		nv1, ok := v1.(io.Reader)
+
+		if ok {
+			rsT, errT := io.ReadAll(nv1)
+
+			if errT != nil {
+				p.SetVar(r, pr, errT)
+				return ""
+			}
+
+			p.SetVar(r, pr, string(rsT))
+			return ""
+		}
 
 		switch nv := v1.(type) {
 		case string:
