@@ -3143,6 +3143,77 @@ As shown above, the runCall instruction can run a compiled piece of code or a ru
 
 Note that the function called by the runCall instruction uses the \$inputL local variable to pass in parameters, which is an array (list). The getArrayItem instruction needs to retrieve each parameter by index from it, and the \$outL parameter needs to be used to pass out return parameters. In addition, the functions called by runCall can access global variables defined in the virtual machine where they are located.
 
+由于runCall指令调用的函数是在同一个虚拟机中运行的，因此可以使用本虚拟机的堆栈，下面是再一个的runCall的例子：
+
+Since the function called by the runCall instruction runs in the same virtual machine, the stack of this virtual machine can be used. Here is another example of runCall:
+
+```go
+// 本例继续演示用runCall指令调用函数的方法
+// This example continues to demonstrate the method of calling functions using the runCall instruction
+
+// 压栈准备传入的函数的第一个参数
+// Push the stack to prepare the first parameter of the incoming function
+push #f1.6
+
+// runCall指令将代码块看做封装函数进行调用
+// 结果参数不可省略，之后第1个参数表示函数代码
+// 之后可以跟多个指令参数，表示传入这个函数内的参数
+// 这些参数在函数代码内可以通过列表类型的变量inputL访问
+// 下面的这个函数的功能是简单的加法运算
+// The runCall instruction treats code blocks as encapsulated functions for calling
+// The result parameter cannot be omitted, and the first parameter after it represents the function code
+// Afterwards, multiple instruction parameters can be used to represent the parameters passed into this function
+// These parameters can be accessed within the function code through the variable inputL of the list type
+// The function below is for simple addition operations
+runCall $rs `
+    // 弹栈第一个参数
+    // pop out the first parameter
+    pop $arg1
+
+    // 获取传入的参数作为加法计算的第二个参数
+    // Obtain the passed in parameter as the second parameter for addition calculation
+    getArrayItem $arg2 $inputL 0
+
+    // 输出两个参数检查
+    // Output two parameter checks
+    pln arg1= $arg1
+    pln arg2= $arg2
+
+    // 将两个参数相加，结果压栈
+    // Add two parameters and stack the result
+    add $push $arg1 $arg2
+
+    // 输出栈顶值检查
+    // Output stack top value check
+    pln $peek
+
+    // runCall函数因为与调用者在同一个虚拟机中运行，所以返回值可以通过堆栈返回
+    // 也可以通过outL变量来返回值
+    // The runCall function runs in the same virtual machine as the caller, so the return value can be returned through the stack
+    // You can also return values through the outL variable
+    assign $outL $peek
+` #f2.3
+
+// 输出函数返回值
+// Output function return value
+pln "result:" $rs
+
+// 输出从堆栈返回的值，这个例子里是一样的
+//Output the value returned from the stack, which is the same in this example
+pln "result:" $pop
+
+```
+
+运行结果是：
+
+```shell
+arg1= 1.6
+arg2= 2.3
+3.9
+result: 3.9
+result: 3.9
+```
+
 后面在合适的时候，我们还将介绍使用不同运行上下文的并发调用指令goRunCall。
 
 Later, when appropriate, we will also introduce the use of the concurrent call instruction goRunCall with different running contexts.
@@ -4043,7 +4114,7 @@ code loaded:
 
 &nbsp;
 
-封装函数与一般函数与快速函数的区别是：封装函数直接采用源代码形式调用，实际上会新启动一个谢语言虚拟机去执行函数代码，封闭性更好（相当于沙盒执行），也更灵活，参数和返回值通过堆栈传递；缺点是性能稍慢（因为要启动虚拟机并解析代码）。下面是封装函数调用的例子（callFunc.xie）：
+封装函数与一般函数与快速函数的区别是：封装函数直接采用源代码形式调用，实际上会新启动一个谢语言虚拟机去执行函数代码，封闭性更好（相当于沙盒执行），也更灵活，参数和返回值通过堆栈传递；缺点是性能稍慢（因为要启动虚拟机并解析代码）。下面是封装函数调用的例子（sealCall.xie）：
 
 The difference between sealed functions and general functions and fast functions is that sealed functions can be directly called in source code form, which actually launches a new Xielang virtual machine to execute the function code. It has better closure (equivalent to sandbox execution) and is more flexible, with parameters and return values passed through the stack; The disadvantage is that the performance is slightly slow (because the virtual machine needs to be started and the code needs to be compiled). The following is an example of sealed function calls (sealCall.xie):
 

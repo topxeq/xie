@@ -49,7 +49,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var VersionG string = "1.3.7"
+var VersionG string = "1.3.8"
 
 func Test() {
 	tk.Pl("test")
@@ -502,6 +502,8 @@ var InstrNameSet map[string]int = map[string]int{
 	"maxX": 2121,
 	"min":  2122, // 取多个数的最小值，结果参数不可省略
 	"minX": 2122,
+
+	"adjustFloat": 2201, // 将类似32.0000000004这种浮点计算误差值的位数去掉，结果参数不可省略，用法：adjustFloat @`#f0.65 - #f0.6` 10，第二个参数是整理到小数点后多少位，可以省略，默认是10
 
 	// command-line related 命令行相关
 	"getParam": 10001, // 获取指定序号的命令行参数，结果参数外第一个参数为list或strList类型，第二个为整数，第三个为默认值（字符串类型），例：getParam $result $argsG 2 ""
@@ -997,7 +999,7 @@ var InstrNameSet map[string]int = map[string]int{
 // }
 
 type VarRef struct {
-	Ref    int // -99 - invalid, -31 - clipboard(text), -23 - slice of array/slice, -22 - map item, -21 - array/slice item, -18 - local reg, -17 - reg, -16 - label, -15 - ref, -12 - unref, -11 - seq, -10 - quickEval, -9 - eval, -8 - pop, -7 - peek, -6 - push, -5 - tmp, -4 - pln, -3 - value only, -2 - drop, -1 - debug, 3 normal vars
+	Ref    int // -99 - invalid, -31 - clipboard(text), -23 - slice of array/slice, -22 - map item, -21 - array/slice item, -18 - local reg, -17 - reg, -16 - label, -15 - ref, -12 - unref, -11 - seq, -10 - quickEval, -9 - flexEval, -8 - pop, -7 - peek, -6 - push, -5 - tmp, -4 - pln, -3 - value only, -2 - drop, -1 - debug, 3 normal vars
 	Value  interface{}
 	IsList bool
 }
@@ -1601,6 +1603,34 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 		} else if strings.HasPrefix(s1T, "@") { // quickEval
 			if len(s1T) < 2 {
 				return VarRef{-3, s1T, false}
+			}
+
+			if s1T[1] == '@' {
+				if len(s1T) < 3 {
+					return VarRef{-3, s1T, false}
+				}
+
+				s1T = strings.TrimSpace(s1T[2:])
+
+				if strings.HasPrefix(s1T, "`") && strings.HasSuffix(s1T, "`") {
+					s1T = s1T[1 : len(s1T)-1]
+
+					return VarRef{-9, s1T, false} // quick eval value
+				} else if strings.HasPrefix(s1T, "'") && strings.HasSuffix(s1T, "'") {
+					s1T = s1T[1 : len(s1T)-1]
+
+					return VarRef{-9, s1T, false} // quick eval value
+				} else if strings.HasPrefix(s1T, `"`) && strings.HasSuffix(s1T, `"`) {
+					tmps, errT := strconv.Unquote(s1T)
+
+					if errT != nil {
+						return VarRef{-9, s1T, false}
+					}
+
+					return VarRef{-9, tmps, false}
+				}
+
+				return VarRef{-9, s1T, false}
 			}
 
 			s1T = strings.TrimSpace(s1T[1:])
@@ -12526,6 +12556,26 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		p.SetVar(r, pr, tk.Min(vs...))
 
+		return ""
+
+	case 2201: // adjustFloat
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough paramters")
+		}
+
+		pr := instrT.Params[0]
+		v1p := 1
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		if instrT.ParamLen > 2 {
+			v2 := p.GetVarValue(r, instrT.Params[v1p+1])
+
+			p.SetVar(r, pr, tk.AdjustFloat(tk.ToFloat(v1), tk.ToInt(v2)))
+			return ""
+		}
+
+		p.SetVar(r, pr, tk.AdjustFloat(tk.ToFloat(v1)))
 		return ""
 
 	case 10001: // getParam
