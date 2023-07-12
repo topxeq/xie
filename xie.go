@@ -49,7 +49,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var VersionG string = "1.3.8"
+var VersionG string = "1.3.9"
 
 func Test() {
 	tk.Pl("test")
@@ -1605,7 +1605,7 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 				return VarRef{-3, s1T, false}
 			}
 
-			if s1T[1] == '@' {
+			if s1T[1] == '@' { // flexEval
 				if len(s1T) < 3 {
 					return VarRef{-3, s1T, false}
 				}
@@ -1615,11 +1615,11 @@ func ParseVar(strA string, optsA ...interface{}) VarRef {
 				if strings.HasPrefix(s1T, "`") && strings.HasSuffix(s1T, "`") {
 					s1T = s1T[1 : len(s1T)-1]
 
-					return VarRef{-9, s1T, false} // quick eval value
+					return VarRef{-9, s1T, false} // flex eval value
 				} else if strings.HasPrefix(s1T, "'") && strings.HasSuffix(s1T, "'") {
 					s1T = s1T[1 : len(s1T)-1]
 
-					return VarRef{-9, s1T, false} // quick eval value
+					return VarRef{-9, s1T, false} // flex eval value
 				} else if strings.HasPrefix(s1T, `"`) && strings.HasSuffix(s1T, `"`) {
 					tmps, errT := strconv.Unquote(s1T)
 
@@ -2834,6 +2834,10 @@ func (p *XieVM) GetVarValue(runA *RunningContext, vA VarRef) interface{} {
 		return tk.Undefined
 	}
 
+	if idxT == -9 {
+		return tk.FlexEvalMap(tk.ToStr(vA.Value), p.GetVarValue(runA, ParseVar("$flexEvalEnvG")))
+	}
+
 	if idxT == -10 {
 		// tk.Pln("getvarvalue", vA.Value)
 		return QuickEval(tk.ToStr(vA.Value), p, runA)
@@ -2954,6 +2958,10 @@ func (p *XieVM) GetVarValueGlobal(runA *RunningContext, vA VarRef) interface{} {
 
 	if idxT == -6 {
 		return tk.Undefined
+	}
+
+	if idxT == -9 {
+		return tk.FlexEvalMap(tk.ToStr(vA.Value), p.GetVarValue(runA, ParseVar("$flexEvalEnvG")))
 	}
 
 	if idxT == -10 {
@@ -3605,7 +3613,15 @@ func EvalCondition(condA interface{}, vmA *XieVM, runA *RunningContext) interfac
 	case VarRef:
 		typeT := nv.Ref
 
-		if typeT == -10 {
+		if typeT == -9 {
+			rs := tk.FlexEvalMap(tk.ToStr(nv.Value), vmA.GetVarValue(runA, ParseVar("$flexEvalEnvG")))
+
+			resultT, ok = rs.(bool)
+
+			if !ok {
+				return fmt.Errorf("unsupport condition type: %T(%#v)", condA, condA)
+			}
+		} else if typeT == -10 {
 			rs := QuickEval(tk.ToStr(nv.Value), vmA, runA)
 
 			resultT, ok = rs.(bool)
@@ -3639,7 +3655,15 @@ func EvalCondition(condA interface{}, vmA *XieVM, runA *RunningContext) interfac
 	case *VarRef:
 		typeT := nv.Ref
 
-		if typeT == -10 {
+		if typeT == -9 {
+			rs := tk.FlexEvalMap(tk.ToStr(nv.Value), vmA.GetVarValue(runA, ParseVar("$flexEvalEnvG")))
+
+			resultT, ok = rs.(bool)
+
+			if !ok {
+				return fmt.Errorf("unsupport condition type: %T(%#v)", condA, condA)
+			}
+		} else if typeT == -10 {
 			rs := QuickEval(tk.ToStr(nv.Value), vmA, runA)
 
 			resultT, ok = rs.(bool)

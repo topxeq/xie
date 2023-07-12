@@ -6,6 +6,10 @@ systemCmd $rs "xie" "-gopath" "flexEval.xie"
 
 test $rs "result1=228.85\nresult2=\"abc789\"\nresult3=19.4399\nresult4=\"[18.5,44]\"\n" $seq "flexEval.xie"
 
+systemCmd $rs "xie" "-gopath" "flexEval2.xie"
+
+test $rs "result1=-593\nresult2=\"19.43\"\n" $seq "flexEval2.xie"
+
 systemCmd $rs "xie" "-gopath" "object.xie"
 
 test $rs "abc 123天气很好\nvery\nvery nice\nry nic\n" $seq "object.xie"

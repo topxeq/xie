@@ -34,6 +34,7 @@ Xielang is a free, open-source, cross-platform, cross-language, ASM/SHELL-like, 
   - [- **复杂表达式做参数**](#--复杂表达式做参数)
   - [- **表达式的另一个例子**（Another example of an expression）](#--表达式的另一个例子another-example-of-an-expression)
   - [- **灵活表达式**（Flex expression）](#--灵活表达式flex-expression)
+  - [- **灵活表达式做参数**（Flexible expression as parameter）](#--灵活表达式做参数flexible-expression-as-parameter)
   - [- **goto语句**（The goto instr）](#--goto语句the-goto-instr)
   - [- **一般循环结构**（Loop cycle structure）](#--一般循环结构loop-cycle-structure)
   - [- **条件分支**（Conditional branch）](#--条件分支conditional-branch)
@@ -1655,6 +1656,86 @@ pl "result4=%#v" @`{toJson $tmp $result4}`
 内置函数如果某些情况下出现问题，可以编写同名的自定义函数来代替。
 
 If there is a problem with the Intrinsic function in some cases, you can write a user-defined function with the same name to replace it.
+
+&nbsp;
+
+##### - **灵活表达式做参数**（Flexible expression as parameter）
+
+&nbsp;
+
+灵活表达式也可以用在参数中，can看下面的例子（flexEval2.xie）：
+
+Flexible expressions can also be used in parameters, as shown in the following example (flexEval2.xie):
+
+```go
+
+// 参数以@@开始表示一个灵活表达式，表达式一般需要用反引号括起来
+// 在指令中的灵活表达式将被自动计算出结果值
+// The parameter starts with @@ to represent a flexible expression, which usually needs to be enclosed in back quotes
+// The flexible expression in the instruction will automatically calculate the result value
+pl "result1=%#v" @@`int(7.1 * 24 / 88 - 6 * 99.3)`
+
+// 定义一个实现简单字符串trim功能的函数dele1，注意这里是快速代理函数
+// Define a function dele1 that implements the simple string trim function, and note that this is the fast proxy function
+new $dele1 quickDelegate `
+    getArrayItem $param1 $inputL 0
+
+    trim $outL $param1
+
+    exitL 
+`
+
+// 定义一个实现截断浮点数到小数点后2位功能的函数dele2，注意这里是普通代理函数
+// Define a function dele2 that implements the function of truncating floating point numbers to 2 digits after the Decimal separator. Note that this is a general proxy function
+new $dele2 delegate `
+    getArrayItem $param1 $inputG 0
+
+    spr $outG "%.02f" $param1
+
+    exit 
+`
+
+// 定义一个dele3函数用于替代内置的abs函数
+// Define a dele3 function to replace the built-in ABS function
+new $dele3 quickDelegate `
+    getArrayItem $param1 $inputL 0
+
+    abs $outL $param1
+
+    exitL
+`
+
+// 灵活表达式做参数时，将自动寻找全局预设变量flexEvalEnvG来获取所需的参数和自定义函数等
+// When using flexible expressions as parameters, it will automatically search for the global preset variable flexEvalEnvG to obtain the required parameters and custom functions
+var $flexEvalEnvG map
+
+// 设置其中几个键值对，包括列表，映射、自定义函数几种类型
+// Set several key value pairs, including lists, mappings, and custom function types
+setMapItem $flexEvalEnvG "a1" #L`[68, 37, 76]`
+setMapItem $flexEvalEnvG "m1" #M`{"value1": -3.5, "value2": 9.2}`
+setMapItem $flexEvalEnvG "trim" $dele1
+setMapItem $flexEvalEnvG "toFixed" $dele2
+setMapItem $flexEvalEnvG "abs" $dele3
+
+// toFixed和abs都是自定义函数
+// 注意对于列表和映射使用的索引方法，与一般语言中的一样
+// 计算结果应为19.43
+// toFixed and abs are both custom functions
+// Note that the indexing method used for lists and mappings is the same as in general languages
+// The calculation result should be 19.43
+
+pl "result2=%#v" @@`toFixed(a1[0] / abs(m1.value1))`
+
+```
+
+代码运行后将输出：
+
+After running the code, it will output:
+
+```shell
+result1=-593
+result2="19.43"
+```
 
 &nbsp;
 
