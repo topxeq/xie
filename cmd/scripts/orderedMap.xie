@@ -1,0 +1,14 @@
+new $map1 orderedMap
+
+= $v2 #i1
+= $v3 #L`["s1", "s2"]`
+
+setMapItem $map1 "SSS" v11
+
+mt $_ $map1 Set k1 v1
+mt $_ $map1 Set a2 $v2
+mt $_ $map1 Set 3 $v3
+
+toJson $json1 $map1
+
+pln $json1

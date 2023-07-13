@@ -49,7 +49,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var VersionG string = "1.3.9"
+var VersionG string = "1.5.1"
 
 func Test() {
 	tk.Pl("test")
@@ -835,6 +835,9 @@ var InstrNameSet map[string]int = map[string]int{
 	"dbQueryFloat": 32107, // 在指定数据库连接上执行一个查询的SQL语句，返回一个浮点数，用法示例：dbQueryFloat $rs $db `select PRICE from TABLE1 where FIELD1=:v1 and FIELD2=:v2` $arg1 $arg2 ...
 
 	"dbQueryString": 32108, // 在指定数据库连接上执行一个查询的SQL语句，返回一个字符串，用法示例：dbQueryString $rs $db `select NAME from TABLE1 where FIELD1=:v1 and FIELD2=:v2` $arg1 $arg2 ...
+
+	"dbQueryMapArray": 32109, // 在指定数据库连接上执行一个查询的SQL语句（一般是select等），返回一个映射，以指定的数据库记录字段为键名，对应记录为键值的数组，用法示例：dbQueryMapArray $rs $db $sql $key $arg1 $arg2 ...
+	"dbQueryOrdered":  32110, // 同dbQuery，但返回一个有序列表（orderedMap）
 
 	"dbExec": 32111, // 在指定数据库连接上执行一个有操作的SQL语句（一般是insert、update、delete等），用法示例：dbExec $rs $db $sql $arg1 $arg2 ...
 	"执行数据库":  32111,
@@ -4454,6 +4457,8 @@ func NewVar(p *XieVM, r *RunningContext, typeA string, argsA ...interface{}) int
 		rs = blT
 	case "map", "{}", "map[string]interface{}":
 		rs = map[string]interface{}{}
+	case "orderedMap":
+		rs = tk.NewObject("orderedMap")
 	case "strMap", "map[string]string":
 		rs = map[string]string{}
 	case "bytesBuffer", "bytesBuf":
@@ -10269,6 +10274,8 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 			nv[v2] = tk.ToFloat(v3)
 		case map[string]string:
 			nv[v2] = tk.ToStr(v3)
+		case *tk.OrderedMap:
+			nv.Set(v2o, v3)
 		case url.Values:
 			nv.Set(v2, tk.ToStr(v3))
 		case *url.Values:
@@ -10325,6 +10332,8 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 			delete(nv, v2)
 		case map[string]string:
 			delete(nv, v2)
+		case *tk.OrderedMap:
+			nv.Delete(v2)
 		default:
 			valueT := reflect.ValueOf(v1)
 
@@ -10386,6 +10395,8 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 			rv, ok = nv[v2]
 		case map[string]map[string]interface{}:
 			rv, ok = nv[v2]
+		case *tk.OrderedMap:
+			rv, ok = nv.Get(v2o)
 		default:
 			// tk.Plo("here1", v1, v2o)
 			valueT := reflect.ValueOf(v1)
@@ -10500,6 +10511,9 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 			for k, _ := range nv {
 				rv = append(rv, k)
 			}
+		case *tk.OrderedMap:
+			p.SetVar(r, pr, nv.GetKeys())
+			return ""
 		default:
 			valueT := reflect.ValueOf(v1)
 
@@ -16839,6 +16853,28 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		listT := p.ParamsToList(r, instrT, 4)
 
 		rs := sqltk.QueryDBMapArrayX(v2.(*sql.DB), tk.ToStr(v3), tk.ToStr(v4), listT...)
+
+		if tk.IsError(rs) {
+			p.SetVar(r, p1, rs)
+		} else {
+			p.SetVar(r, p1, rs)
+		}
+
+		return ""
+	case 32110: // dbQueryOrdered
+		if instrT.ParamLen < 3 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		p1 := instrT.Params[0]
+
+		v2 := p.GetVarValue(r, instrT.Params[1])
+
+		v3 := p.GetVarValue(r, instrT.Params[2])
+
+		listT := p.ParamsToList(r, instrT, 3)
+
+		rs := sqltk.QueryDBOrderedX(v2.(*sql.DB), tk.ToStr(v3), listT...)
 
 		if tk.IsError(rs) {
 			p.SetVar(r, p1, rs)

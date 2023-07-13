@@ -1182,6 +1182,10 @@ We have seen some built-in global variables commonly used in Xielang, such as \$
   表示一个全局的整数，每次使用都会加1，一般用于获取自增长、不重复的序号
   Represents a global integer, which will be increased by 1 every time it is used. It is generally used to obtain self-growing and non-repeating serial numbers
   
+- **\$flexEvalEnvG** 
+  用于灵活表达式做参数时的计算参数变量
+  Used for Arguments While Flexible Expressions as Parameters
+  
 - **\$undefinedG** 
   表示未定义的变量值，或指令应返回结果而没有返回结果的时候
   Indicates an undefined variable value, or when the instruction should return a result without returning a result

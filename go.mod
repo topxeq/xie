@@ -14,7 +14,7 @@ require (
 	github.com/topxeq/awsapi v0.0.0-20191115074250-1192cb0fdb97
 	github.com/topxeq/goph v0.0.0-20230116054750-120b087d86fb
 	github.com/topxeq/regexpx v0.0.0-20200814082553-4bffc7d07029
-	github.com/topxeq/sqltk v0.0.0-20230223005953-f9932d23950c
+	github.com/topxeq/sqltk v0.0.0-20230713014122-1cfca57c0814
 	github.com/topxeq/tk v1.0.1
 	github.com/xuri/excelize/v2 v2.7.0
 )
@@ -25,7 +25,6 @@ require (
 	github.com/andybalholm/brotli v1.0.4 // indirect
 	github.com/antonmedv/expr v1.12.5 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
-	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/beevik/etree v1.1.0 // indirect
 	github.com/boombuler/barcode v1.0.1 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
@@ -72,7 +71,6 @@ require (
 	github.com/topxeq/uuid v0.0.0-20210318003930-0d149e412ca1 // indirect
 	github.com/topxeq/xmlx v0.2.0 // indirect
 	github.com/ulikunitz/xz v0.5.10 // indirect
-	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	github.com/xuri/efp v0.0.0-20220603152613-6918739fd470 // indirect
 	github.com/xuri/nfp v0.0.0-20220409054826-5e722a1d9e22 // indirect
@@ -85,7 +83,6 @@ require (
 	golang.org/x/term v0.5.0 // indirect
 	golang.org/x/text v0.7.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
 replace github.com/topxeq/tk v1.0.1 => ../tk
