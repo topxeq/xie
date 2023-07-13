@@ -361,6 +361,7 @@ var InstrNameSet map[string]int = map[string]int{
 	"setMapItem": 1310, // 设置映射项，用法：setMapItem $map1 Name "李白"
 
 	"deleteMapItem": 1312, // 删除映射项
+	"removeMapItem": 1312,
 
 	"getMapItem": 1320, // 获取指定序号的映射项，用法：getMapItem $result $map1 #i2，获取map1中的序号为2的项（即第3项），放入结果变量result中，如果有第4个参数则为默认值（没有找到映射项时使用的值），省略时将是undefined（可与全局内置变量$undefined比较）
 	"{}":         1320,
