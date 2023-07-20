@@ -42,14 +42,14 @@ import (
 
 	_ "github.com/denisenkom/go-mssqldb"
 
-	_ "github.com/godror/godror"
+	// _ "github.com/godror/godror"
 	_ "github.com/sijms/go-ora/v2"
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var VersionG string = "1.5.1"
+var VersionG string = "1.5.2"
 
 func Test() {
 	tk.Pl("test")
@@ -308,9 +308,9 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"go": 1063, // 快速并发调用一个标号处的代码，该段代码应该使用exit命令来表示退出该线程
 
-	"fastCall": 1070, // 快速调用函数，第一个参数是跳转标号，后面的参数将被依次压栈，可以在函数体内弹栈使用 fast call function, no function stack used, no result value allowed, use stack or variables for input and output(parameters after the label parameter will be pushed to the stack in order), use fastRet or ret to return
+	"fastCall": 1070, // 快速调用函数，第一个参数是跳转标号，后面的参数将被依次压栈，可以在函数体内弹栈使用；函数体内应使用fastRet指令返回 fast call function, no function stack used, no result value allowed, use stack or variables for input and output(parameters after the label parameter will be pushed to the stack in order), use fastRet or ret to return
 
-	"fastRet": 1071, // return from fast function, used with fastCall
+	"fastRet": 1071, // 从快速函数中返回 return from fast function, used with fastCall
 
 	// for/range related 循环/遍历相关
 	"for": 1080, // for loop, usage: for @`$a < #i10` `++ $a` :cont1 :+1 , if the quick eval result is true(bool value), goto label :cont1, otherwise goto :+1(the next line/instr), the same as in C/C++ "for (; a < 10; a++) {...}"
@@ -367,6 +367,8 @@ var InstrNameSet map[string]int = map[string]int{
 	"{}":         1320,
 
 	"getMapKeys": 1331, // 取所有的映射键名，可用于手工遍历等场景
+
+	"toOrderedMap": 1341, // 转换列表为有序列表
 
 	// object related 对象相关
 
@@ -592,6 +594,10 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"close": 12003, // 关闭文件等具有Close方法的对象
 
+	"resultf":        12101, // 生成一个TXResult表示通用结果的对象，JSON表达类似{"Status": "fail", "Value": "auth failed"}，Status一般只有success和fail两个取值，Value一般在fail时为失败原因，还可以有其他字段
+	"resultFromJson": 12102, // 生成一个TXResult表示通用结果的对象，JSON表达类似{"Status": "fail", "Value": "auth failed"}，Status一般只有success和fail两个取值，Value一般在fail时为失败原因，还可以有其他字段
+	"resultFromJSON": 12102, // 根据JSON生成TXResult对象，失败时返回error对象
+
 	// http request/response related HTTP请求相关
 	"writeResp":       20110, // 写一个HTTP请求的响应
 	"setRespHeader":   20111, // 设置一个HTTP请求的响应头，如setRespHeader $responseG "Content-Type" "text/json; charset=utf-8"
@@ -631,7 +637,10 @@ var InstrNameSet map[string]int = map[string]int{
 	"regFindAllGroups": 20422, // 获取正则表达式的所有匹配，结果参数不可省略，结果是二维字符串数组，包含各个组，其中第0组是完整匹配，1开始是各个括号中的匹配组，用法示例：regFindAllGroups $result $str1 $regex1
 	"regFind":          20423, // 获取正则表达式的第一个匹配，用法示例：regFind $result $str1 $regex1 $group
 	"regFindFirst":     20423,
-	"regFindIndex":     20425, // 获取正则表达式的第一个匹配的位置，返回一个整数数组，任意值为-1表示没有找到匹配，用法示例：regFindIndex $result $str1 $regex1
+
+	"regFindFirstGroup": 20424, // 获取正则表达式的第一个匹配，返回所有的匹配组为一个列表，其中第一项是完整匹配结果，第二项是第一个匹配组……，，用法示例：regFindFirstGroup $result $str1 $regex1
+
+	"regFindIndex": 20425, // 获取正则表达式的第一个匹配的位置，返回一个整数数组，任意值为-1表示没有找到匹配，用法示例：regFindIndex $result $str1 $regex1
 
 	"regMatch": 20431, // 判断字符串是否完全符合正则表达式，用法示例：regMatch $result "abcab" `a.*b`
 
@@ -838,7 +847,8 @@ var InstrNameSet map[string]int = map[string]int{
 	"dbQueryString": 32108, // 在指定数据库连接上执行一个查询的SQL语句，返回一个字符串，用法示例：dbQueryString $rs $db `select NAME from TABLE1 where FIELD1=:v1 and FIELD2=:v2` $arg1 $arg2 ...
 
 	"dbQueryMapArray": 32109, // 在指定数据库连接上执行一个查询的SQL语句（一般是select等），返回一个映射，以指定的数据库记录字段为键名，对应记录为键值的数组，用法示例：dbQueryMapArray $rs $db $sql $key $arg1 $arg2 ...
-	"dbQueryOrdered":  32110, // 同dbQuery，但返回一个有序列表（orderedMap）
+
+	"dbQueryOrdered": 32110, // 同dbQuery，但返回一个有序列表（orderedMap）
 
 	"dbExec": 32111, // 在指定数据库连接上执行一个有操作的SQL语句（一般是insert、update、delete等），用法示例：dbExec $rs $db $sql $arg1 $arg2 ...
 	"执行数据库":  32111,
@@ -10250,51 +10260,62 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 			return p.Errf(r, "not enough parameters(参数不够)")
 		}
 
-		// p1 := instrT.Params[0].Ref
+		var pr interface{} = -5
+		v1p := 0
 
-		v1 := p.GetVarValue(r, instrT.Params[0])
-
-		v2o := p.GetVarValue(r, instrT.Params[1])
-
-		v2 := tk.ToStr(v2o)
-
-		var v3 interface{}
-
-		v3 = p.GetVarValue(r, instrT.Params[2])
-
-		switch nv := v1.(type) {
-		case map[string]interface{}:
-			nv[v2] = v3
-		case map[string]int:
-			nv[v2] = tk.ToInt(v3)
-		case map[string]byte:
-			nv[v2] = tk.ToByte(v3)
-		case map[string]rune:
-			nv[v2] = tk.ToRune(v3)
-		case map[string]float64:
-			nv[v2] = tk.ToFloat(v3)
-		case map[string]string:
-			nv[v2] = tk.ToStr(v3)
-		case *tk.OrderedMap:
-			nv.Set(v2o, v3)
-		case url.Values:
-			nv.Set(v2, tk.ToStr(v3))
-		case *url.Values:
-			nv.Set(v2, tk.ToStr(v3))
-		default:
-			valueT := reflect.ValueOf(v1)
-
-			kindT := valueT.Kind()
-
-			if kindT == reflect.Map {
-				valueT.SetMapIndex(reflect.ValueOf(v2o), reflect.ValueOf(v3))
-				return ""
-			}
-
-			return p.Errf(r, "参数类型错误: %T(%#v)", v1, v1)
+		if instrT.ParamLen > 3 {
+			pr = instrT.Params[0]
+			v1p = 1
 		}
 
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		v2 := p.GetVarValue(r, instrT.Params[v1p+1])
+
+		v3 := p.GetVarValue(r, instrT.Params[v1p+2])
+
+		p.SetVar(r, pr, tk.SetMapItem(v1, v2, v3))
 		return ""
+
+		// v2 := tk.ToStr(v2o)
+
+		// var v3 interface{}
+
+		// v3 = p.GetVarValue(r, instrT.Params[2])
+
+		// switch nv := v1.(type) {
+		// case map[string]interface{}:
+		// 	nv[v2] = v3
+		// case map[string]int:
+		// 	nv[v2] = tk.ToInt(v3)
+		// case map[string]byte:
+		// 	nv[v2] = tk.ToByte(v3)
+		// case map[string]rune:
+		// 	nv[v2] = tk.ToRune(v3)
+		// case map[string]float64:
+		// 	nv[v2] = tk.ToFloat(v3)
+		// case map[string]string:
+		// 	nv[v2] = tk.ToStr(v3)
+		// case *tk.OrderedMap:
+		// 	nv.Set(v2o, v3)
+		// case url.Values:
+		// 	nv.Set(v2, tk.ToStr(v3))
+		// case *url.Values:
+		// 	nv.Set(v2, tk.ToStr(v3))
+		// default:
+		// 	valueT := reflect.ValueOf(v1)
+
+		// 	kindT := valueT.Kind()
+
+		// 	if kindT == reflect.Map {
+		// 		valueT.SetMapIndex(reflect.ValueOf(v2o), reflect.ValueOf(v3))
+		// 		return ""
+		// 	}
+
+		// 	return p.Errf(r, "参数类型错误: %T(%#v)", v1, v1)
+		// }
+
+		// return ""
 
 	case 1312: // deleteMapItem
 		if instrT.ParamLen < 2 {
@@ -10469,75 +10490,94 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		v1 := p.GetVarValue(r, instrT.Params[v1p])
 
-		var rv []string
+		// var rv []string
 
-		switch nv := v1.(type) {
-		case map[string]interface{}:
-			rv = make([]string, 0, len(nv))
-			for k, _ := range nv {
-				rv = append(rv, k)
-			}
-		case map[string]int:
-			rv = make([]string, 0, len(nv))
-			for k, _ := range nv {
-				rv = append(rv, k)
-			}
-		case map[string]byte:
-			rv = make([]string, 0, len(nv))
-			for k, _ := range nv {
-				rv = append(rv, k)
-			}
-		case map[string]rune:
-			rv = make([]string, 0, len(nv))
-			for k, _ := range nv {
-				rv = append(rv, k)
-			}
-		case map[string]float64:
-			rv = make([]string, 0, len(nv))
-			for k, _ := range nv {
-				rv = append(rv, k)
-			}
-		case map[string]string:
-			rv = make([]string, 0, len(nv))
-			for k, _ := range nv {
-				rv = append(rv, k)
-			}
-		case map[string]map[string]string:
-			rv = make([]string, 0, len(nv))
-			for k, _ := range nv {
-				rv = append(rv, k)
-			}
-		case map[string]map[string]interface{}:
-			rv = make([]string, 0, len(nv))
-			for k, _ := range nv {
-				rv = append(rv, k)
-			}
-		case *tk.OrderedMap:
-			p.SetVar(r, pr, nv.GetKeys())
-			return ""
-		default:
-			valueT := reflect.ValueOf(v1)
+		// switch nv := v1.(type) {
+		// case map[string]interface{}:
+		// 	rv = make([]string, 0, len(nv))
+		// 	for k, _ := range nv {
+		// 		rv = append(rv, k)
+		// 	}
+		// case map[string]int:
+		// 	rv = make([]string, 0, len(nv))
+		// 	for k, _ := range nv {
+		// 		rv = append(rv, k)
+		// 	}
+		// case map[string]byte:
+		// 	rv = make([]string, 0, len(nv))
+		// 	for k, _ := range nv {
+		// 		rv = append(rv, k)
+		// 	}
+		// case map[string]rune:
+		// 	rv = make([]string, 0, len(nv))
+		// 	for k, _ := range nv {
+		// 		rv = append(rv, k)
+		// 	}
+		// case map[string]float64:
+		// 	rv = make([]string, 0, len(nv))
+		// 	for k, _ := range nv {
+		// 		rv = append(rv, k)
+		// 	}
+		// case map[string]string:
+		// 	rv = make([]string, 0, len(nv))
+		// 	for k, _ := range nv {
+		// 		rv = append(rv, k)
+		// 	}
+		// case map[string]map[string]string:
+		// 	rv = make([]string, 0, len(nv))
+		// 	for k, _ := range nv {
+		// 		rv = append(rv, k)
+		// 	}
+		// case map[string]map[string]interface{}:
+		// 	rv = make([]string, 0, len(nv))
+		// 	for k, _ := range nv {
+		// 		rv = append(rv, k)
+		// 	}
+		// case *tk.OrderedMap:
+		// 	p.SetVar(r, pr, nv.GetKeys())
+		// 	return ""
+		// default:
+		// 	valueT := reflect.ValueOf(v1)
 
-			kindT := valueT.Kind()
+		// 	kindT := valueT.Kind()
 
-			if kindT == reflect.Map {
-				keysT := valueT.MapKeys()
+		// 	if kindT == reflect.Map {
+		// 		keysT := valueT.MapKeys()
 
-				rvo := reflect.MakeSlice(valueT.Type().Key(), 0, len(keysT))
+		// 		rvo := reflect.MakeSlice(valueT.Type().Key(), 0, len(keysT))
 
-				for _, v := range keysT {
-					reflect.Append(rvo, v)
-				}
+		// 		for _, v := range keysT {
+		// 			reflect.Append(rvo, v)
+		// 		}
 
-				rvi := rvo.Interface()
+		// 		rvi := rvo.Interface()
 
-				return rvi
-			}
+		// 		return rvi
+		// 	}
 
-			return p.Errf(r, "参数类型错误：%T(%v)", v1, v1)
+		// 	return p.Errf(r, "参数类型错误：%T(%v)", v1, v1)
+		// }
+
+		p.SetVar(r, pr, tk.GetMapKeys(v1))
+
+		return ""
+
+	case 1341: // toOrderedMap
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough parameters(参数不够)")
 		}
 
-		p.SetVar(r, pr, rv)
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		p.SetVar(r, pr, tk.ToOrderedMap(v1))
 
 		return ""
 
@@ -13855,6 +13895,36 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		return p.Errf(r, "不支持的类型(type not supported)：%T(%v)", v1, v1)
 
+	case 12101: // resultf
+		if instrT.ParamLen < 3 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		pr := instrT.Params[0]
+
+		v2 := tk.ToStr(p.GetVarValue(r, instrT.Params[1]))
+
+		v3 := tk.ToStr(p.GetVarValue(r, instrT.Params[2]))
+
+		vs := p.ParamsToList(r, instrT, 3)
+
+		p.SetVar(r, pr, tk.Resultf(v2, v3, vs...))
+
+		return ""
+
+	case 12102: // resultFromJson/resultFromJSON
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		pr := instrT.Params[0]
+
+		v2 := tk.ToStr(p.GetVarValue(r, instrT.Params[1]))
+
+		p.SetVar(r, pr, tk.NewTXResultFromJSON(v2))
+
+		return ""
+
 	case 20110: // writeResp
 		if instrT.ParamLen < 2 {
 			return p.Errf(r, "not enough parameters(参数不够)")
@@ -14404,13 +14474,13 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		v2 := p.GetVarValue(r, instrT.Params[v1p+1])
 
-		rs := tk.RegFindAllGroups(tk.ToStr(v1), tk.ToStr(v2))
+		rs := tk.RegFindAllGroupsX(tk.ToStr(v1), tk.ToStr(v2))
 
 		p.SetVar(r, pr, rs)
 
 		return ""
 
-	case 20423: // regFind
+	case 20423: // regFind/regFindFirst
 		if instrT.ParamLen < 3 {
 			return p.Errf(r, "not enough parameters(参数不够)")
 		}
@@ -14430,6 +14500,29 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		v3 := p.GetVarValue(r, instrT.Params[v1p+2])
 
 		rs := tk.RegFindFirstX(tk.ToStr(v1), tk.ToStr(v2), tk.ToInt(v3, 0))
+
+		p.SetVar(r, pr, rs)
+
+		return ""
+
+	case 20424: // regFindFirstGroup
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 2 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		v2 := p.GetVarValue(r, instrT.Params[v1p+1])
+
+		rs := tk.RegFindFirstGroupsX(tk.ToStr(v1), tk.ToStr(v2))
 
 		p.SetVar(r, pr, rs)
 
@@ -16673,7 +16766,22 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 			v1p = 1
 		}
 
-		dbT := sqltk.ConnectDBX(tk.ToStr(p.GetVarValue(r, instrT.Params[v1p])), tk.ToStr(p.GetVarValue(r, instrT.Params[v1p+1])))
+		v1 := tk.Trim(tk.ToStr(p.GetVarValue(r, instrT.Params[v1p])))
+		v2 := tk.Trim(tk.ToStr(p.GetVarValue(r, instrT.Params[v1p+1])))
+
+		if v1 == "godror" {
+			// aws2/fltrpaws2404@129.0.1.10:1521/ORCL
+			// oracle,oracle://aws2:fltrpaws2404@129.0.1.10:1521/ORCL
+
+			matchesT := tk.RegFindFirstGroupsX(v2, `^(.*?)/(.*?)@(.*?)$`)
+
+			if matchesT != nil {
+				v1 = "oracle"
+				v2 = "oracle://" + matchesT[1] + ":" + matchesT[2] + "@" + matchesT[3]
+			}
+		}
+
+		dbT := sqltk.ConnectDBX(v1, v2)
 
 		p.SetVar(r, pr, dbT)
 
