@@ -11,7 +11,7 @@ require (
 	github.com/kbinani/screenshot v0.0.0-20210720154843-7d3a670d8329
 	github.com/ncruces/zenity v0.10.5
 	github.com/topxeq/dlgs v0.0.0-20220223083937-4d3036aff547
-	github.com/topxeq/tk v1.0.1
+	github.com/topxeq/tk v1.0.6
 	github.com/topxeq/xie v0.0.0
 )
 
@@ -34,11 +34,7 @@ require (
 	github.com/dsnet/compress v0.0.2-0.20210315054119-f66993602bf5 // indirect
 	github.com/eiannone/keyboard v0.0.0-20200508000154-caf4b762e807 // indirect
 	github.com/gen2brain/shm v0.0.0-20200228170931-49f9650110c5 // indirect
-	github.com/go-logfmt/logfmt v0.5.1 // indirect
-	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-sql-driver/mysql v1.7.0 // indirect
-	github.com/godror/godror v0.36.0 // indirect
-	github.com/godror/knownpb v0.1.0 // indirect
 	github.com/gogs/chardet v0.0.0-20211120154057-b7413eaefb8f // indirect
 	github.com/golang-sql/civil v0.0.0-20190719163853-cb61b32ac6fe // indirect
 	github.com/golang-sql/sqlexp v0.1.0 // indirect
@@ -77,11 +73,11 @@ require (
 	github.com/topxeq/gods v0.0.0-20220125023913-b5718bb0c704 // indirect
 	github.com/topxeq/goph v0.0.0-20230116054750-120b087d86fb // indirect
 	github.com/topxeq/mahonia v0.0.0-20190828060648-12b0599ddd1a // indirect
-	github.com/topxeq/regexpx v0.0.0-20200814082553-4bffc7d07029 // indirect
-	github.com/topxeq/socks v0.0.0-20200812112322-24acb126b5f3 // indirect
+	github.com/topxeq/regexpx v0.0.0-20230721063247-f118dbe089d7 // indirect
+	github.com/topxeq/socks v0.0.0-20230721063359-4740c5e460e9 // indirect
 	github.com/topxeq/sqltk v0.0.0 // indirect
 	github.com/topxeq/uuid v0.0.0-20210318003930-0d149e412ca1 // indirect
-	github.com/topxeq/xmlx v0.2.0 // indirect
+	github.com/topxeq/xmlx v0.3.0 // indirect
 	github.com/ulikunitz/xz v0.5.10 // indirect
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	github.com/xuri/efp v0.0.0-20220603152613-6918739fd470 // indirect
@@ -96,10 +92,9 @@ require (
 	golang.org/x/sys v0.5.0 // indirect
 	golang.org/x/term v0.5.0 // indirect
 	golang.org/x/text v0.7.0 // indirect
-	google.golang.org/protobuf v1.28.1 // indirect
 )
 
-replace github.com/topxeq/tk v1.0.1 => ../../tk
+replace github.com/topxeq/tk v1.0.6 => ../../tk
 
 replace github.com/topxeq/sqltk v0.0.0 => ../../sqltk
 
