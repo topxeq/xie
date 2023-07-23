@@ -50,3 +50,12 @@ mt $_ $map2 MoveToFront "kkk"
 
 pln $map2
 
+range $map2 :+1 :end1
+    getIter $i $v
+
+    pln $i $v
+
+    continue
+
+:end1
+exit

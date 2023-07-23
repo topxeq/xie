@@ -49,7 +49,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var VersionG string = "1.5.2"
+var VersionG string = "1.5.3"
 
 func Test() {
 	tk.Pl("test")
@@ -539,6 +539,8 @@ var InstrNameSet map[string]int = map[string]int{
 	"plv": 10430,
 
 	"plvsr": 10433, // 输出多个变量或数值的值的内部表达形式，之间以换行间隔
+
+	"pv": 10435, // 输出变量值和名字
 
 	"plErr":  10440, // 输出一个error（表示错误的数据类型）信息
 	"plErrX": 10441, // 输出一个error（表示错误的数据类型）或TXERROR字符串信息
@@ -2928,6 +2930,105 @@ func (p *XieVM) GetVarValue(runA *RunningContext, vA VarRef) interface{} {
 	}
 
 	return tk.Undefined
+
+}
+
+func (p *XieVM) GetVarName(runA *RunningContext, vA VarRef) interface{} {
+	if runA == nil {
+		runA = p.Running
+	}
+
+	idxT := vA.Ref
+
+	if idxT == -1 { // $debug
+		return "$debug"
+	}
+
+	if idxT == -2 {
+		return "$drop"
+	}
+
+	if idxT == -3 {
+		return "value"
+	}
+
+	if idxT == -4 {
+		return "$pln"
+	}
+
+	if idxT == -5 {
+		return "$tmp"
+	}
+
+	if idxT == -6 {
+		return "$push"
+	}
+
+	if idxT == -7 {
+		return "$peek"
+	}
+
+	if idxT == -8 {
+		return "$pop"
+	}
+
+	if idxT == -9 {
+		return "flexEval"
+	}
+
+	if idxT == -10 {
+		return "eval"
+	}
+
+	if idxT == -11 {
+		return "$seq"
+	}
+
+	if idxT == -12 { // unref
+		return "unref"
+	}
+
+	if idxT == -15 { // ref
+		return "ref"
+	}
+
+	if idxT == -16 { // labels
+		return "label"
+	}
+
+	if idxT == -17 { // regs
+		return "reg"
+	}
+
+	if idxT == -18 { // local regs
+		return "localReg"
+	}
+
+	if idxT == -21 { // array/slice item
+		return "slice"
+	}
+
+	if idxT == -22 { // map item
+		return "map"
+	}
+
+	if idxT == -23 { // slice of array/slice
+		return "sliceOfSlice"
+	}
+
+	if idxT == -31 {
+		return "$clip"
+	}
+
+	if idxT == -99 {
+		return "invalid"
+	}
+
+	if idxT == 3 { // normal variables
+		return tk.ToStr(vA.Value)
+	}
+
+	return "unknown"
 
 }
 
@@ -12973,10 +13074,17 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		return ""
 
 	case 10433: // plvsr
-
 		vs := p.ParamsToList(r, instrT, 0)
 
 		tk.Plvsr(vs)
+
+		return ""
+
+	case 10435: // pv
+		for i1 := 0; i1 < instrT.ParamLen; i1++ {
+			tmpv := p.GetVarValue(r, instrT.Params[i1])
+			tk.Pl("%v(%T): %v", p.GetVarName(r, instrT.Params[i1]), tmpv, tmpv)
+		}
 
 		return ""
 

@@ -1,0 +1,7 @@
+= $a #i1
+
+= $b #f3.2
+
+eval $c `{toFloat $tmp $a} + $b`
+
+pv $a $b $c
