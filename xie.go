@@ -174,7 +174,7 @@ var InstrNameSet map[string]int = map[string]int{
 	"getSharedMapSize":       302,
 	"tryGetSharedMapItem":    303,
 	"tryGetSharedMapSize":    304,
-	"setSharedMapItem":       311, // 设置全局映射变量，用法：setSharedMapItem $result key value
+	"setSharedMapItem":       311, // 设置全局映射变量，用法：setSharedMapItem key value
 	"trySetSharedMapItem":    313,
 	"deleteSharedMapItem":    321,
 	"tryDeleteSharedMapItem": 323,
@@ -3714,6 +3714,7 @@ type LoopStruct struct {
 
 func EvalCondition(condA interface{}, vmA *XieVM, runA *RunningContext) interface{} {
 	var resultT, ok bool
+	// tk.Plo(condA)
 	switch nv := condA.(type) {
 	case bool:
 		resultT = nv
@@ -3738,6 +3739,10 @@ func EvalCondition(condA interface{}, vmA *XieVM, runA *RunningContext) interfac
 			}
 		} else if typeT == -10 {
 			rs := QuickEval(tk.ToStr(nv.Value), vmA, runA)
+
+			if tk.IsError(rs) {
+				return fmt.Errorf("failed to eval condition(%v): %T(%#v)", rs, condA, condA)
+			}
 
 			resultT, ok = rs.(bool)
 
@@ -9265,7 +9270,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		rs := EvalCondition(v1, p, r)
 
 		if tk.IsError(rs) {
-			return p.Errf(r, "failed to eval condition: %v", v1)
+			return p.Errf(r, "failed to eval condition(%v): %v", rs, v1)
 		}
 
 		rsbT := rs.(bool)
@@ -20506,7 +20511,7 @@ func init() {
 	// 	InstrCodeSet[v] = k
 	// }
 
-	GlobalsG = &GlobalContext{}
+	GlobalsG = &GlobalContext{SyncMap: *tk.NewSyncMap(), SyncQueue: *tk.NewSyncQueue(), SyncStack: *tk.NewSyncStack(), SyncSeq: *tk.NewSeq()}
 
 	GlobalsG.Vars = make(map[string]interface{}, 0)
 

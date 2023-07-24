@@ -9,6 +9,8 @@ pln $rs
 exit
 
 :fib
+    // 声明局部变量
+    // 否则在递归调用时发生冲突
     // define local variables
     // if not, may be confused with the up level function in the recursion
     var $n1

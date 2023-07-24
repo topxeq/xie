@@ -2,7 +2,7 @@
 
 captureScreen $imgT 100 100 640 480
 
-assign $fileNameT `c:\b.png`
+assign $fileNameT `d:\b.png`
 
 createFile $errT $fileNameT -overwrite
 
@@ -14,4 +14,4 @@ pngEncode $errT $fileNameT $imgT
 ifErr $errT +1 +2
     fatalf `failed to encode png image: %v` $errT
 
-pln "successfully capture the screen area, file saved to c:\\b.png"
+pln "successfully capture the screen area, file saved to d:\\b.png"

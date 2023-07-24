@@ -6,7 +6,7 @@ isNil $rs
 
 ifNot $tmp :fail1
 
-mt $rs $guiG showInfo 提示 "今天是个好日子：%v！" ?(?nowStr)
+mt $rs $guiG showInfo 提示 "今天是个好日子：%v！" @'{nowStr}'
 
 plo $rs
 

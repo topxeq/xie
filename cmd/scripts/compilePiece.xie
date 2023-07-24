@@ -5,3 +5,6 @@ pln "..."
 
 runCall $rs $code1
 
+plo $rs
+
+

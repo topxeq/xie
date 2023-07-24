@@ -2,6 +2,14 @@ systemCmd $rs "xie" "-gopath" "basic.xie"
 
 test $rs "5.6\n10\n" $seq "basic.xie"
 
+systemCmd $rs "xie" "-gopath" "compilePiece.xie"
+
+test $rs "main defer 3 in compiled code piece\n...\n(tk.UndefinedStruct)tk.UndefinedStruct{int:0}\n" $seq "compilePiece.xie"
+
+systemCmd $rs "xie" "-gopath" "calPi.xie"
+
+testByReg $rs `Pi=3\.\d+\n` $seq "calPi.xie"
+
 systemCmd $rs "xie" "-gopath" "pv.xie"
 
 test $rs "a(int): 1\nb(float64): 3.2\nc(float64): 4.2\n" $seq "pv.xie"

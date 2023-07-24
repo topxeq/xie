@@ -1,7 +1,8 @@
 // 截取整个屏幕，直接保存为PNG和JPG格式文件
+// Take a screenshot of the entire screen and save it directly as PNG and JPG format files
 captureDisplay $imgT 0
 
-createFile $fileT `c:\a.png` -return -overwrite
+createFile $fileT `d:\a.png` -return -overwrite
 
 ifErr $fileT +1 +2
     fatalf `failed to create png file: %v` $fileT
@@ -13,16 +14,16 @@ closeFile $fileT
 ifErr $errT +1 +2
     fatalf `failed to encode png image`
 
-createFile $fileT `c:\a.jpg` -return -overwrite
+createFile $fileT `d:\a.jpg` -return -overwrite
 
 ifErr $fileT +1 +2
     fatalf `failed to create jpg file: %v` $fileT
 
 jpgEncode $errT $fileT $imgT -quality=70
 
-closeFile $fileT
+close $fileT
 
 ifErr $errT +1 +2
     fatalf `failed to encode jpg image`
 
-pln "successfully capture the screen, file saved to c:\\a.png and c:\\a.jpg"
+pln "successfully capture the screen, file saved to d:\\a.png and d:\\a.jpg"

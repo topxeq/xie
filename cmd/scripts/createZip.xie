@@ -1,33 +1,35 @@
+// 本例演示将指定的多个文件压缩为指定文件名的文件
+// 用法：xie createZip.xie -zip=d:\abc.zip -files=d:\user1\file1.txt,d:\user1\file2.jpg -overwrite
+// 加-overwrite参数表示如果存在指定名称的文件时覆盖保存
+// This example demonstrates compressing serveral files into a compressed(zip format) file with the specified file name
+// Usage: xie createZip.xie -zip=d:\abc.zip -files=d:\user1\file1.txt,d:\user1\file2.jpg -overwrite
+// Adding the -overwrite parameter means overwriting and saving if a file with the specified name exists
+
 getSwitch $zipFileT $argsG -zip= ""
 
-ifEmpty $zipFileT +1 :next1a
+ifEmpty $zipFileT +1 :next1
     fatalf "empty dest zip file path"
 
-:next1a
+:next1
+pl zipFile=%v $rs
+
 getSwitch $rs $argsG -files= ""
 
-pl rs=%v $rs
-
-ifEmpty $rs +1 :next1
+ifEmpty $rs +1 :next2
     fatalf "empty files"
 
-:next1
-pl rs=%v $rs
-fromJSON $aryT $rs
-
-ifErrX $aryT +1 :next2
-    fatalf "invalid files: %v" $aryT
-
 :next2
+pl files=%v $rs
+
+strSplit $aryT $rs ","
 
 switchExists $overwriteT $argsG -overwrite
 
-if $overwriteT +1 +3
+if $overwriteT :+1 :+3
     archiveFilesToZip $r1 $zipFileT $aryT -overwrite
     goto :next3
     archiveFilesToZip $r1 $zipFileT $aryT
 
 :next3
-
 
 pl "archive result: %v" $r1

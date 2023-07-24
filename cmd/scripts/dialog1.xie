@@ -1,3 +1,6 @@
+// 本例演示创建一个图形化的弹出信息提示对话框
+// This example demonstrates creating a graphical pop-up message prompt dialog box
+
 plo $guiG
 
 mt $rs $guiG init
@@ -6,9 +9,11 @@ isNil $rs
 
 ifNot $tmp :fail1
 
-mt $rs $guiG showInfo 提示 "今天是个好日子：%v！" ?(?nowStr)
+mt $rs $guiG showInfo 提示 "今天是个好日子：%v ！" @"{nowStr}"
 
 plo $rs
+
+ifErrX $rs :fail2 :+1
 
 exit
 

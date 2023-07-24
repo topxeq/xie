@@ -1,22 +1,29 @@
 // 本例使用随机落点法来计算Pi（π）值
 // 该算法的说明可参看[这里](https://www.jianshu.com/p/11c4b7dfdd62)
+// This example uses the random falling point method to calculate the Pi (π) value
+// The explanation of this algorithm can be found in [here]（ https://www.jianshu.com/p/11c4b7dfdd62 ）
 
 // 初始化随机数种子
+// Initialize random number seed
 randomize
 
 // 将计数器变量inCircleCount赋为整数0
-= $inCircleCount 0
+// Assign the counter variable inCircleCount to the integer 0
+= $inCircleCount #i0
 
-// 将循环数量count设置为10000
-= $count 10000
+// 将循环数量count设置为初始值整数0
+// Set the cycle quantity count to the initial value integer 0
+= $count #i0
 
 // 循环10000次来计算Pi
-// 对于整数，将从第一个参数开始每次加1进行循环，直至大于等于第二个数字
-// 因为本例是从0循环到9999，即循环10000次
-range #i0 $count :range1
+// for指令进行循环时，第一个参数是初始化指令（字符串格式），第二个是循环继续的条件表达式，第三个是每单次循环后执行的指令，第四第五个是循环体标号与跳出循环标号
+// Cycle 10000 times to calculate Pi
+// When the for instruction performs a loop, the first parameter is the initialization instruction (string format), the second parameter is the conditional expression for the loop to continue, the third parameter is the instruction to be executed after each single loop, and the fourth and fifth parameters are the loop body label and the loop exit label
+for "" @`$count < #i10000` "++ $count" :loop1 :+1
 
 // 循环完毕后，根据公式计算出Pi值
-eval $pi `#f4.0 * (?convert $inCircleCount float) / (?convert $count float)`
+// After the loop is completed, calculate the Pi value according to the formula
+eval $pi `#f4.0 * {convert $inCircleCount float} / {toFloat $count}`
 
 pl `Pi=%v` $pi
 
@@ -25,11 +32,14 @@ exit
 // 循环体代码
 // 每次循环产生一个随机坐标（x,y）
 // 如果该坐标落在圆内，则将计数器inCircleCount加1
-:range1
+// Loop body code
+// Generate a random coordinate (x, y) for each loop
+// If the coordinate falls within a circle, increase the counter inCircleCount by 1
+:loop1
     getRandomFloat $x
     getRandomFloat $y
 
-    ifEval `(($x * $x) + ($y * $y)) < #f1.0` +1 +2
+    ifEval `(($x * $x) + ($y * $y)) <= #f1.0` +1 +2
         inc $inCircleCount
 
     continue

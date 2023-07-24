@@ -3,6 +3,8 @@
 
 new $msgQ messageQueue
 
+plo $msgQ
+
 setSharedMapItem msgQ $msgQ
 
 # getSharedMapSize $pln 
@@ -13,26 +15,41 @@ setSharedMapItem msgQ $msgQ
 
 # exit
 
-guiNew $w window "-title=圆周率计算" -width=1024 -height=768 -center -debug
+guiNewWindow $w "-title=圆周率计算" -width=1024 -height=768 -center -debug
 
 // 如果出错则停止执行
 checkErrX $w
 
+setSharedMapItem window $w
+
 // 调用窗口对象的setDelegate方法来指定代理函数
-mt $rs $w setDelegate `
+= $code1 `
 pln 1
     getArrayItem $cmdT $inputG 0
 
     ifEqual $cmdT "start" :+1 :inext1
 
-        goFunc 0 ~~~
+        goCall $rs ~~~
 pln 2
-        :for1
-            getSharedMapItem $msgQ msgQ $nilG
+        getSharedMapItem $msgQ msgQ $nilG
 
+        getSharedMapItem $w1 window $nilG
+
+        = $cntT #i10
+
+        :for1
             mt $rs $msgQ get
 
             pl "get result: %v" $rs
+
+            ++ $cntT
+
+            ifEval '$cntT > #i50' :+1 :+2
+                = $cntT #i10
+
+            spr $tmps "drawPoint(10, %v)" $cntT
+
+            mt $rs $w1 eval $tmps
 
             sleep 1.0
         
@@ -62,6 +79,10 @@ pln 2
 
     exit
 `
+
+strReplace $code1 $code1 ~~~ $backQuoteG
+
+mt $rs $w setDelegate $code1 $w
 
 pl "set dele: %v" $rs
 
