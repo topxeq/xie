@@ -1,59 +1,63 @@
 // 本例演示使用随机落点法计算圆周率Pi时将落点即时画在图形界面上
 // 使用HTML5中的画布（canvas）对象来实现
 
-new $msgQ messageQueue
+// 初始化随机数发生器
+randomize
 
-plo $msgQ
-
-setSharedMapItem msgQ $msgQ
-
-# getSharedMapSize $pln 
-
-# getSharedMap $pln
-
-# getSharedMapItem $pln msgQ $nilG
-
-# exit
-
-guiNewWindow $w "-title=圆周率计算" -width=1024 -height=768 -center -debug
+// 新建窗口
+guiNewWindow $w "-title=圆周率计算（Cal Pi）" -width=640 -height=480 -center -debug
 
 // 如果出错则停止执行
 checkErrX $w
 
+// 计算圆周率Pi将单启动一个线程来进行计算
+// 因此需要将窗口对象传入该线程以便后续使用绘图功能
+// 这里采用全局共享映射来进行传递
 setSharedMapItem window $w
 
-// 调用窗口对象的setDelegate方法来指定代理函数
+// 调用窗口对象的setDelegate方法来指定图形界面的代理函数
 = $code1 `
-pln 1
+    // 通过inputG来获取传入参数
     getArrayItem $cmdT $inputG 0
 
+    // 处理start命令
     ifEqual $cmdT "start" :+1 :inext1
 
+        // 启动线程进行圆周率计算
         goCall $rs ~~~
-pln 2
-        getSharedMapItem $msgQ msgQ $nilG
+            getSharedMapItem $w1 window $nilG
 
-        getSharedMapItem $w1 window $nilG
+            var $count int 0
 
-        = $cntT #i10
+            = $inCircleCount #i0
 
-        :for1
-            mt $rs $msgQ get
+            :for1
+                ++ $count
 
-            pl "get result: %v" $rs
+                getRandomInt $x -100 100
+                getRandomInt $y -100 100
 
-            ++ $cntT
+                ifEval '(($x * $x) + ($y * $y)) <= #i10000' :+1 :nexti1
+                    inc $inCircleCount
+                    spr $tmps "drawPoint(%v, %v)" $x $y
+                    mt $rs $w1 eval $tmps
+                    goto :nexti2
+                :nexti1
+                    spr $tmps "drawPoint(%v, %v, true)" $x $y
+                    mt $rs $w1 eval $tmps
 
-            ifEval '$cntT > #i50' :+1 :+2
-                = $cntT #i10
+                :nexti2
 
-            spr $tmps "drawPoint(10, %v)" $cntT
+                ifEval '($count % #i100) == #i0' :+1 :nexti3
+                    eval $pi '#f4.0 * {convert $inCircleCount float} / {toFloat $count}'
 
-            mt $rs $w1 eval $tmps
+                    spr $tmps "setPiText(%v)" $pi
+                    mt $rs $w1 eval $tmps
 
-            sleep 1.0
-        
-            goto :for1
+                :nexti3
+                sleep 0.001
+            
+                goto :for1
         ~~~
 
         = $outG "started"
@@ -101,49 +105,49 @@ pl "set dele: %v" $rs
 
         ctxG.strokeStyle = "rgb(0,0,0)";
         ctxG.beginPath();
-        ctxG.arc(150, 150, 150, 0, 2 * Math.PI);
+        ctxG.arc(100, 100, 100, 0, 2 * Math.PI);
         ctxG.closePath();
         ctxG.stroke();
 
         ctxG.setLineDash([20, 5]);
         ctxG.strokeStyle = "rgb(200,0,0)";
-        ctxG.strokeRect(0, 0, 300, 300);
+        ctxG.strokeRect(0, 0, 200, 200);
 
-        drawPoint(150, 150, false);
-        drawPoint(10, 20, true);
+        // drawPoint(150, 150, false);
+        // drawPoint(10, 20, true);
 	};
 
     function drawPoint(x, y, red) {
         if (!red) {
-            ctxG.strokeStyle = "rgb(0,0,0)";
+            ctxG.fillStyle = "rgb(0,0,0)";
         } else {
-            ctxG.strokeStyle = "rgb(200,0,0)";
+            ctxG.fillStyle = "rgb(200,0,0)";
         }
 
-        ctxG.fillRect(x,y,1,1);
+        ctxG.fillRect(x+100,y+100,1,1);
+    }
+
+    function setPiText(v) {
+        var piTextSpan = document.getElementById('piTextId');
+
+        piTextSpan.innerHTML = "圆周率（Pi） = " + v;
     }
 
 	function start() {
         console.log("start...");
         delegateDo("start");
 	}
-
-	function test() {
-		var rs = delegateDo("showNav", "userAgent", navigator.userAgent);
-
-		// 返回的结果是一个Promise，因此要用相应的方式获取
-		rs.then(res => {
-			alert("test2: "+res);
-		});
-	}
 </script>
 </head>
 <body>
-<div id="div1">
+<div id="div1" style="margin-top: 1.0em; text-align: center;">
 	<button onclick="javascript:start();">开始绘制<br>（start drawing）</button>
 </div>
+<div id="div2" style="margin-top: 1.0em; text-align: center;">
+    <span id="piTextId">圆周率（Pi） = </span>
+</div>
 <div id="div3" style="margin-top: 1.0em; text-align: center;">
-    <canvas id="mainCanvasId" width="300" height="300"></canvas>
+    <canvas id="mainCanvasId" width="200" height="200"></canvas>
 </div>
 </body>
 </html>

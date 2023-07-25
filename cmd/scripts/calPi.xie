@@ -39,7 +39,7 @@ exit
     getRandomFloat $x
     getRandomFloat $y
 
-    ifEval `(($x * $x) + ($y * $y)) <= #f1.0` +1 +2
+    ifEval `(($x * $x) + ($y * $y)) <= #f1.0` :+1 :+2
         inc $inCircleCount
 
     continue
