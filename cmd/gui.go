@@ -537,13 +537,13 @@ func guiHandler(actionA string, objA interface{}, dataA interface{}, paramsA ...
 		}
 		return showInfoGUI(tk.ToStr(paramsA[0]), tk.ToStr(paramsA[1]), paramsA[2:]...)
 
-	case "showError":
+	case "showError": // mt $rs $guiG showError 错误提示 "您选择了“否”！"
 		if len(paramsA) < 2 {
 			return fmt.Errorf("参数不够")
 		}
 		return showErrorGUI(tk.ToStr(paramsA[0]), tk.ToStr(paramsA[1]), paramsA[2:]...)
 
-	case "getConfirm":
+	case "getConfirm": // mt $rs1 $guiG getConfirm "请选择……（please select...）" "文件路径为空，是否创建新文件？（file not exists, create a new file for edit?）"
 		if len(paramsA) < 2 {
 			return fmt.Errorf("参数不够")
 		}
@@ -558,7 +558,7 @@ func guiHandler(actionA string, objA interface{}, dataA interface{}, paramsA ...
 		// 	return fmt.Errorf("参数不够")
 		// }
 		return selectFileGUI(tk.InterfaceToStringArray(paramsA)...)
-	case "selectFileToSave":
+	case "selectFileToSave": // mt $pln $guiG selectFileToSave -confirmOverwrite -title=保存文件…… -default=c:\test\test.txt `-filter=[{"Name":"Go and TextFiles", "Patterns":["*.go","*.txt"], "CaseFold":true}]`
 		// if len(paramsA) < 2 {
 		// 	return fmt.Errorf("参数不够")
 		// }

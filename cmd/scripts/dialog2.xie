@@ -1,30 +1,16 @@
-plo $guiG
+mt $rs $guiG getConfirm 请选择…… "今天是星期天吗（%v）？（Is it Sunday today?）" @'{nowStr}'
 
-mt $rs $guiG init
-
-isNil $rs
-
-ifNot $tmp :fail1
-
-mt $rs $guiG getConfirm 请选择…… "今天是星期天吗（%v）？" ?(?nowStr)
-
-isErrX $tmp $rs
-
-if $tmp :fail2
+ifErrX $rs :fail1
 
 if $rs :selTrue
-mt $rs $guiG showError 错误提示 "您选择了“否”！"
-goto +2
+mt $rs $guiG showError 错误提示 "您选择了“否”！（You selected 'no'）"
+exit
 
 :selTrue
-mt $rs $guiG showInfo 提示 "您选择了“是”！"
+mt $rs $guiG showInfo 提示 "您选择了“是”！（You selected 'yes'）"
 
 exit
 
-:fail1
-    pl "初始化图形界面库失败：%v" $rs
-    exit
-
 :fail2
-    pl "调用方法失败：%v" $rs
+    pl "调用图形界面方法失败：%v" $rs
     exit

@@ -1,38 +1,25 @@
-getParam $argsG 2 ""
+// 本例演示网页的抓取，用法示例：xie dict.xie word
 
-pop $wordT
+getParam $wordT $argsG 2 ""
 
-strAdd `http://dict.cn/` $wordT
-
-pop $urlT
+add $urlT "http://dict.cn/" $wordT
 
 var $paramsT list
 
-addItem $paramsT -timeout=30
+addItem $paramsT "-timeout=30"
 // addItem $paramsT -detail
 // addItem $paramsT -verbose
 
-getWeb $push $urlT $paramsT
+getWeb $rs1 $urlT $paramsT
 
-// pops $resultT
+htmlToText $rs2 $rs1 -type=
 
-htmlToText $push $pop -type=
+trim $rs3 $rs2
 
-trim
+// pln "ORIGIN:" $rs3
 
-peek $originalTextT
+regReplaceAllStr $rs4 $rs3 `©.*?海词词典[\s\S]*` ""
 
-pln "ORIGIN:" $originalTextT
-
-push `©.*?海词词典[\s\S]*`
-push ``
-
-regReplaceAllStr$
-
-pln "RESULT:" $pop
-
-// getRuntimeInfo
-
-// plo
+pln "result:" $rs4
 
 

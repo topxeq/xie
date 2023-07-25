@@ -211,7 +211,8 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"ifEval": 631, // 判断第一个参数（字符串类型）表示的表达式计算结果如果是true，则跳转到指定标号处
 
-	"ifEmpty": 641, // 判断是否是空（值为undefined、nil、false、空字符串、小于等于0的整数或浮点数均会满足条件），是则跳转
+	"ifEmpty":      641, // 判断是否是空（值为undefined、nil、false、空字符串、小于等于0的整数或浮点数均会满足条件），是则跳转
+	"ifNilOrEmpty": 641,
 
 	"ifEqual":    643, // 判断是否相等，是则跳转
 	"ifNotEqual": 644, // 判断是否不等，是则跳转
@@ -4266,6 +4267,33 @@ func NewObject(p *XieVM, r *RunningContext, typeA string, argsA ...interface{}) 
 			codeT = compiledT
 		}
 
+		lable1, ok := codeT.(int)
+
+		if ok {
+			if len(argsT) < 2 {
+				return p.Errf(r, "not enough parameters(参数不够)")
+			}
+
+			lable2, ok := argsT[1].(int)
+
+			if !ok {
+				return p.Errf(r, "invalid end label: %v", argsT[1])
+			}
+
+			compiledT := r.ExtractCompiled(lable1, lable2)
+
+			if tk.IsErrX(compiledT) {
+				return p.Errf(r, "failed to compile code block: %v", compiledT)
+			}
+
+			codeT, ok = compiledT.(*CompiledCode)
+
+			if !ok {
+				return p.Errf(r, "failed to compile code block: %v", compiledT)
+			}
+
+		}
+
 		cp1, ok := codeT.(*CompiledCode)
 
 		if !ok {
@@ -4628,6 +4656,33 @@ func NewVar(p *XieVM, r *RunningContext, typeA string, argsA ...interface{}) int
 			}
 
 			codeT = compiledT
+		}
+
+		lable1, ok := codeT.(int)
+
+		if ok {
+			if len(argsA) < 2 {
+				return p.Errf(r, "not enough parameters(参数不够)")
+			}
+
+			lable2, ok := argsA[1].(int)
+
+			if !ok {
+				return p.Errf(r, "invalid end label: %v", argsA[1])
+			}
+
+			compiledT := r.ExtractCompiled(lable1, lable2)
+
+			if tk.IsErrX(compiledT) {
+				return p.Errf(r, "failed to compile code block: %v", compiledT)
+			}
+
+			codeT, ok = compiledT.(*CompiledCode)
+
+			if !ok {
+				return p.Errf(r, "failed to compile code block: %v", compiledT)
+			}
+
 		}
 
 		cp1, ok := codeT.(*CompiledCode)

@@ -14,4 +14,10 @@ strAdd $push $pop $b
 
 pln $pop
 
+pl "%v" $backQuoteG
+
+dataToBytes $rs $backQuoteG
+
+pl "%#v" $rs
+
 // debug

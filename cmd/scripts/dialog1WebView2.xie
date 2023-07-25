@@ -1,21 +1,83 @@
-plo $guiG
+var $result
 
-mt $rs $guiG init
+assign $htmlT `
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <title>信息提示（info）</title>
+    <script>
+        function okClick() {
+            quickDelegateDo("ok");
+        }
+ 
+        function cancelClick() {
+            quickDelegateDo("cancel");
+        }
+ 
+        window.onload = function() {
+        };
+ 
+    </script>
+</head>
+<body style="font-size: 16px;">
+    <div style="margin-top: 1.0rem; text-align: center; font-size: 1.0rem;">
+        <span id="titleSpanId" style="font-size: 2.0rem; font-weight: bold;">信息提示（info）</span>
+    </div>
+    <div id="msgDivId" style="margin-top: 1.0rem; text-align: center; padding: 1.0rem;">
+		<span id="msgSpanId">这里是详细信息文本，可能有很多，可能有很多，可能有很多，可能有很多，可能有很多，可能有很多，可能有很多，可能有很多，可能有很多，……（Here is the detail text, maybe many, maybe many, maybe many, maybe many, maybe many, maybe many, maybe many, ...）</span>
+	</div>
+	<div style="margin-top: 1.5rem; text-align: center;">
+		<button id="btnOk" onclick="javascript:okClick();">确定（ok）</button>
+		&nbsp<button id="btnCancel" onclick="javascript:cancelClick();">取消（cancel）</button>
+	</div>
 
-isNil $rs
+</body>
+</html>
+`
 
-ifNot $tmp :fail1
+mt $windowT $guiG newWindow "-title=信息提示对话框（info dialog）" -width=480 -height=320 -center
 
-mt $rs $guiG showInfo 提示 "今天是个好日子：%v！" @'{nowStr}'
+new $dele1 quickDelegate `
+    [] $resultL $inputL 0
 
-plo $rs
+    pl "resultL: %v" $resultL
 
-exit
+    = $result $resultL
 
-:fail1
-    pl "初始化图形界面库失败：%v" $rs
-    exit
+    ifEqual $resultL "ok" :+1 :next1L
+        mt $drop $windowT close
+        exitL $resultL
 
-:fail2
-    pl "调用方法失败：%v" $rs
-    exit
+    :next1L
+    ifEqual $resultL "cancel" :+1 :next2L
+        mt $drop $windowT close
+        exitL $resultL
+
+    :next2L
+
+    exitL $resultL
+`
+
+checkErrX $dele1
+
+mt $rs $windowT setQuickDelegate $dele1
+
+checkErrX $rs
+
+mt $rs $windowT setHtml $htmlT
+
+checkErrX $rs
+
+mt $rs $windowT show
+
+checkErrX $rs
+
+mt $rs $windowT close
+
+checkErrX $rs
+
+pl "result=%v" $result
+
+

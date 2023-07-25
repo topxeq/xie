@@ -1,0 +1,187 @@
+// 本例演示通过SSH连接直接编辑服务器上的文件
+// 用法：xie sshEdit.xie -host=youdomain.com -pass=password -remotePath=/root/a1.bin
+// 注意使用时将上面参数中的内容替换为自己的实际内容
+
+getSwitch $filePathT $argsG "-file=" ""
+
+trim $filePathT $filePathT
+
+var $textT str ""
+
+ifEmpty $filePathT :+1 :next1
+    mt $rs1 $guiG getConfirm "请选择……（please select...）" "文件路径为空，是否创建新文件？（file not exists, create a new file for edit?）"
+
+    ifNot $rs1 :+1 :+2
+        exit
+
+    mt $rs2 $guiG selectFileToSave -confirmOverwrite -title="新建文件……（new file...）" -default=test.txt `-filter=[{"Name":"All files", "Patterns":["*.*"], "CaseFold":true}]`
+
+    ifNilOrEmpty $rs2 :+1 :+2
+        fatalf "未选择文件（no file selected）"
+
+    = $filePathT $rs2
+
+    goto :next2
+
+:next1
+loadText $textT $filePathT 
+
+ifErrX $textT :+1 :+2
+    fatalf "载入文件内容失败（failed to load file content）"
+
+:next2
+
+getResource $tmps "js/tkc.js"
+
+adds $htmlT `
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <title>编辑文件……</title>
+    <script>TX_tkc.js_XT</script>
+</head>
+<body >
+	<div style="margin-top: 10px; margin-bottom: 10px;">
+		<label for="remotePathID" >文件路径： </label><input id="filePathID" type="text" readonly />
+	</div>
+	<div style="margin-top: 10px; margin-bottom: 10px;">
+		<textarea id="mainTextArea" style="width: 90%; height: 80%;"></textarea>
+	</div>
+	<div>
+		<button id="btnLoadID" cmd="reload">重新载入</button>
+		<button id="btnSaveID" cmd="save">保存</button>
+		<button id="btnClose">关闭</button>
+	</div>
+
+    <script type="text/javascript">
+        function showMsg(titleA, textA) {
+            // Window.this.modal(<alert caption={titleA}>{textA}</alert>);
+        }
+
+        function setFilePath(pathA) {
+            document.getElementById("filePathID").value = tkc.hexDecode(pathA);
+        }
+
+        function setTextValue(textA) {
+            console.log("textA", textA);
+            document.getElementById("mainTextArea").value = textA;
+        }
+
+        function sendCmd(e, senderA) {
+            // var rs = Window.this.xcall("delegateDo", JSON.stringify({"cmd": senderA.getAttribute("cmd"), "text": document.getElementById("mainTextArea").value}));
+
+            // showMsg("命令执行结果", rs);
+
+        }
+
+        function closeWindow() {
+            quickDelegateDo("close");
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById("btnClose").addEventListener("click", closeWindow);
+
+            quickDelegateDo(JSON.stringify({cmd: "init"}));
+
+        }, false);
+
+    </script>
+</body>
+</html>
+`
+strReplace $htmlT $htmlT "TX_tkc.js_XT" $tmps
+
+// 新建窗口，第二个参数传入了JSON格式的表示左、上、宽、高的窗口位置与大小的字符串
+// 但实际上由于下面调用了TiScript中的moveToCenter函数，因此将会使这里定义的宽和高无效
+mt $windowT $guiG newWindow "-title=编辑文件（edit file）" -width=640 -height=480 -center -debug
+
+// mt $rs $windowT call setRemotePath $remotePathT
+// mt $rs $windowT call setTextValue $textT
+
+// 创建并设定与界面之间的快速代理对象
+new $dele1 quickDelegate :deleFast1 :deleFast1End
+
+plo $dele1
+mt $rs $windowT setQuickDelegate $dele1
+
+mt $rs $windowT setHtml $htmlT
+
+// 运行图形界面
+mt $rs $windowT show
+
+pl "showWindowResult: %v" $rs
+
+exit
+
+// 快速代理对象的代码
+// 用于在WEB图形界面GUI中回调函数
+:deleFast1
+
+    getArrayItem $inputT $inputL 0
+
+    pl "inputT: %v" $inputT
+
+    fromJson $cmdObjT $inputT
+
+    {} $cmdT $cmdObjT "cmd" ""
+    {} $textT $cmdObjT "text" ""
+
+    pl "cmd: %T(%v) %v %v" $cmdT $cmdT @`$cmdT == "save"` $textT
+
+    if @`$cmdT == "init"` :+1 :inext1
+        pln "init"
+        
+        hexEncode $tmps1 $filePathT
+
+        spr $tmps2 `setFilePath('%v')` $tmps1
+        
+        plo $tmps2
+        
+        mt $rs $windowT eval $tmps2
+        plo $rs
+
+        exitL
+
+    :inext1
+    if @`$cmdT == "save"` :+1 :inext2
+        pln "upload text"
+        
+        # convert $buf1 $textT byteList
+
+        sshUploadBytes $rs1 $textT -host=$hostT -port=$portT -user=$userT -password=$passT -remotePath=$remotePathT -force
+
+        ifErrX $rs1 :+1 :inextErr1
+            spr $rs "远程保存失败：%v" $rs1
+            push $rs
+            fastRet
+        
+        :inextErr1
+            push "远程保存完毕"
+            fastRet
+
+    :inext2
+    if @`$cmdT == "reload"` :+1 :inext3
+        pln "reload text"
+        
+        sshDownloadBytes $rs2 -host=$hostT -port=$portT -user=$userT -password=$passT -remotePath=$remotePathT
+
+        ifErrX $rs2 :+1 :inextErr2
+            spr $rs "重新载入失败：%v" $rs2
+            push $rs
+            fastRet
+        
+        :inextErr2
+            toStr $rs2 $rs2
+            mt $rs $windowT call setTextValue $rs2
+            push "重新载入完毕"
+            fastRet
+
+    :inext3
+    pln 未知命令
+
+    push ""
+
+:deleFast1End
+    exitL
