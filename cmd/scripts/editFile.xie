@@ -39,20 +39,21 @@ adds $htmlT `
 <head>
 	<meta charset="utf-8">
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-    <title>编辑文件……</title>
+    <title>编辑文件（edit file）……</title>
     <script>TX_tkc.js_XT</script>
 </head>
-<body >
-	<div style="margin-top: 10px; margin-bottom: 10px;">
-		<label for="remotePathID" >文件路径： </label><input id="filePathID" type="text" readonly />
+<body style="font-size: 16px;">
+	<div style="margin-top: 10px;">
+		<label for="remotePathID" >文件路径（file path）： </label><input id="filePathID" type="text" readonly />
 	</div>
-	<div style="margin-top: 10px; margin-bottom: 10px;">
-		<textarea id="mainTextArea" style="width: 90%; height: 80%;"></textarea>
+	<div style="margin-top: 10px; text-align: center;">
+		<textarea id="mainTextArea" style="width: calc(100% - 10px); height: 80vh; font-size: 16px;"></textarea>
 	</div>
-	<div>
-		<button id="btnLoadID" cmd="reload">重新载入</button>
-		<button id="btnSaveID" cmd="save">保存</button>
-		<button id="btnClose">关闭</button>
+	<div style="margin-top: 10px;">
+		<button id="btnLoadID" cmd="reload">重新载入（reload）</button>
+		<button id="btnSaveID" cmd="save">保存（save）</button>
+		<button id="btnSaveAsID" cmd="saveAs">另存为（saveAs）……</button>
+		<button id="btnClose">关闭（close）</button>
 	</div>
 
     <script type="text/javascript">
@@ -66,22 +67,61 @@ adds $htmlT `
 
         function setTextValue(textA) {
             console.log("textA", textA);
-            document.getElementById("mainTextArea").value = textA;
+            document.getElementById("mainTextArea").value = tkc.hexDecode(textA);
         }
 
         function sendCmd(e, senderA) {
             // var rs = Window.this.xcall("delegateDo", JSON.stringify({"cmd": senderA.getAttribute("cmd"), "text": document.getElementById("mainTextArea").value}));
 
             // showMsg("命令执行结果", rs);
+            var cmdT = e.target.getAttribute("cmd").trim();
 
+            console.log(cmdT);
+
+            if (cmdT == "save") {
+                var rs = quickDelegateDo(JSON.stringify({cmd: cmdT, value: document.getElementById("mainTextArea").value}));
+
+                rs.then(res => {
+                    alert(res);
+                });
+        
+                return;
+            } else if (cmdT == "saveAs") {
+                var rs = quickDelegateDo(JSON.stringify({cmd: cmdT, value: document.getElementById("mainTextArea").value}));
+
+                rs.then(res => {
+                    // alert(res);
+                    if (res.startsWith("TXERROR:")) {
+                        alert(res.substring(8));
+                        return;
+                    }
+
+                    document.getElementById("filePathID").value = res;
+                });
+        
+                return;
+            }
+
+            var rs = quickDelegateDo(JSON.stringify({cmd: cmdT}));
+
+            rs.then(res => {
+                console.log(res);
+                if (res != "") {
+                    alert(res);
+                }
+            });
         }
 
         function closeWindow() {
-            quickDelegateDo("close");
+            quickDelegateDo(JSON.stringify({cmd: "close"}));
         }
 
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById("btnClose").addEventListener("click", closeWindow);
+
+            document.getElementById("btnLoadID").addEventListener("click", sendCmd);
+            document.getElementById("btnSaveID").addEventListener("click", sendCmd);
+            document.getElementById("btnSaveAsID").addEventListener("click", sendCmd);
 
             quickDelegateDo(JSON.stringify({cmd: "init"}));
 
@@ -126,7 +166,7 @@ exit
     fromJson $cmdObjT $inputT
 
     {} $cmdT $cmdObjT "cmd" ""
-    {} $textT $cmdObjT "text" ""
+    {} $valueT $cmdObjT "value" ""
 
     pl "cmd: %T(%v) %v %v" $cmdT $cmdT @`$cmdT == "save"` $textT
 
@@ -142,46 +182,81 @@ exit
         mt $rs $windowT eval $tmps2
         plo $rs
 
+        loadText $fcT $filePathT    
+        hexEncode $tmps1 $fcT
+        spr $tmps2 `setTextValue('%v')` $tmps1
+        
+        mt $rs $windowT eval $tmps2
+
         exitL
 
     :inext1
     if @`$cmdT == "save"` :+1 :inext2
-        pln "upload text"
+        pln "save text"
         
-        # convert $buf1 $textT byteList
-
-        sshUploadBytes $rs1 $textT -host=$hostT -port=$portT -user=$userT -password=$passT -remotePath=$remotePathT -force
+        saveText $rs1 $valueT $filePathT   
 
         ifErrX $rs1 :+1 :inextErr1
-            spr $rs "远程保存失败：%v" $rs1
-            push $rs
-            fastRet
+            spr $rs "保存失败（failed to save）：%v" $rs1
+            exitL $rs
         
         :inextErr1
-            push "远程保存完毕"
-            fastRet
+            exitL "保存完毕（successfully saved）"
 
     :inext2
-    if @`$cmdT == "reload"` :+1 :inext3
-        pln "reload text"
-        
-        sshDownloadBytes $rs2 -host=$hostT -port=$portT -user=$userT -password=$passT -remotePath=$remotePathT
+    if @`$cmdT == "saveAs"` :+1 :inext3
+        pln "saveAs"
 
-        ifErrX $rs2 :+1 :inextErr2
-            spr $rs "重新载入失败：%v" $rs2
-            push $rs
-            fastRet
+        spr $tmps1 -default=%v $filePathT
+        
+        mt $rs2 $guiG selectFileToSave -confirmOverwrite -title="另存为（save as）……" $tmps1 `-filter=[{"Name":"All files", "Patterns":["*.*"], "CaseFold":true}]`
+
+        ifNilOrEmpty $rs2 :+1 :+2
+            exitL "TXERROR:未选择文件（no file selected）"
+    
+        = $filePathT $rs2
+    
+        saveText $rs1 $valueT $filePathT   
+
+        ifErrX $rs1 :+1 :inextErr2
+            spr $rs "TXERROR:另存失败（failed to save）：%v" $rs1
+            exitL $rs
         
         :inextErr2
-            toStr $rs2 $rs2
-            mt $rs $windowT call setTextValue $rs2
-            push "重新载入完毕"
-            fastRet
+            exitL $filePathT
 
     :inext3
+    if @`$cmdT == "reload"` :+1 :inext4
+        pln "reload text"
+        
+        loadText $fcT $filePathT    
+        hexEncode $tmps1 $fcT
+        spr $tmps2 `setTextValue('%v')` $tmps1
+        
+        mt $rs $windowT eval $tmps2
+
+        exitL ""
+
+    :inext4
+    if @`$cmdT == "close"` :+1 :inext5
+        pln "close window"
+        
+        mt $rs $windowT close
+
+        exitL ""
+
+    :inext5
+    if @`$cmdT == "prints"` :+1 :inextn
+        {} $tmps $cmdObjT "value" ""
+
+        pln $tmps
+
+        exitL ""
+
+    :inextn
     pln 未知命令
 
-    push ""
+    exitL "未知命令（unknown command）"
 
 :deleFast1End
     exitL
