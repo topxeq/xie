@@ -1,13 +1,20 @@
-// 本例演示通过SSH连接直接编辑服务器上的文件
-// 用法：xie sshEdit.xie -host=youdomain.com -pass=password -remotePath=/root/a1.bin
+// 本例演示编辑一个文本文件
+// 用法：xie editFile.xie -file=d:\tmp\a1.txt
 // 注意使用时将上面参数中的内容替换为自己的实际内容
+// This example demonstrates editing a text file
+// Usage: xie editFile.xie -file=d:\tmp\a1.txt
+// Please replace the content in the above parameters with your own actual content when using it
 
+// 从命令行获取文件名
+// Obtain a file name from the command line
 getSwitch $filePathT $argsG "-file=" ""
 
 trim $filePathT $filePathT
 
-var $textT str ""
-
+// 如果没有指定文件名则提示是否要新建一个文件
+// 弹出文件选择框来指定文件
+// If no file name is specified, prompt whether to create a new file
+// Pop up a file selection box to specify the file
 ifEmpty $filePathT :+1 :next1
     mt $rs1 $guiG getConfirm "请选择……（please select...）" "文件路径为空，是否创建新文件？（file not exists, create a new file for edit?）"
 
@@ -21,19 +28,15 @@ ifEmpty $filePathT :+1 :next1
 
     = $filePathT $rs2
 
-    goto :next2
-
 :next1
-loadText $textT $filePathT 
 
-ifErrX $textT :+1 :+2
-    fatalf "载入文件内容失败（failed to load file content）"
-
-:next2
-
+// 获取内置的用于基于WebView2的图形界面所用的JavaScript文件
+// Obtain built-in JavaScript files for WebView2 based graphical interfaces
 getResource $tmps "js/tkc.js"
 
-adds $htmlT `
+// 设置图形界面所用的HTML
+// Set the HTML used for the GUI
+= $htmlT `
 <!DOCTYPE html>
 <html>
 <head>
@@ -57,26 +60,16 @@ adds $htmlT `
 	</div>
 
     <script type="text/javascript">
-        function showMsg(titleA, textA) {
-            // Window.this.modal(<alert caption={titleA}>{textA}</alert>);
-        }
-
         function setFilePath(pathA) {
             document.getElementById("filePathID").value = tkc.hexDecode(pathA);
         }
 
         function setTextValue(textA) {
-            console.log("textA", textA);
             document.getElementById("mainTextArea").value = tkc.hexDecode(textA);
         }
 
         function sendCmd(e, senderA) {
-            // var rs = Window.this.xcall("delegateDo", JSON.stringify({"cmd": senderA.getAttribute("cmd"), "text": document.getElementById("mainTextArea").value}));
-
-            // showMsg("命令执行结果", rs);
             var cmdT = e.target.getAttribute("cmd").trim();
-
-            console.log(cmdT);
 
             if (cmdT == "save") {
                 var rs = quickDelegateDo(JSON.stringify({cmd: cmdT, value: document.getElementById("mainTextArea").value}));
@@ -90,7 +83,6 @@ adds $htmlT `
                 var rs = quickDelegateDo(JSON.stringify({cmd: cmdT, value: document.getElementById("mainTextArea").value}));
 
                 rs.then(res => {
-                    // alert(res);
                     if (res.startsWith("TXERROR:")) {
                         alert(res.substring(8));
                         return;
@@ -131,67 +123,85 @@ adds $htmlT `
 </body>
 </html>
 `
+
+// 替换HTML文本中的JavaScript内容
+// Replace JavaScript content in HTML text
 strReplace $htmlT $htmlT "TX_tkc.js_XT" $tmps
 
-// 新建窗口，第二个参数传入了JSON格式的表示左、上、宽、高的窗口位置与大小的字符串
-// 但实际上由于下面调用了TiScript中的moveToCenter函数，因此将会使这里定义的宽和高无效
+// 新建图形界面窗口
+// Create a new graphical interface window
 mt $windowT $guiG newWindow "-title=编辑文件（edit file）" -width=640 -height=480 -center -debug
 
-// mt $rs $windowT call setRemotePath $remotePathT
-// mt $rs $windowT call setTextValue $textT
-
-// 创建并设定与界面之间的快速代理对象
+// 创建并设定图形界面使用的快速代理对象
+// Create and set fast proxy objects for graphical interface use
 new $dele1 quickDelegate :deleFast1 :deleFast1End
-
-plo $dele1
 mt $rs $windowT setQuickDelegate $dele1
 
+// 设置图形界面所用的HTML
+// Create and set fast proxy objects for graphical interface use
 mt $rs $windowT setHtml $htmlT
 
 // 运行图形界面
+// show the GUI window
 mt $rs $windowT show
 
-pl "showWindowResult: %v" $rs
+ifErrX $rs :+1 :+2
+    fatalf "运行图形界面失败（failed to run GUI）：%v" $rs
 
 exit
 
 // 快速代理对象的代码
-// 用于在WEB图形界面GUI中回调函数
+// 即用于在WEB图形界面GUI中的回调函数
+// Code for quick delegate Objects
+// The callback function used in the WEB GUI
 :deleFast1
-
+    // 获取传入参数
+    // Get incoming parameters
     getArrayItem $inputT $inputL 0
 
     pl "inputT: %v" $inputT
 
+    // 本例只允许传入JSON格式的指令，这里将JSON转换为内部对象（这里是一个映射）
+    // This example only allows instructions in JSON format to be passed in, where JSON is converted into an internal object (here is a mapping)
     fromJson $cmdObjT $inputT
 
+    // 从映射对象中键名为cmd和value各自对应的键值
+    // From the mapping object, the key names cmd and value correspond to their respective key values
     {} $cmdT $cmdObjT "cmd" ""
     {} $valueT $cmdObjT "value" ""
 
-    pl "cmd: %T(%v) %v %v" $cmdT $cmdT @`$cmdT == "save"` $textT
-
+    // 根据命令各自处理
+    // Process according to commands
     if @`$cmdT == "init"` :+1 :inext1
+        // 初始化命令
+        // Initialization command
         pln "init"
         
+        // 为了传递进JavaScript的函数，将参数进行16进制编码，以免特殊字符冲突
+        // To pass in JavaScript functions, encode the parameters in hexadecimal to avoid special character collisions
         hexEncode $tmps1 $filePathT
 
         spr $tmps2 `setFilePath('%v')` $tmps1
-        
-        plo $tmps2
-        
+
+        // 调用图形界面中的JavaScript函数设置文件路径的显示
+        // Calling JavaScript functions in the GUI to set the display of file path
         mt $rs $windowT eval $tmps2
         plo $rs
 
+        // 载入文本内容并显示在textarea中
+        // Load the text content and display it in the textarea
         loadText $fcT $filePathT    
         hexEncode $tmps1 $fcT
         spr $tmps2 `setTextValue('%v')` $tmps1
         
         mt $rs $windowT eval $tmps2
 
-        exitL
+        exitL ""
 
     :inext1
     if @`$cmdT == "save"` :+1 :inext2
+        // 保存
+        // save
         pln "save text"
         
         saveText $rs1 $valueT $filePathT   
@@ -205,6 +215,8 @@ exit
 
     :inext2
     if @`$cmdT == "saveAs"` :+1 :inext3
+        // 另存
+        // save as
         pln "saveAs"
 
         spr $tmps1 -default=%v $filePathT
@@ -223,10 +235,13 @@ exit
             exitL $rs
         
         :inextErr2
+            // 注意，另存后将返回新的文件路径，以便显示在图形界面中
             exitL $filePathT
 
     :inext3
     if @`$cmdT == "reload"` :+1 :inext4
+        // 重新载入
+        // reload
         pln "reload text"
         
         loadText $fcT $filePathT    
@@ -239,6 +254,8 @@ exit
 
     :inext4
     if @`$cmdT == "close"` :+1 :inext5
+        // 关闭窗口
+        // close the GUI window
         pln "close window"
         
         mt $rs $windowT close
@@ -247,6 +264,8 @@ exit
 
     :inext5
     if @`$cmdT == "prints"` :+1 :inextn
+        // 用于调试的prints命令
+        // prints command for debug purpose
         {} $tmps $cmdObjT "value" ""
 
         pln $tmps
@@ -254,7 +273,7 @@ exit
         exitL ""
 
     :inextn
-    pln 未知命令
+    pln "未知命令（unknown command）"
 
     exitL "未知命令（unknown command）"
 

@@ -49,7 +49,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var VersionG string = "1.5.3"
+var VersionG string = "1.5.5"
 
 func Test() {
 	tk.Pl("test")
@@ -57,19 +57,20 @@ func Test() {
 
 // var InstrCodeSet map[int]string = map[int]string{}
 
+// instructions start
 var InstrNameSet map[string]int = map[string]int{
 
-	// internal & debug related
-	"invalidInstr": 12, // invalid instruction, use internally to indicate invalid instr(s) while parsing commands
+	// 内部使用或调试相关 internal & debug related
+	"invalidInstr": 12, // 表示无效的指令 invalid instruction, use internally to indicate invalid instr(s) while parsing commands
 
-	"version": 100, // get current Xielang version, return a string type value, if the result parameter not designated, it will be put to the global variable $tmp(and it's same for other instructions has result and not variable parameters)
+	"version": 100, // 获取当前谢语言版本号 get current Xielang version, return a string type value, if the result parameter not designated, it will be put to the global variable $tmp(and it's same for other instructions has result and not variable parameters)
 
-	"pass": 101, // do nothing, useful for placeholder
+	"pass": 101, // 没有任何作用的指令，一般用于占位 do nothing, useful for placeholder
 
-	"debug": 102,
+	"debug": 102, // 输出调试信息 output the debug info
 
-	"debugInfo": 103, // get the debug info
-	"varInfo":   104, // get the information of the variables
+	"debugInfo": 103, // 获取调试信息 get the debug info
+	"varInfo":   104, // 获取变量定义信息 get the information of the variables
 
 	"help": 105, // not implemented
 
@@ -97,7 +98,7 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"loadCode": 151, // 载入字符串格式的谢语言代码到当前虚拟机中（加在最后），出错则返回error对象说明原因
 
-	"loadGel": 152, // 从网络载入谢语言函数（称为gel，凝胶，取其封装的意思），生成compiled对象，一般作为封装函数调用，建议用runCall或goRunCall调用（函数通过准全局变量inputL和outL进行出入参数的交互），出错则返回error对象说明原因；用法：loadGet http://example.com/gel/get1.xie -key=abc123，-key参数可以输入解密密钥，-file参数表示从本地文件读取（默认从远程读取也可以用file://协议从本地读取）
+	"loadGel": 152, // 从网络载入谢语言函数（称为gel，凝胶，取其封装的意思），生成compiled对象，一般作为封装函数调用，建议用runCall或goRunCall调用（函数通过准全局变量inputL和outL进行出入参数的交互），出错则返回error对象说明原因；用法：loadGel http://example.com/gel/get1.xie -key=abc123，-key参数可以输入解密密钥，-file参数表示从本地文件读取（默认从远程读取也可以用file://协议从本地读取）
 
 	"compile": 153, // compile a piece of code
 
@@ -436,6 +437,8 @@ var InstrNameSet map[string]int = map[string]int{
 	"strContainsIn": 1572, // 判断字符串是否包含任意一个子串，结果参数不可省略
 	"strCount":      1573, // 计算字符串中子串的出现次数
 
+	"strRepeat": 1575, // 重复字符串n次生成新的字符串
+
 	"strIn":  1581, // 判断字符串是否在一个字符串列表中出现，函数定义： 用法：strIn $result $originStr -it $sub1 "sub2"，第一个可变参数如果以“-”开头，将表示参数开关，-it表示忽略大小写，并且trim再比较（strA并不trim）
 	"inStrs": 1581,
 
@@ -685,8 +688,8 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"appendText": 21111, // 追加文本到指定文件末尾
 
-	"writeStr":  21201, // 写入字符串，可以向文件、字节数组、字符串等写入
-	"writeStrf": 21202, // 写入字符串，可以向文件、字节数组、字符串等写入，类似printf后的可变参数
+	"writeStr":  21201, // 写入字符串，可以向文件、字节数组、字符串等写入，结果参数不可省略
+	"writeStrf": 21202, // 写入字符串，可以向文件、字节数组、字符串等写入，类似printf后的可变参数，结果参数不可省略
 
 	"readStr":    21203, // 读出字符串，可以从文件、字节数组、字符串等读取，读取所有能读取的
 	"readAllStr": 21203, // 读出字符串，可以从文件、字节数组、字符串等读取，读取所有能读取的
@@ -826,6 +829,9 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"listen": 27101, // net.Listen
 	"accept": 27105, // net.Listener.Accept()
+
+	"startSocksServer": 28101, // 启动一个Socks5透传服务器，用法：startSocksServer $result -ip=0.0.0.0 -port=8080 -password=acb123 -verbose，参数都是可选
+	"startSocksClient": 28103, // 启动一个Socks5透传客户端，用法：startSocksClient $result -remoteIp=0.0.0.0 -remotePort=8080 -localIp=0.0.0.0 -localPort=8081 -password=acb123 -verbose，参数都是可选
 
 	// database related 数据库相关
 	"dbConnect": 32101, // 连接数据库，用法示例：dbConnect $db "sqlite3" `c:\tmpx\test.db`，或dbConnect $db "godror" `user/pass@129.0.9.11:1521/testdb`，结果参数外第一个参数为数据库驱动类型，目前支持sqlite3、mysql、mssql、godror（即oracle）等，第二个参数为连接字串
@@ -998,6 +1004,8 @@ var InstrNameSet map[string]int = map[string]int{
 	"guiMethod": 410001, // 调用GUI生成的对象的方法
 	"guiMt":     410001,
 }
+
+// instructions end
 
 // type UndefinedStruct struct {
 // 	int
@@ -12080,6 +12088,26 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		return ""
 
+	case 1575: // strRepeat
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 2 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+		v2 := tk.ToInt(p.GetVarValue(r, instrT.Params[v1p+1]))
+
+		p.SetVar(r, pr, strings.Repeat(v1, v2))
+
+		return ""
+
 	case 1581: // strIn/inStrs
 		if instrT.ParamLen < 3 {
 			return p.Errf(r, "not enough parameters(参数不够)")
@@ -14045,6 +14073,12 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		switch nv := v1.(type) {
 		case *os.File:
+			errT := nv.Close()
+
+			p.SetVar(r, pr, errT)
+
+			return ""
+		case *excelize.File:
 			errT := nv.Close()
 
 			p.SetVar(r, pr, errT)
@@ -16920,7 +16954,32 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		p.SetVar(r, pr, rsT)
 		return ""
+	case 28101: // startSocksServer
+		var pr interface{} = -5
+		v1p := 0
 
+		if instrT.ParamLen > 0 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		vs := p.ParamsToStrs(r, instrT, v1p)
+
+		p.SetVar(r, pr, tk.StartSocksServer(vs...))
+		return ""
+	case 28103: // startSocksClient
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 0 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		vs := p.ParamsToStrs(r, instrT, v1p)
+
+		p.SetVar(r, pr, tk.StartSocksClient(vs...))
+		return ""
 	case 32101: // dbConnect
 		if instrT.ParamLen < 2 {
 			return p.Errf(r, "not enough parameters(参数不够)")

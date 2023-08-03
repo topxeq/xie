@@ -2,7 +2,7 @@
 getSwitch $filePathT $argsG -file= ""
 
 // 文件名不能为空
-if @`{isEmptyTrim $tmp $filePathT}` +1 +2
+if @`{isEmptyTrim $tmp $filePathT}` :+1 :+2
     fatalf "empty file name"
 
 pl "try open %v ..." $filePathT

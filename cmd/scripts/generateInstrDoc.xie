@@ -1,0 +1,93 @@
+getEnv $dirT GOPATH
+
+joinPath $pathT $dirT src github.com topxeq xie xie.go
+
+joinPath $mdPathT $dirT src github.com topxeq xie instr.md
+
+plo $pathT
+
+loadText $fcT $pathT
+
+checkErrX $fcT
+
+regFindFirst $docBodyT $fcT `(?sm)// instructions start(.*?)// instructions end` 1
+
+plo $docBodyT
+
+strReplace $docBodyT $docBodyT "\r" ""
+
+strSplitLines $linesT $docBodyT
+
+new $bufT stringBuilder
+
+writeStr $_ $bufT "## 谢语言指令参考（Xielang Instruction Reference）\n\n"
+
+range $linesT :+1 :rangeEnd1
+    getIter $i $v
+
+    trim $tv $v
+
+    ifEqual $tv "" :+1 :+2
+        continue
+
+    if @`{strStartsWith $tmp $tv "var Instr"}` :+1 :+2
+        continue
+
+    if @`{strStartsWith $tmp $tv "\x7d"}` :+1 :+2
+        continue
+
+    regFindFirst $tmp1 $tv `//\s+(.* related)` 1
+
+    ifErrX $tmp1 :inext1 :+1
+        adds $v1 "### --- " $tmp1 " ---" "\n\n"
+        writeStr $_ $bufT $v1
+        continue
+
+    :inext1
+    regFindFirstGroup $tmp1 $tv `"(.*?)":\s* \d+\s*,\s*//\s*(.*?)\s*$`
+    // fatalf "tv: %v -> tmp1: %v" $tv $tmp1
+
+    ifErrX $tmp1 :inext2 :+1
+
+    ifEmpty $tmp1 :inext2 :+1
+        adds $v1 "**" [$tmp1,1] "**" ": " [$tmp1,2] "\n\n"
+        writeStr $_ $bufT $v1
+        continue
+
+    :inext2
+
+    regFindFirstGroup $tmp1 $tv `"(.*?)":\s* \d+\s*,\s*$`
+    // fatalf "tv: %v -> tmp1: %v" $tv $tmp1
+
+    ifErrX $tmp1 :inext3 :+1
+
+    ifEmpty $tmp1 :inext3 :+1
+        adds $v1 "**" [$tmp1,1] "**" "\n\n"
+        writeStr $_ $bufT $v1
+        continue
+
+    :inext3
+
+    add $v1 $tv "\n"
+
+    writeStr $_ $bufT $v1
+
+    :cont1
+    continue
+
+:rangeEnd1
+
+strRepeat $str1 $backQuoteG 3
+
+adds $strn "\n\n" $str1 "\n" $docBodyT $str1 "\n"
+
+// writeStr $_ $bufT $strn
+
+toStr $strw $bufT
+
+saveText $rs $strw $mdPathT
+
+checkErrX $rs
+
+
+

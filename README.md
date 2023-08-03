@@ -7792,7 +7792,7 @@ If the main program of Xielang is compiled with the compilation parameter of -ld
 
 #### 内置指令/命令/函数参考（Built-in instruction/command/function reference）
 
-目前暂时请参看代码中的InstrNameSet数据结构的代码注释，后面文档会慢慢补齐。
+请参考[这里](instr.md)。或者目前暂时请参看代码中的InstrNameSet数据结构的代码注释，后面文档会慢慢补齐。
 
 For the moment, please refer to the code comments of the InstrNameSet data structure in the code, and the following documents will be supplemented slowly.
 
