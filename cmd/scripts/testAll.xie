@@ -16,7 +16,7 @@ test $rs "a(int): 1\nb(float64): 3.2\nc(float64): 4.2\n" $seq "pv.xie"
 
 systemCmd $rs "xie" "-gopath" "orderedMap.xie"
 
-testByReg $rs `(?sm){"SSS":"v11","k1":"v1","a2":1,"3":\["s1","s2"\]}\n\(map\[string\]interface {}\)map\[string\]interface {}{.*\n{"SSS":"v11","k1":"v1","a2":1,"3":\["s1","s2"\]}\n{"a2":1,"SSS":"v11","k1":"v1","3":\["s1","s2"\]}\n{"a2":1,"3":\["s1","s2"\],"SSS":"v11","k1":"v1"}\n{"3":\["s1","s2"\],"SSS":"v11","a2":1,"k1":"v1"}\n{"k1":"v1","a2":1,"SSS":"v11","3":\["s1","s2"\]}\n{"SSS":"v11","3":\["s1","s2"\],"k1":"v1","a2":1}\nSSS v11\n3 \[s1 s2\]\nk1 v1\na2 1\n.*` $seq "orderedMap.xie"
+testByReg $rs `(?sm){"SSS":"v11","k1":"v1","a2":1,"3":\["s1","s2"\]}\n\(map\[string\]interface {}\)map\[string\]interface {}{.*\n{"3":\["s1","s2"\],"SSS":"v11","a2":1,"k1":"v1"}\n{"k1":"v1","a2":1,"SSS":"v11","3":\["s1","s2"\]}\n{"SSS":"v11","3":\["s1","s2"\],"k1":"v1","a2":1}\nSSS v11\n3 \[s1 s2\]\nk1 v1\na2 1\n.*` $seq "orderedMap.xie"
 
 systemCmd $rs "xie" "-gopath" "flexEval.xie"
 
@@ -56,7 +56,7 @@ test $rs "(string)\"abc\\\"123\\\"3.8\\\"递四方dsgive it to \\n    them\\n\"\
 
 systemCmd $rs "xie" "-gopath" "backQuote.xie"
 
-test $rs "`\n`\n` $abc `\n" $seq "backQuote.xie"
+test $rs "\x60\n\x60\n\x60 $abc \x60\n\x60\n[]byte{0x60}\n" $seq "backQuote.xie"
 
 systemCmd $rs "xie" "-gopath" "goto.xie"
 
