@@ -76,7 +76,7 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"onError": 106, // set error handler
 
-	"dumpf": 107,
+	"dumpf": 107, // dump debug info
 
 	"defer": 109, // delay running an instruction, the instruction will be running by order(first in last out) when the function returns or the program exits, or error occurrs
 
@@ -94,7 +94,7 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"layer": 141, // 获取变量所处的层级（主函数层级为0，调用的第一个函数层级为1，再嵌套调用的为2，……）
 
-	// -- run code related 运行代码相关
+	// 运行代码相关 run code related
 
 	"loadCode": 151, // 载入字符串格式的谢语言代码到当前虚拟机中（加在最后），出错则返回error对象说明原因
 
@@ -116,7 +116,7 @@ var InstrNameSet map[string]int = map[string]int{
 	"fatalf": 170, // printf then exit the program(类似pl输出信息后退出程序运行)
 
 	"goto": 180, // jump to the instruction line (often indicated by labels)
-	"jmp":  180,
+	"jmp":  180, // same as goto
 
 	"wait": 191, // 等待可等待的对象，例如waitGroup或chan，如果没有指定，则无限循环等待（中间会周期性休眠），用于等待用户按键退出或需要静止等待等场景；如果给出一个字符串，则输出字符串后等待输入（回车确认）后继续；如果是整数或浮点数则休眠相应的秒数后继续；
 
@@ -124,7 +124,7 @@ var InstrNameSet map[string]int = map[string]int{
 	"exitfL": 198, // terminate the program(maybe quickDelegate), can with a return string value assembled like fatalf/sprintf(same as assign the semi-global value $outL), usage: exitfL "error is %v" err1
 	"exit":   199, // terminate the program, can with a return value(same as assign the global value $outG)
 
-	// var related
+	// 变量相关 var related
 	"global": 201, // define a global variable
 
 	"var": 203, // define a local variable
@@ -147,7 +147,7 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"assignRefVar": 219, // 根据引用进行赋值（用于局部变量或全局变量）
 
-	// push/peek/pop stack related
+	// 堆栈相关 push/peek/pop stack related
 
 	"push": 220, // push any value to stack
 
@@ -155,9 +155,9 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"pop": 224, // pop the value on the top of the stack
 
-	"getStackSize": 230,
+	"getStackSize": 230, // get item count in the stack
 
-	"clearStack": 240,
+	"clearStack": 240, // clear the stack
 
 	"pushRun": 250, // push any value to running context stack
 
@@ -165,11 +165,11 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"popRun": 254, // pop the value on the top of the running stack
 
-	"getRunStackSize": 256,
+	"getRunStackSize": 256, // get the run-stack size
 
-	"clearRunStack": 258,
+	"clearRunStack": 258, // clear the run-stack
 
-	// shared sync map(cross-VM) related 全局同步映射相关（跨虚拟机）
+	// 全局同步映射相关（跨虚拟机）shared sync map(cross-VM) related
 	"getSharedMap":           300, // 获取所有的列表项
 	"getSharedMapItem":       301, // 获取全局映射变量，用法：getSharedMapItem $result key default，其中key是键名，default是可以省略的默认值（省略时如果没有值将返回undefined）
 	"getSharedMapSize":       302,
@@ -196,9 +196,9 @@ var InstrNameSet map[string]int = map[string]int{
 	"quickDeleteSharedMapItem": 357,
 	"quickSizeSharedMap":       359,
 
-	// assign related
+	// 赋值相关 assign related
 	"assign": 401, // assignment, from local variable to global, assign value to local if not found
-	"=":      401,
+	"=":      401, // same as 'assign'
 
 	"assignGlobal": 491, // 声明（如果未声明的话）并赋值一个全局变量
 
@@ -206,7 +206,7 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"assignLocal": 493, // 声明（如果未声明的话）并赋值一个局部变量
 
-	// if/else, switch related
+	// 条件分支相关 if/else, switch related
 	"if":    610, // usage: if $boolValue1 :labelForTrue :labelForElse
 	"ifNot": 611, // usage: if @`$a1 == #i3` :+1 :+2
 
@@ -225,7 +225,7 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"switchCond": 693, // 用法：switch $condition1 :label1 $condition2 :label2 ... :defaultLabel
 
-	// compare related
+	// 比较相关 compare related
 	"==": 701, // 判断两个数值是否相等，无参数时，比较两个弹栈值，结果压栈；参数为1个时是结果参数，两个数值从堆栈获取；参数为2个时，表示两个数值，结果压栈；参数为3个时，第一个参数是结果参数，后两个为待比较数值
 
 	"!=": 702, // 判断两个数值是否不等，无参数时，比较两个弹栈值，结果压栈；参数为1个时是结果参数，两个数值从堆栈获取；参数为2个时，表示两个数值，结果压栈；参数为3个时，第一个参数是结果参数，后两个为待比较数值
@@ -237,7 +237,7 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"cmp": 790, // 比较两个数值，根据结果返回-1，0或1，分别表示小于、等于、大于，无参数时，比较两个弹栈值（注意弹栈值先弹出的为第二个待比较数值），结果压栈；参数为1个时是结果参数，两个数值从堆栈获取；参数为2个时，表示两个数值，结果压栈；参数为3个时，第一个参数是结果参数，后两个为待比较数值
 
-	// operator related
+	// 运算符/操作符相关 operator related
 
 	"inc": 801, // ++
 	"++":  801,
@@ -278,7 +278,7 @@ var InstrNameSet map[string]int = map[string]int{
 	"&^": 944, // bit and not
 
 	"?":          990, // 三元操作符，用法示例：? $result $a $s1 "abc"，表示判断变量$a中的布尔值，如果为true，则结果为$s1，否则结果值为字符串abc，结果值将放入结果变量result中，如果省略结果参数，结果值将会存入$tmp
-	"ifThenElse": 990,
+	"ifThenElse": 990, // same as '?'
 
 	"flexEval":    997, // 计算一个表达式，支持普通语法，结果参数不可省略，之后第一个参数是表达式字符串，然后是0个或多个参数，在表达式中可以用v1、v2……来指代，表达式采用 github.com/antonmedv/expr 提供的表达式计算引擎，相关进一步文档也可以从这里获取，并可参照例子 flexEval.xie
 	"flexEvalMap": 998, // 类似flexEval指令，区别是：flexEval后从第二个参数开始可以接受多个参数，并在表达式中以v1、v2这样来指代，而flexEvalMap则只允许有一个参数，需要是映射类型，这样可以直接用键名在表达式中引用这些变量
@@ -286,9 +286,9 @@ var InstrNameSet map[string]int = map[string]int{
 	// "eval":      998, // 计算一个表达式
 
 	"quickEval": 999, // quick eval an expression, use {} to contain an instruction(no nested {} allowed) that return result value in $tmp
-	"eval":      999,
+	"eval":      999, // same as 'quickEval'
 
-	// func related
+	// 函数调用相关 func related
 
 	"call": 1010, // call a normal function, usage: call $result :func1 $arg1 $arg2...
 	// result value could not be omitted, use $drop if not neccessary
@@ -321,7 +321,7 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"getIter": 1087, // get i, v or k, v in range
 
-	// array/slice related 数组/切片相关
+	// 数组/切片相关 array/slice related
 
 	"newList":  1101, // 新建一个数组，后接任意个元素作为数组的初始项
 	"newArray": 1101,
@@ -353,12 +353,12 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"slice": 1130, // 对列表（数组）切片，如果没有指定结果参数，将改变原来的变量。用法示例：slice $list4 $list3 #i1 #i5，将list3进行切片，截取序号1（包含）至序号5（不包含）之间的项，形成一个新的列表，放入变量list4中。可以使用“-”来表示省略某个数值，例如：slice $list1 $argsT 2 -，表示截取从序号2到后面所有的项。
 
-	// control related 代码逻辑控制相关
+	// 代码逻辑控制相关 control related
 	"continue": 1210, // continue the loop or range, PS "continue 2" means continue the upper loop in nested loop, "continue 1" means continue the upper of upper loop, default is 1 but could be omitted
 
 	"break": 1211, // break the loop or range, PS "break 2" means break the upper loop in nested loop
 
-	// map related 映射相关
+	// 映射相关 map related
 
 	"setMapItem": 1310, // 设置映射项，用法：setMapItem $map1 Name "李白"
 
@@ -372,7 +372,7 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"toOrderedMap": 1341, // 转换列表为有序列表
 
-	// object related 对象相关
+	// 对象相关 object related
 
 	"new": 1401, // 新建一个数据或对象，第一个参数为结果放入的变量（不可省略），第二个为字符串格式的数据类型或对象名，后面是可选的0-n个参数，目前支持byte、int等，注意一般获得的结果是引用（或指针）
 
@@ -394,7 +394,7 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"callObj": 1440, // 调用对象方法
 
-	// string related 字符串相关
+	// 字符串相关 string related
 	"backQuote": 1501, // 获取反引号字符串
 
 	"quote":   1503, // 将字符串进行转义（加上转义符，如“"”变成“\"”）
@@ -447,13 +447,13 @@ var InstrNameSet map[string]int = map[string]int{
 	"strEndsWith":     1584, // 判断字符串是否以某个子串结束
 	"strEndsWithIn":   1585, // 判断字符串是否以某个子串结束（可以指定多个子串，符合任意一个则返回true），结果参数不可省略
 
-	// binary related 二进制数据相关
+	// 二进制数据相关 binary related
 	"bytesToData": 1601,
 	"dataToBytes": 1603,
 	"bytesToHex":  1605, // 以16进制形式输出字节数组
 	"bytesToHexX": 1606, // 以16进制形式输出字节数组，字节中间以空格分割
 
-	// thread related 并发/线程相关
+	// 并发/线程相关 thread related
 	"lock":   1701, // lock an object which is lockable
 	"unlock": 1703, // unlock an object which is unlockable
 
@@ -465,7 +465,7 @@ var InstrNameSet map[string]int = map[string]int{
 	"readUnlockN":  1726, // read unlock a global, internal, predefined lock, 0 <= N < 10
 	"tryReadLockN": 1727, // try read lock a global, internal, predefined lock, 0 <= N < 10
 
-	// time related 时间相关
+	// 时间相关 time related
 	"now": 1910, // 获取当前时间
 
 	"nowStrCompact": 1911, // 获取简化的当前时间字符串，如20220501080930
@@ -498,7 +498,7 @@ var InstrNameSet map[string]int = map[string]int{
 	"tickToTime":    1993, // 时间戳转换为时间，如果参数是nil则返回当前时间，如果参数是整数，则按纳秒转换，如果是字符串，则可转换13位（毫秒）或10位（秒）的时间戳，此时如果转换失败则返回时间的零值（1970年...）
 	"tickIntToTime": 1993, // 时间戳转换为时间，输入为纳秒单位的整数
 
-	// math related 数学相关
+	// 数学相关 math related
 	"abs": 2100, // 取绝对值
 
 	"ceil":  2111, // 向上取整
@@ -512,7 +512,7 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"adjustFloat": 2201, // 将类似32.0000000004这种浮点计算误差值的位数去掉，结果参数不可省略，用法：adjustFloat @`#f0.65 - #f0.6` 10，第二个参数是整理到小数点后多少位，可以省略，默认是10
 
-	// command-line related 命令行相关
+	// 命令行相关 command-line related
 	"getParam": 10001, // 获取指定序号的命令行参数，结果参数外第一个参数为list或strList类型，第二个为整数，第三个为默认值（字符串类型），例：getParam $result $argsG 2 ""
 	"获取参数":     10001,
 
@@ -526,7 +526,7 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"parseCommandLine": 10011, //-> 分析命令行字符串，类似os.Args的获取过程
 
-	// print related
+	// 信息输出相关 print related
 	"pln": 10410, // same as println function in other languages
 
 	"plo": 10411, // print a value with its type
@@ -553,11 +553,11 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"spr": 10460, // 相当于其它语言的sprintf函数
 
-	// scan/input related 输入相关
+	// 输入相关 scan/input related
 	"scanf":  10511, // 相当于其它语言的scanf函数
 	"sscanf": 10512, // 相当于其它语言的sscanf函数
 
-	// convert related 转换相关
+	// 转换相关 convert related
 	"convert": 10810, // 转换数值类型，例如 convert $a int
 
 	"hex":        10821, // 16进制编码，对于数字高位在后
@@ -576,14 +576,14 @@ var InstrNameSet map[string]int = map[string]int{
 	"toTime":  10871, // 将任意数值（可为字符串、时间戳字符串、时间等）转换为时间，字符串格式可以类似now、2006-01-02 15:04:05、20060102150405、2006-01-02 15:04:05.000，或10位或13位的Unix时间戳，可带可选参数-global、-defaultNow、-defaultErr、-defaultErrStr、-format=2006-01-02等，
 	"toAny":   10891,
 
-	// err string(TXERROR:) related TXERROR错误字符串相关
+	// TXERROR错误字符串相关 err string(TXERROR:) related
 	"isErrStr":  10910, // 判断是否是TXERROR字符串，用法：isErrStr $result $str1 $errMsg，第三个参数可选（结果参数不可省略），如有则当str1为TXERROR字符串时，会放入错误原因信息
 	"errStrf":   10915, // 生成TXERROR字符串，用法：errStrf $result "error: %v" $errMsg\
 	"getErrStr": 10921, // 获取TXERROR字符串中的错误原因信息（即TXERROR:后的内容）
 
 	"checkErrStr": 10931, // 判断是否是TXERROR字符串，是则退出程序运行
 
-	// error related / err string(with the prefix "TXERROR:" ) related error相关
+	// 错误信息（error）相关 error related / err string(with the prefix "TXERROR:" ) related
 
 	"isErr":     10941, // 判断是否是error对象，结果参数不可省略，除结果参数外第一个参数是需要确定是否是error的对象，第二个可选变量是如果是error时，包含的错误描述信息
 	"getErrMsg": 10942, // 获取error对象的错误信息
@@ -595,7 +595,7 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"errf": 10949, // 生成错误对象，类似printf
 
-	// common related 通用相关
+	// 通用相关 common related
 	"clear": 12001, // clear various object, and the object with Close method
 
 	"close": 12003, // 关闭文件等具有Close方法的对象
@@ -604,7 +604,7 @@ var InstrNameSet map[string]int = map[string]int{
 	"resultFromJson": 12102, // 生成一个TXResult表示通用结果的对象，JSON表达类似{"Status": "fail", "Value": "auth failed"}，Status一般只有success和fail两个取值，Value一般在fail时为失败原因，还可以有其他字段
 	"resultFromJSON": 12102, // 根据JSON生成TXResult对象，失败时返回error对象
 
-	// http request/response related HTTP请求相关
+	// HTTP请求相关 http request/response related
 	"writeResp":       20110, // 写一个HTTP请求的响应
 	"setRespHeader":   20111, // 设置一个HTTP请求的响应头，如setRespHeader $responseG "Content-Type" "text/json; charset=utf-8"
 	"writeRespHeader": 20112, // 写一个HTTP请求的响应头状态，如writeRespHeader $responseG #i200
@@ -620,7 +620,7 @@ var InstrNameSet map[string]int = map[string]int{
 	"startHttpServer":  20151, // 启动http服务器，用法示例：startHttpServer $resultT ":80" $muxT ；可以后面加-go参数表示以线程方式启动，此时应注意主线程不要退出，否则服务器线程也会随之退出，可以用无限循环等方式保持运行
 	"startHttpsServer": 20153, // 启动https(SSL)服务器，用法示例：startHttpsServer $resultT ":443" $muxT /root/server.crt /root/server.key -go
 
-	// web related WEB相关
+	// WEB相关 web related
 	"getWeb":      20210, // 发送一个HTTP网络请求，并获取响应结果（字符串格式），getWeb指令除了第一个参数必须是返回结果的变量，第二个参数是访问的URL，其他所有参数都是可选的，method可以是GET、POST等；encoding用于指定返回信息的编码形式，例如GB2312、GBK、UTF-8等；headers是一个JSON格式的字符串，表示需要加上的自定义的请求头内容键值对；参数中还可以有一个映射类型的变量或值，表示需要POST到服务器的参数，另外可加-bytes参数表示传回字节数组结果，用法示例：getWeb $resultT "http://127.0.0.1:80/xms/xmsApi" -method=POST -encoding=UTF-8 -timeout=15 -headers=`{"Content-Type": "application/json"}` $mapT
 	"getWebBytes": 20213, // 与getWeb相同，但获取结果为字节数组
 
@@ -632,10 +632,10 @@ var InstrNameSet map[string]int = map[string]int{
 	"getResourceRaw":  20292, // 与getResource作用类似，唯一区别是不将~~~替换回反引号
 	"getResourceList": 20293, // 获取可获取的资源名称列表
 
-	// html related HTML相关
+	// HTML相关 html related
 	"htmlToText": 20310, // 将HTML转换为字符串，用法示例：htmlToText $result $str1 "flat"，第3个参数开始是可选参数，表示HTML转文本时的选项
 
-	// regex related 正则表达式相关
+	// 正则表达式相关 regex related
 	"regReplace":       20411,
 	"regReplaceAllStr": 20411,
 
@@ -658,7 +658,7 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"regQuote": 20491, // 将一个普通字符串中涉及正则表达式特殊字符进行转义替换以便用于正则表达式中
 
-	// system related
+	// 系统相关 system related
 
 	"sleep": 20501, // sleep for n seconds(float, 0.001 means 1 millisecond)
 
@@ -676,7 +676,7 @@ var InstrNameSet map[string]int = map[string]int{
 	"getOSName": 20901, // 获取操作系统名称，如windows,linux,darwin等
 	"getOsName": 20901,
 
-	// file related
+	// 文件操作相关 file related
 	"loadText": 21101, // load text from file
 	"saveText": 21103, // 保存文本到指定文件
 
@@ -725,7 +725,7 @@ var InstrNameSet map[string]int = map[string]int{
 	"renameFile":    21803, // 重命名文件
 	"copyFile":      21805, // 复制文件，用法 copyFile $result $fileName1 $fileName2，可带参数-force和-bufferSize=100000等
 
-	// path related
+	// 路径相关 path related
 
 	"genFileList": 21901, // 生成目录中的文件列表，即获取指定目录下的符合条件的所有文件，例：getFileList $result `d:\tmp` "-recursive" "-pattern=*" "-exclusive=*.txt" "-withDir" "-verbose"，另有 -compact 参数将只给出Abs、Size、IsDir三项, -dirOnly参数将只列出目录（不包含文件），列表项对象内容类似：map[Abs:D:\tmpx\test1.gox Ext:.gox IsDir:false Mode:-rw-rw-rw- Name:test1.gox Path:test1.gox Size:353339 Time:20210928091734]
 	"getFileList": 21901,
@@ -746,29 +746,29 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"ensureMakeDirs": 21921,
 
-	// console related 命令行相关
+	// 终端操作相关 console related
 	"getInput":    22001, // 从命令行获取输入，第一个参数开始是提示字符串，可以类似printf加多个参数，用法：getInput $text1 "请输入%v个数字：" #i2
-	"getInputf":   22001,
+	"getInputf":   22001, // same as 'getInput'
 	"getPassword": 22003, // 从命令行获取密码输入（输入字符不显示），第一个参数是提示字符串
 
-	// json related JSON相关
+	// JSON相关 json related
 	"toJson": 22101, // 将对象编码为JSON字符串
 	"toJSON": 22101,
 
 	"fromJson": 22102, // 将JSON字符串转换为对象
 	"fromJSON": 22102,
 
-	// xml related XML相关
+	// XML相关 xml related
 	"toXml": 22201, // 将对象编码为XML字符串
 	"toXML": 22201,
 
 	"getAllNodesTextFromXML": 22301, // 从XML文本中获取所有文本节点形成文本数组
 
-	// simple map related simple map相关
+	// simple map相关 simple map related
 	"toSimpleMap":   22401, // 将对象编码为Simple Map字符串（每行一个键值对，以第一个等号分隔，例如：name=Zhang San）
 	"fromSimpleMap": 22403, // 将Simple Map字符串解码为映射对象
 
-	// random related 随机数相关
+	// 随机数相关 random related
 
 	"randomize": 23000, // 初始化随机种子
 
@@ -779,7 +779,7 @@ var InstrNameSet map[string]int = map[string]int{
 	"genRandomStr": 23101, // 生成随机字符串，用法示例：genRandomStr $result -min=6 -max=8 -noUpper -noLower -noDigit -special -space -invalid，其中，除结果参数外所有参数均可选，-min用于设置最少生成字符个数，-max设置最多字符个数，-noUpper设置是否包含大写字母，-noLower设置是否包含小写字母，-noDigit设置是否包含数字，-special设置是否包含特殊字符，-space设置是否包含空格，-invalid设置是否包含一般意义上文件名中的非法字符，
 	"getRandomStr": 23101,
 
-	// encode/decode related 编码解码相关
+	// 编码解码相关 encode/decode related
 
 	"md5": 24101, // 生成MD5编码
 
@@ -807,7 +807,7 @@ var InstrNameSet map[string]int = map[string]int{
 	"toUtf8": 24801, // 转换字符串或字节列表为UTF-8编码，结果参数不可省略，第一个参数为要转换的源字符串或字节列表，第二个参数表示原始编码（默认为GBK）
 	"toUTF8": 24801,
 
-	// encrypt/decrypt related 加密/解密相关
+	// 加密/解密相关 encrypt/decrypt related
 
 	"encryptText": 25101, // 用TXDEF方法加密字符串
 	"decryptText": 25103, // 用TXDEF方法解密字符串
@@ -815,7 +815,7 @@ var InstrNameSet map[string]int = map[string]int{
 	"encryptData": 25201, // 用TXDEF方法加密数据（字节列表）
 	"decryptData": 25203, // 用TXDEF方法解密数据（字节列表）
 
-	// compress/uncompress related 压缩/解压缩相关
+	// 压缩/解压缩相关 compress/uncompress related
 	"compress":   26001, // compress string or byte array to byte array
 	"uncompress": 26002,
 	"decompress": 26002,
@@ -824,7 +824,7 @@ var InstrNameSet map[string]int = map[string]int{
 	"uncompressText": 26012,
 	"decompressText": 26012,
 
-	// network relate 网络相关
+	// 网络相关 network relate
 	"getRandomPort": 27001, // 获取一个可用的socket端口（注意：获取后应尽快使用，否则仍有可能被占用）
 
 	"listen": 27101, // net.Listen
@@ -833,21 +833,16 @@ var InstrNameSet map[string]int = map[string]int{
 	"startSocksServer": 28101, // 启动一个Socks5透传服务器，用法：startSocksServer $result -ip=0.0.0.0 -port=8080 -password=acb123 -verbose，参数都是可选
 	"startSocksClient": 28103, // 启动一个Socks5透传客户端，用法：startSocksClient $result -remoteIp=0.0.0.0 -remotePort=8080 -localIp=0.0.0.0 -localPort=8081 -password=acb123 -verbose，参数都是可选
 
-	// database related 数据库相关
+	// 数据库相关 database related
 	"dbConnect": 32101, // 连接数据库，用法示例：dbConnect $db "sqlite3" `c:\tmpx\test.db`，或dbConnect $db "godror" `user/pass@129.0.9.11:1521/testdb`，结果参数外第一个参数为数据库驱动类型，目前支持sqlite3、mysql、mssql、godror（即oracle）等，第二个参数为连接字串
-	"连接数据库":     32101,
 
 	"dbClose": 32102, // 关闭数据库连接
-	"关闭数据库":   32102,
 
 	"dbQuery": 32103, // 在指定数据库连接上执行一个查询的SQL语句（一般是select等），返回数组，每行是映射（字段名：字段值），用法示例：dbQuery $rs $db $sql $arg1 $arg2 ...
-	"查询数据库":   32103,
 
 	"dbQueryMap": 32104, // 在指定数据库连接上执行一个查询的SQL语句（一般是select等），返回一个映射，以指定的数据库记录字段为键名，对应记录为键值，用法示例：dbQueryMap $rs $db $sql $key $arg1 $arg2 ...
-	"查询数据库映射":    32104,
 
 	"dbQueryRecs": 32105, // 在指定数据库连接上执行一个查询的SQL语句（一般是select等），返回二维数组（第一行为字段名），用法示例：dbQueryRecs $rs $db $sql $arg1 $arg2 ...
-	"查询数据库记录":     32105,
 
 	"dbQueryCount": 32106, // 在指定数据库连接上执行一个查询的SQL语句，返回一个整数，一般用于查询记录条数或者某个整数字段的值等场景，用法示例：dbQueryCount $rs $db `select count(*) from TABLE1 where FIELD1=:v1 and FIELD2=:v2` $arg1 $arg2 ...
 
@@ -862,10 +857,10 @@ var InstrNameSet map[string]int = map[string]int{
 	"dbExec": 32111, // 在指定数据库连接上执行一个有操作的SQL语句（一般是insert、update、delete等），用法示例：dbExec $rs $db $sql $arg1 $arg2 ...
 	"执行数据库":  32111,
 
-	// markdown related Markdown格式相关
+	// Markdown（MD）格式相关 markdown related
 	"renderMarkdown": 40001, // 将Markdown格式字符串渲染为HTML
 
-	// image related 图像处理相关
+	// 图像处理相关 image related
 	"newImage": 41001,
 
 	"pngEncode": 41101, // 将图像保存为PNG文件或其他可写载体（如字符串），用法：pngEncode $errT $fileT $imgT
@@ -873,7 +868,7 @@ var InstrNameSet map[string]int = map[string]int{
 	"jpgEncode":  41103, // 将图像保存为JPG文件或其他可写载体（如字符串），用法：jpgEncode $errT $fileT $imgT -quality=90
 	"jpegEncode": 41103,
 
-	// screen related 屏幕相关
+	// 屏幕相关 screen related
 	"getActiveDisplayCount": 45001, // 获取活跃屏幕数量
 
 	"getScreenResolution": 45011, // 获取指定屏幕的分辨率，用法：getScreenResolution $rectT -index=0 -format=rect，其中后面的参数均可选，index指定要获取的活跃屏幕号，主屏幕是0，format可以是rect、json或为空，参看例子代码getScreenInfo.xie
@@ -883,11 +878,11 @@ var InstrNameSet map[string]int = map[string]int{
 	"captureScreen":     45023, // 屏幕区域截图，用法 captureScreenRect $imgT 100 100 640 480，截取主屏幕的坐标(100,100)为左上角，宽640，高480的区域截图，后面几个参数均可省略，默认截全屏
 	"captureScreenRect": 45023,
 
-	// token related 令牌相关
+	// 令牌相关 token related
 	"genToken":   50001, // 生成令牌，用法：genToken $result $appCode $userID $userRole -secret=abc，其中可选开关secret是加密秘钥，可省略
 	"checkToken": 50003, // 检查令牌，用法：checkToken $result XXXXX -secret=abc -expire=2，其中expire是设置的超时秒数（默认为1440），如果成功，返回类似“appCode|userID|userRole|”的字符串；失败返回TXERROR字符串
 
-	// line editor related 内置行文本编辑器有关
+	// 内置行文本编辑器有关 line editor related
 	"leClear": 70001, // 清空行文本编辑器缓冲区
 
 	"leLoadStr":     70003, // 行文本编辑器缓冲区载入指定字符串内容，例：leLoadStr $textT "abc\nbbb\n结束"
@@ -927,18 +922,18 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"leRun": 70098, // 将当前行文本编辑器中保存的文本作为谢语言代码执行，结果参数不可省略，如有第二个参数则为要传入的inputG，第三个参数开始为传入的argsG
 
-	// server related 服务器相关
+	// 服务/服务器相关 server related
 	"getMimeType": 80001, // 根据文件名获取MIME类型，文件名可以包含路径
 	"getMIMEType": 80001,
 
-	// zip related 压缩相关
+	// 压缩相关 zip related
 	"archiveFilesToZip":   90101, // 添加多个文件到一个新建的zip文件，第一个参数为zip文件名，后缀必须是.zip，可选参数-overwrite（是否覆盖已有文件），-makeDirs（是否根据需要新建目录），其他参数看做是需要添加的文件或目录，目录将递归加入zip文件，如果参数为一个列表，将看作一个文件名列表，其中的文件都将加入
 	"extractFilesFromZip": 90111, // 添加文件到zip文件
 
 	// "compressData":   90201, // 压缩数据，用法：compressData $result $data -method=gzip，压缩方法由-method参数指定，默认为gzip，还支持lzw
 	// "decompressData": 90203, // 解压缩数据
 
-	// web GUI related 网页界面相关
+	// 网页界面相关 web GUI related
 	"initWebGUIW":   100001, // 初始化Web图形界面编程环境（Windows下IE11版本），如果没有外嵌式浏览器xiewbr，则将其下载到xie语言目录下
 	"initWebGuiW":   100001,
 	"updateWebGuiW": 100003, // 强制刷新Web图形界面编程环境（Windows下IE11版本），会将最新的外嵌式浏览器xiewbr下载到xie语言目录下
@@ -946,7 +941,7 @@ var InstrNameSet map[string]int = map[string]int{
 	"initWebGUIC": 100011, // 初始化Web图形界面编程环境（Windows下CEF版本），如果没有外嵌式浏览器xiecbr及相关库文件，则将其下载到xie语言目录下
 	"initWebGuiC": 100011,
 
-	// ssh/sftp/ftp related
+	// SSH/SFTP/FTP相关 ssh/sftp/ftp related
 	"sshConnect":       200001, // 打开一个SSH连接，用法：sshConnect 结果变量 -host=服务器名 -port=服务器端口 -user=用户名 -password=密码
 	"sshOpen":          200001,
 	"sshClose":         200003, // 关闭一个SSH连接
@@ -955,7 +950,7 @@ var InstrNameSet map[string]int = map[string]int{
 	"sshDownload":      200021, // 通过ssh下载一个文件，用法：sshDownload 结果变量 -host=服务器名 -port=服务器端口 -user=用户名 -password=密码 -path=本地文件路径 -remotePath=远端文件路径，可以加-force参数表示覆盖已有文件
 	"sshDownloadBytes": 200023, // 通过ssh下载一个文件，结果为字节数组（或error对象），用法：sshDownloadBytes 结果变量 -host=服务器名 -port=服务器端口 -user=用户名 -password=密码 -remotePath=远端文件路径，可以加-force参数表示覆盖已有文件
 
-	// excel related
+	// Excel相关 excel related
 	"excelNew":    210001, // 新建一个excel文件，用法：excelNew $excelFileT
 	"excelOpen":   210003, // 打开一个excel文件，用法：excelOpen $excelFileT `d:\tmp\excel1.xlsx`
 	"excelClose":  210005, // 关闭一个excel文件
@@ -974,16 +969,16 @@ var InstrNameSet map[string]int = map[string]int{
 
 	// "mailNewSender": 220001, // 新建一个邮件发送对象，与 new $result "mailSender" 指令效果类似
 
-	// pinyin related 拼音相关
+	// 拼音相关 pinyin related
 
 	"toPinYin": 220001, // 字符串转换为拼音，结果参数不可省略，用法：toPinyin $result "我们都是nice的。"，结果是所有汉字转为的拼音和所有无法转为拼音的字符的原字符；可以加-sep=-表示将各个拼音和字符间以指定分隔符分隔，加-pinYinOnly开关参数表示只包含能够转换为拼音的字符，加-ascOnly表示只包含ASCII字符，加-first表示拼音只取首字母，-tone表示加音调，-digitTone表示音调以数字表示，-digitTone2表示音调以数字表示且加在韵母（元音）后，加-raw表示结果为二维字符串数组，加参数用法类似：toPinyin $pln "我们都是nice的。" -digitTone -sep=-
 	"toPinyin": 220001,
 
-	// misc related 杂项相关
+	// 杂项相关 misc related
 
 	"awsSign": 300101,
 
-	// GUI related 图形界面相关
+	// 图形界面相关 GUI related
 	"guiInit": 400000, // 初始化GUI环境
 
 	"alert":    400001, // 类似JavaScript中的alert，弹出对话框，显示一个字符串或任意数字、对象的字符串表达
