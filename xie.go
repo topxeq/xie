@@ -11028,7 +11028,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 			case "getInfo":
 				zoneT, offsetT := nv.Zone()
 
-				p.SetVar(r, pr, map[string]interface{}{"Time": nv, "Formal": nv.Format(tk.TimeFormat), "Compact": nv.Format(tk.TimeFormat), "Full": fmt.Sprintf("%v", nv), "Year": nv.Year(), "Month": nv.Month(), "Day": nv.Day(), "Hour": nv.Hour(), "Minute": nv.Minute(), "Second": nv.Second(), "Zone": zoneT, "Offset": offsetT, "UnixNano": nv.UnixNano()})
+				p.SetVar(r, pr, map[string]interface{}{"Time": nv, "Formal": nv.Format(tk.TimeFormat), "Compact": nv.Format(tk.TimeFormatCompact), "Full": fmt.Sprintf("%v", nv), "Year": nv.Year(), "Month": nv.Month(), "Day": nv.Day(), "Hour": nv.Hour(), "Minute": nv.Minute(), "Second": nv.Second(), "Zone": zoneT, "Offset": offsetT, "UnixNano": nv.UnixNano(), "WeekDay": int(nv.Weekday()), "NanoSec": nv.Nanosecond(), "MilliSec": nv.Nanosecond() / 1000000})
 				return ""
 			case "format":
 				var v2 string = ""
