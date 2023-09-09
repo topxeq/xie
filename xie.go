@@ -18629,6 +18629,8 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 			errT = sshT.Upload(v5, v6, pa...)
 		}
 
+		fmt.Println()
+
 		if errT != nil {
 			p.SetVar(r, pr, errT)
 
