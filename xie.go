@@ -49,7 +49,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var VersionG string = "1.5.5"
+var VersionG string = "1.5.6"
 
 func Test() {
 	tk.Pl("test")
@@ -676,6 +676,9 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"getOSName": 20901, // 获取操作系统名称，如windows,linux,darwin等
 	"getOsName": 20901,
+
+	"getOSArch": 20903, // 获取系统架构，如amd,arm等
+	"getOsArch": 20903,
 
 	// 文件操作相关 file related
 	"loadText": 21101, // load text from file
@@ -15032,6 +15035,19 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		}
 
 		p.SetVar(r, pr, runtime.GOOS)
+
+		return ""
+
+	case 20903: // getOSArch
+		var pr interface{} = -5
+		// v1p := 0
+
+		if instrT.ParamLen > 0 {
+			pr = instrT.Params[0]
+			// v1p = 1
+		}
+
+		p.SetVar(r, pr, runtime.GOARCH)
 
 		return ""
 
