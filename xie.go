@@ -644,7 +644,8 @@ var InstrNameSet map[string]int = map[string]int{
 	"regFind":          20423, // 获取正则表达式的第一个匹配，用法示例：regFind $result $str1 $regex1 $group
 	"regFindFirst":     20423,
 
-	"regFindFirstGroup": 20424, // 获取正则表达式的第一个匹配，返回所有的匹配组为一个列表，其中第一项是完整匹配结果，第二项是第一个匹配组……，，用法示例：regFindFirstGroup $result $str1 $regex1
+	"regFindFirstGroup":  20424, // 获取正则表达式的第一个匹配，返回所有的匹配组为一个列表，其中第一项是完整匹配结果，第二项是第一个匹配组……，，用法示例：regFindFirstGroup $result $str1 $regex1
+	"regFindFirstGroups": 20424,
 
 	"regFindIndex": 20425, // 获取正则表达式的第一个匹配的位置，返回一个整数数组，任意值为-1表示没有找到匹配，用法示例：regFindIndex $result $str1 $regex1
 
