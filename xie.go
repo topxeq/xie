@@ -741,6 +741,7 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"getAppDir":    21907, // get the application directory(where execute-file exists)
 	"getConfigDir": 21908, // get application config directory
+	"getHomeDir":   21909, // get the user home directory
 
 	"extractFileName": 21910, // 从文件路径中获取文件名部分
 	"getFileBase":     21910,
@@ -16112,6 +16113,23 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		p.SetVar(r, pr, rsT)
 		return ""
+	case 21909: // getHomeDir
+
+		var pr any = -5
+
+		// v1p := 0
+
+		if instrT.ParamLen > 0 {
+			pr = instrT.Params[0]
+			// v1p = 1
+		}
+
+		rsT := tk.GetHomeDir()
+
+		p.SetVar(r, pr, rsT)
+
+		return ""
+
 	case 21910: // extractFileName
 		if instrT.ParamLen < 1 {
 			return p.Errf(r, "not enough parameters(参数不够)")
