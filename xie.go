@@ -15913,7 +15913,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 			optsA := p.ParamsToStrs(r, instrT, 2)
 
 			if tk.IfSwitchExistsWhole(optsA, "-dry") {
-				tk.Pl("模拟删除 %v", v1)
+				tk.Pl("(simulate removing file(模拟删除) %v", v1)
 
 				p.SetVar(r, pr, nil)
 
