@@ -1,0 +1,11 @@
+new $seq1 "seq"
+
+plt $seq1
+
+mt $rs $seq1 "Get"
+
+plt $rs
+
+mt $rs $seq1 "Get"
+
+plt $rs

@@ -49,7 +49,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var VersionG string = "1.5.6"
+var VersionG string = "1.5.7"
 
 func Test() {
 	tk.Pl("test")
@@ -532,6 +532,8 @@ var InstrNameSet map[string]int = map[string]int{
 	"plo": 10411, // print a value with its type
 
 	"plos": 10412, // 输出多个变量或数值的类型和值
+
+	"plt": 10413, // print a value with its type
 
 	"pr":  10415, // the same as print in other languages
 	"prf": 10416, // the same as printf in other languages
@@ -13036,6 +13038,17 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		vs := p.ParamsToList(r, instrT, 0)
 
 		tk.Plos(vs...)
+
+		return ""
+	case 10413: // plt
+		if instrT.ParamLen < 1 {
+			tk.Plt(p.GetCurrentFuncContext(r).Tmp)
+			return ""
+		}
+
+		vs := p.ParamsToList(r, instrT, 0)
+
+		tk.Plt(vs...)
 
 		return ""
 	case 10415: // pr
