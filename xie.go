@@ -422,6 +422,8 @@ var InstrNameSet map[string]int = map[string]int{
 	"strReplace":   1540, // 字符串替换，用法示例：strReplace $result $str1 $find $replacement
 	"strReplaceIn": 1543, // 字符串替换，可同时替换多个子串，用法示例：strReplace $result $str1 $find1 $replacement1 $find2 $replacement2
 
+	"limitStr": 1545, // 超长字符串截短，用法 limitStr $s2 "abcdefg" 3 "-suffix=..."，将得到abc...，suffix为后缀，默认为..., -end参数用于指定保留后面开始
+
 	"trim":    1550, // 字符串首尾去空白，非字符串将自动转换为字符串
 	"strTrim": 1550,
 	"去空白":     1550,
@@ -12090,6 +12092,22 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		vs := p.ParamsToStrs(r, instrT, v1p+1)
 
 		p.SetVar(r, pr, tk.StringReplace(v1, vs...))
+
+		return ""
+	case 1545: // limitStr
+		if instrT.ParamLen < 3 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		pr := instrT.Params[0]
+		v1p := 1
+
+		v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+		v2 := tk.ToInt(p.GetVarValue(r, instrT.Params[v1p+1]))
+
+		vs := p.ParamsToStrs(r, instrT, v1p+2)
+
+		p.SetVar(r, pr, tk.LimitString(v1, v2, vs...))
 
 		return ""
 	case 1550: // trim/strTrim

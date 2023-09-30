@@ -2,6 +2,10 @@ systemCmd $rs "xie" "-gopath" "basic.xie"
 
 testByText $rs "5.6\n10\n" $seq "basic.xie"
 
+systemCmd $rs "xie" "-gopath" "limitStr.xie"
+
+testByText $rs "abcde...\n34567...\nabcde!!!\n" $seq "limitStr.xie"
+
 systemCmd $rs "xie" "-gopath" "findStringDiffPos.xie"
 
 testByText $rs "4\n" $seq "findStringDiffPos.xie"

@@ -1,0 +1,7 @@
+= $s "abcdefg1234567"
+
+limitStr $pln $s 5
+
+limitStr $pln $s 5 "-end"
+
+limitStr $pln $s 5 "-suffix=!!!"
