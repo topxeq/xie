@@ -1,0 +1,80 @@
+= $a #J`[1, 3, 2.5, 435, "abc", "zbds123", "0123a", "2.33", 2.33]`
+
+plv $a
+
+extractRun $func1 :func1Start :func1End
+
+runCall $rs $func1 #i1 #i2
+
+pln $rs
+
+sortByFuncQuick $rs1 $a $func1
+
+pln $rs1
+
+sortByFunc $rs2 $a `
+[] $dataL $inputL 0
+[] $i $inputL 1
+[] $j $inputL 2
+
+[] $v1 $dataL $i
+[] $v2 $dataL $j
+
+toStr $v1s $v1
+toStr $v2s $v2
+
+> $b1 $v1s $v2s
+
+// pln $v1s $v2s $b1
+
+exitL $b1
+`
+
+pln $rs2
+
+exit
+
+:func1Start
+// [] $dataL $inputL 0
+[] $i $inputL 0
+[] $j $inputL 1
+
+[] $v1 $a $i
+[] $v2 $a $j
+
+toStr $v1s $v1
+toStr $v2s $v2
+
+// pln $v1s $v2s
+
+< $b1 $v1s $v2s
+
+= $outL $b1
+
+:func1End
+exitL
+
+// b = sortByFunc(a, func(i, j) {
+// 	// pl("i: %v, j: %v", i, j)
+// 	return toStr(a[i]) < toStr(a[j])
+// })
+
+// plv(b)
+
+// m = [{"Name": "Tom", "Age": 18}, {"Name": "Jerry", "Age": 22}, {"Name": "Jerry", "Age": 18}, {"Name": "Peter", "Age": 8}]
+
+// func sort1(i, j) {
+// 	if m[i].Name < m[j].Name {
+// 		return true
+// 	}
+
+// 	if m[i].Name == m[j].Name {
+// 		return m[i].Age < m[j].Age
+// 	}
+
+// 	return false
+// }
+
+// m1 := sortByFunc(m, sort1)
+// pln(toJson(m1, "-sort"))
+

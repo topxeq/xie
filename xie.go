@@ -87,8 +87,11 @@ var InstrNameSet map[string]int = map[string]int{
 	"isNil":   113, // 判断变量是否是nil，第一个结果参数可省略，第二个参数是要判断的变量
 
 	"test":             121, // for test purpose, check if 2 values are equal
-	"testByStartsWith": 122, // for test purpose, check if first string starts with the 2nd
-	"testByReg":        123, // for test purpose, check if first string matches the regex pattern defined by the 2nd string
+	"testByText":       122, // for test purpose, check if 2 string values are equal
+	"testByStartsWith": 123, // for test purpose, check if first string starts with the 2nd
+	"testByEndsWith":   124, // for test purpose, check if first string ends with the 2nd
+	"testByContains":   125, // for test purpose, check if first string contains the 2nd
+	"testByReg":        128, // for test purpose, check if first string matches the regex pattern defined by the 2nd string
 
 	"typeOf": 131, // 获取变量或数值类型（字符串格式），省略所有参数表示获取看栈值（不弹栈）的类型
 
@@ -353,6 +356,9 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"slice": 1130, // 对列表（数组）切片，如果没有指定结果参数，将改变原来的变量。用法示例：slice $list4 $list3 #i1 #i5，将list3进行切片，截取序号1（包含）至序号5（不包含）之间的项，形成一个新的列表，放入变量list4中。可以使用“-”来表示省略某个数值，例如：slice $list1 $argsT 2 -，表示截取从序号2到后面所有的项。
 
+	"sortByFunc":      1141, // 按函数排序，根据自定义函数（可为一个run对象或一段源代码字符串，跟函数中全局变量可直接饮用）排序，自定义函数需三个参数，分别是被排序对象，对比的索引号1（整数），对比的索引号2
+	"sortByFuncQuick": 1143, // 根据自定义函数排序，自定义函数需两个参数，分别是对比的索引号1（整数），对比的索引号2
+
 	// 代码逻辑控制相关 control related
 	"continue": 1210, // continue the loop or range, PS "continue 2" means continue the upper loop in nested loop, "continue 1" means continue the upper of upper loop, default is 1 but could be omitted
 
@@ -446,6 +452,8 @@ var InstrNameSet map[string]int = map[string]int{
 	"strStartsWithIn": 1583, // 判断字符串是否以某个子串开头（可以指定多个子串，符合任意一个则返回true），结果参数不可省略
 	"strEndsWith":     1584, // 判断字符串是否以某个子串结束
 	"strEndsWithIn":   1585, // 判断字符串是否以某个子串结束（可以指定多个子串，符合任意一个则返回true），结果参数不可省略
+
+	"strFindDiffPos": 1591, // 查找两个字符串首处不同的位置，完全相同则返回-1
 
 	// 二进制数据相关 binary related
 	"bytesToData": 1601,
@@ -5790,7 +5798,37 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		return ""
 
-	case 122: // testByStartsWith
+	case 122: // testByText
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[0]))
+		v2 := tk.ToStr(p.GetVarValue(r, instrT.Params[1]))
+
+		// tk.Plo("--->", v2)
+
+		var v3 string
+		var v4 string
+
+		if instrT.ParamLen > 3 {
+			v3 = tk.ToStr(p.GetVarValue(r, instrT.Params[2]))
+			v4 = "(" + tk.ToStr(p.GetVarValue(r, instrT.Params[3])) + ")"
+		} else if instrT.ParamLen > 2 {
+			v3 = tk.ToStr(p.GetVarValue(r, instrT.Params[2]))
+		} else {
+			v3 = tk.ToStr(GlobalsG.SyncSeq.Get())
+		}
+
+		if v1 == v2 {
+			tk.Pl("test %v%v passed", v3, v4)
+		} else {
+			return p.Errf(r, "test %v%v failed: (pos: %v) %#v <-> %#v\n-----\n%v\n-----\n%v", v3, v4, tk.FindFirstDiffIndex(v1, v2), v1, v2, v1, v2)
+		}
+
+		return ""
+
+	case 123: // testByStartsWith
 		if instrT.ParamLen < 2 {
 			return p.Errf(r, "not enough parameters(参数不够)")
 		}
@@ -5818,7 +5856,63 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		return ""
 
-	case 123: // testByReg
+	case 124: // testByEndsWith
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[0])
+		v2 := p.GetVarValue(r, instrT.Params[1])
+
+		var v3 string
+		var v4 string
+
+		if instrT.ParamLen > 3 {
+			v3 = tk.ToStr(p.GetVarValue(r, instrT.Params[2]))
+			v4 = "(" + tk.ToStr(p.GetVarValue(r, instrT.Params[3])) + ")"
+		} else if instrT.ParamLen > 2 {
+			v3 = tk.ToStr(p.GetVarValue(r, instrT.Params[2]))
+		} else {
+			v3 = tk.ToStr(GlobalsG.SyncSeq.Get())
+		}
+
+		if strings.HasSuffix(tk.ToStr(v1), tk.ToStr(v2)) {
+			tk.Pl("test %v%v passed", v3, v4)
+		} else {
+			return p.Errf(r, "test %v%v failed: %#v <-> %#v", v3, v4, v1, v2)
+		}
+
+		return ""
+
+	case 125: // testByContains
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[0])
+		v2 := p.GetVarValue(r, instrT.Params[1])
+
+		var v3 string
+		var v4 string
+
+		if instrT.ParamLen > 3 {
+			v3 = tk.ToStr(p.GetVarValue(r, instrT.Params[2]))
+			v4 = "(" + tk.ToStr(p.GetVarValue(r, instrT.Params[3])) + ")"
+		} else if instrT.ParamLen > 2 {
+			v3 = tk.ToStr(p.GetVarValue(r, instrT.Params[2]))
+		} else {
+			v3 = tk.ToStr(GlobalsG.SyncSeq.Get())
+		}
+
+		if strings.Contains(tk.ToStr(v1), tk.ToStr(v2)) {
+			tk.Pl("test %v%v passed", v3, v4)
+		} else {
+			return p.Errf(r, "test %v%v failed: %#v <-> %#v", v3, v4, v1, v2)
+		}
+
+		return ""
+
+	case 128: // testByReg
 		if instrT.ParamLen < 2 {
 			return p.Errf(r, "not enough parameters(参数不够)")
 		}
@@ -10340,6 +10434,142 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		return ""
 
+	case 1141: // sortByFunc
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 2 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+		v2 := p.GetVarValue(r, instrT.Params[v1p+1])
+
+		nv1, ok := v2.(*RunningContext)
+
+		nv2 := ""
+
+		if !ok {
+			nv1 = nil
+
+			nv2, ok = v2.(string)
+
+			if !ok {
+				return p.Errf(r, "type not supported(不支持的类型)：%T(%v)", v2, v2)
+			}
+		}
+
+		if nv1 == nil {
+			r1 := NewRunningContext()
+			if tk.IsError(r1) {
+				return p.Errf(r, "[%v](xie) runtime error, failed to initialize running context: %v", tk.GetNowTimeStringFormal(), r1)
+			}
+
+			nv1 = r1.(*RunningContext)
+
+			errT := nv1.Load(nv2)
+
+			if errT != nil {
+				return p.Errf(r, "[%v](xie) runtime error, failed to load code: %v", tk.GetNowTimeStringFormal(), errT)
+			}
+
+			nv2 = ""
+		}
+
+		// tk.Pl("nv1: %#v, nv2: %#v", nv1, nv2)
+
+		sort.SliceStable(v1, func(i, j int) bool {
+			rsi1 := RunCodePiece(p, nv1, nv2, []interface{}{v1, i, j}, true)
+
+			if tk.IsErrX(rsi1) {
+				// tk.Pln("sort error:", rsi1)
+				return false
+			}
+
+			nv1, ok := rsi1.(bool)
+
+			if !ok {
+				return false
+			}
+
+			return nv1
+		})
+
+		p.SetVar(r, pr, v1)
+		return ""
+	case 1143: // sortByFuncQuick
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 2 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+		v2 := p.GetVarValue(r, instrT.Params[v1p+1])
+
+		nv1, ok := v2.(*RunningContext)
+
+		nv2 := ""
+
+		if !ok {
+			nv1 = nil
+
+			nv2, ok = v2.(string)
+
+			if !ok {
+				return p.Errf(r, "type not supported(不支持的类型)：%T(%v)", v2, v2)
+			}
+		}
+
+		if nv1 == nil {
+			r1 := NewRunningContext()
+			if tk.IsError(r1) {
+				return p.Errf(r, "[%v](xie) runtime error, failed to initialize running context: %v", tk.GetNowTimeStringFormal(), r1)
+			}
+
+			nv1 = r1.(*RunningContext)
+
+			errT := nv1.Load(nv2)
+
+			if errT != nil {
+				return p.Errf(r, "[%v](xie) runtime error, failed to load code: %v", tk.GetNowTimeStringFormal(), errT)
+			}
+
+			nv2 = ""
+		}
+
+		// tk.Pl("nv1: %#v, nv2: %#v", nv1, nv2)
+
+		sort.SliceStable(v1, func(i, j int) bool {
+			rsi1 := RunCodePiece(p, nv1, nv2, []interface{}{i, j}, true)
+
+			if tk.IsErrX(rsi1) {
+				// tk.Pln("sort error:", rsi1)
+				return false
+			}
+
+			nv1, ok := rsi1.(bool)
+
+			if !ok {
+				return false
+			}
+
+			return nv1
+		})
+
+		p.SetVar(r, pr, v1)
+		return ""
 	case 1210: // continue
 		// tk.Plo("continue PointerStack", r.PointerStack)
 		levelT := 1
@@ -12196,6 +12426,20 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 			return p.Errf(r, "not enough parameters(参数不够)")
 		}
 
+		var pr interface{} = instrT.Params[0]
+		v1p := 1
+
+		v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
+		v2 := p.ParamsToStrs(r, instrT, v1p+1)
+
+		p.SetVar(r, pr, tk.EndsWith(v1, v2...))
+
+		return ""
+	case 1591: // strFindDiffPos
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
 		var pr interface{} = -5
 		v1p := 0
 
@@ -12205,9 +12449,9 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		}
 
 		v1 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p]))
-		v2 := p.ParamsToStrs(r, instrT, v1p+1)
+		v2 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p+1]))
 
-		p.SetVar(r, pr, tk.EndsWith(v1, v2...))
+		p.SetVar(r, pr, tk.FindFirstDiffIndex(v1, v2))
 
 		return ""
 	case 1601: // bytesToData
@@ -19683,20 +19927,34 @@ func RunCodePiece(p *XieVM, r interface{}, codeA interface{}, inputA interface{}
 
 	var rp *RunningContext
 
+	// tk.Pl("0 r: %#v, rp: %#v, codeA: %#v", r, rp, codeA)
 	if r == nil {
 		r = NewRunningContext()
 		if tk.IsError(r) {
-			return p.Errf(rp, "[%v](xie) runtime error, failed to initialize running contexte: %v", tk.GetNowTimeStringFormal(), r)
+			return p.Errf(rp, "[%v](xie) runtime error, failed to initialize running context: %v", tk.GetNowTimeStringFormal(), r)
 		}
 	}
 
 	rp = r.(*RunningContext)
 
+	if rp == nil {
+		r1 := NewRunningContext()
+		if tk.IsError(r1) {
+			return p.Errf(rp, "[%v](xie) runtime error, failed to initialize running context: %v", tk.GetNowTimeStringFormal(), r)
+		}
+
+		rp = r1.(*RunningContext)
+	}
+
+	// tk.Pl("1 r: %#v, rp: %#v, codeA: %#v", r, rp, codeA)
 	errT := rp.Load(codeA)
+	// tk.Pl("2 r: %#v, codeA: %#v, errT: %#v", r, codeA, errT)
 
 	if errT != nil {
 		return p.Errf(rp, "[%v](xie) runtime error, failed to load code: %v", tk.GetNowTimeStringFormal(), errT)
 	}
+
+	// tk.Pl("rp: %#v, codeA: %#v", rp, codeA)
 
 	if len(rp.CodeList) < 1 {
 		return tk.Undefined
@@ -19710,7 +19968,7 @@ func RunCodePiece(p *XieVM, r interface{}, codeA interface{}, inputA interface{}
 	func1.Vars["inputL"] = inputA
 
 	for {
-		// tk.Pl("-- [%v] %v", p.CodePointerM, tk.LimitString(p.SourceM[p.CodeSourceMapM[p.CodePointerM]], 50))
+		// tk.Pl("-- [%v] %v", rp.CodePointer, tk.LimitString(rp.Source[rp.CodeSourceMap[rp.CodePointer]], 50))
 		resultT := RunInstr(p, rp, &rp.InstrList[rp.CodePointer])
 		if GlobalsG.VerboseLevel > 1 {
 			tk.Pl("--- RunInstr: %#v: %#v", rp.InstrList[rp.CodePointer], resultT)

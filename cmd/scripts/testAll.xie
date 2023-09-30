@@ -1,10 +1,18 @@
 systemCmd $rs "xie" "-gopath" "basic.xie"
 
-test $rs "5.6\n10\n" $seq "basic.xie"
+testByText $rs "5.6\n10\n" $seq "basic.xie"
+
+systemCmd $rs "xie" "-gopath" "findStringDiffPos.xie"
+
+testByText $rs "4\n" $seq "findStringDiffPos.xie"
+
+systemCmd $rs "xie" "-gopath" "sortByFunc.xie"
+
+testByText $rs "[]interface {}{1, 3, 2.5, 435, \"abc\", \"zbds123\", \"0123a\", \"2.33\", 2.33}\nfalse\n[0123a 1 2.33 2.33 2.5 3 435 abc zbds123]\n[zbds123 abc 435 3 2.5 2.33 2.33 1 0123a]\n" $seq "sortByFunc.xie"
 
 systemCmd $rs "xie" "-gopath" "compilePiece.xie"
 
-test $rs "main defer 3 in compiled code piece\n...\n(tk.UndefinedStruct)tk.UndefinedStruct{int:0}\n" $seq "compilePiece.xie"
+testByText $rs "main defer 3 in compiled code piece\n...\n(tk.UndefinedStruct)tk.UndefinedStruct{int:0}\n" $seq "compilePiece.xie"
 
 systemCmd $rs "xie" "-gopath" "calPi.xie"
 
@@ -12,7 +20,7 @@ testByReg $rs `Pi=3\.\d+\n` $seq "calPi.xie"
 
 systemCmd $rs "xie" "-gopath" "pv.xie"
 
-test $rs "a(int): 1\nb(float64): 3.2\nc(float64): 4.2\n" $seq "pv.xie"
+testByText $rs "a(int): 1\nb(float64): 3.2\nc(float64): 4.2\n" $seq "pv.xie"
 
 systemCmd $rs "xie" "-gopath" "orderedMap.xie"
 
@@ -20,123 +28,123 @@ testByReg $rs `(?sm){"SSS":"v11","k1":"v1","a2":1,"3":\["s1","s2"\]}\n\(map\[str
 
 systemCmd $rs "xie" "-gopath" "flexEval.xie"
 
-test $rs "result1=228.85\nresult2=\"abc789\"\nresult3=19.4399\nresult4=\"[18.5,44]\"\n" $seq "flexEval.xie"
+testByText $rs "result1=228.85\nresult2=\"abc789\"\nresult3=19.4399\nresult4=\"[18.5,44]\"\n" $seq "flexEval.xie"
 
 systemCmd $rs "xie" "-gopath" "flexEval2.xie"
 
-test $rs "result1=-593\nresult2=\"19.43\"\n" $seq "flexEval2.xie"
+testByText $rs "result1=-593\nresult2=\"19.43\"\n" $seq "flexEval2.xie"
 
 systemCmd $rs "xie" "-gopath" "object.xie"
 
-test $rs "abc 123天气很好\nvery\nvery nice\nry nic\n" $seq "object.xie"
+testByText $rs "abc 123天气很好\nvery\nvery nice\nry nic\n" $seq "object.xie"
 
 systemCmd $rs "xie" "-gopath" "bitwise.xie"
 
-test $rs "163 -> a3 -> 10100011\n92 -> 5c -> 01011100\n00001100\n01011111\n01010011\n" $seq "bitwise.xie"
+testByText $rs "163 -> a3 -> 10100011\n92 -> 5c -> 01011100\n00001100\n01011111\n01010011\n" $seq "bitwise.xie"
 
 systemCmd $rs "xie" "-gopath" "byteList.xie"
 
-test $rs "([]uint8)[]byte{0xb, 0x16, 0x21}\n(string)\"abc123天气很好\"\n([]uint8)[]byte{0x61, 0x62, 0x63, 0x31, 0x32, 0x33, 0xe5, 0xa4, 0xa9, 0xe6, 0xb0, 0x94, 0xe5, 0xbe, 0x88, 0xe5, 0xa5, 0xbd}\n(string)\"abc123天气很好\"\n" $seq "byteList.xie"
+testByText $rs "([]uint8)[]byte{0xb, 0x16, 0x21}\n(string)\"abc123天气很好\"\n([]uint8)[]byte{0x61, 0x62, 0x63, 0x31, 0x32, 0x33, 0xe5, 0xa4, 0xa9, 0xe6, 0xb0, 0x94, 0xe5, 0xbe, 0x88, 0xe5, 0xa5, 0xbd}\n(string)\"abc123天气很好\"\n" $seq "byteList.xie"
 
 systemCmd $rs "xie" "-gopath" "assign.xie"
 
-test $rs "(string)\"abc\"\n(string)\"abc 123\"\n(string)\"abc 123\\nand this\"\n(int)3\n(int)3\n(float64)3\n" $seq "assign.xie"
+testByText $rs "(string)\"abc\"\n(string)\"abc 123\"\n(string)\"abc 123\\nand this\"\n(int)3\n(int)3\n(float64)3\n" $seq "assign.xie"
 
 systemCmd $rs "xie" "-gopath" "undefined.xie"
 
-test $rs "tk.UndefinedStruct{int:0}\nundefined\ntrue\ntrue\nfalse\n" $seq "undefined.xie"
+testByText $rs "tk.UndefinedStruct{int:0}\nundefined\ntrue\ntrue\nfalse\n" $seq "undefined.xie"
 
 systemCmd $rs "xie" "-gopath" "add.xie"
 
-test $rs "(int)7\n(float64)4.1\n(string)\"abc123 456\"\n(string)\"9.18abc123 456\"\n(int)208\n" $seq "add.xie"
+testByText $rs "(int)7\n(float64)4.1\n(string)\"abc123 456\"\n(string)\"9.18abc123 456\"\n(int)208\n" $seq "add.xie"
 
 systemCmd $rs "xie" "-gopath" "adds.xie"
 
-test $rs "(string)\"abc\\\"123\\\"3.8\\\"递四方dsgive it to \\n    them\\n\"\n(int)48\n" $seq "adds.xie"
+testByText $rs "(string)\"abc\\\"123\\\"3.8\\\"递四方dsgive it to \\n    them\\n\"\n(int)48\n" $seq "adds.xie"
 
 systemCmd $rs "xie" "-gopath" "backQuote.xie"
 
-test $rs "\x60\n\x60\n\x60 $abc \x60\n\x60\n[]byte{0x60}\n" $seq "backQuote.xie"
+testByText $rs "\x60\n\x60\n\x60 $abc \x60\n\x60\n[]byte{0x60}\n" $seq "backQuote.xie"
 
 systemCmd $rs "xie" "-gopath" "goto.xie"
 
-test $rs "start...\nlabel1 = 1.8\nc = 1.8\n" $seq "goto.xie"
+testByText $rs "start...\nlabel1 = 1.8\nc = 1.8\n" $seq "goto.xie"
 
 systemCmd $rs "xie" "-gopath" "if.xie"
 
-test $rs "if branch\nlabel3 else\n" $seq "if.xie"
+testByText $rs "if branch\nlabel3 else\n" $seq "if.xie"
 
 systemCmd $rs "xie" "-gopath" "else.xie"
 
-test $rs "label1\nelse2\n" $seq "else.xie"
+testByText $rs "label1\nelse2\n" $seq "else.xie"
 
 systemCmd $rs "xie" "-gopath" "quickIf.xie"
 
-test $rs "<5\na = abc\n" $seq "quickIf.xie"
+testByText $rs "<5\na = abc\n" $seq "quickIf.xie"
 
 systemCmd $rs "xie" "-gopath" "for.xie"
 
-test $rs "0 : 10\n1 : 11\n2 : 12\n3 : 13\n4 : 14\nend\n" $seq "for.xie"
+testByText $rs "0 : 10\n1 : 11\n2 : 12\n3 : 13\n4 : 14\nend\n" $seq "for.xie"
 
 systemCmd $rs "xie" "-gopath" "for2.xie"
 
-test $rs "0 : 10\nj: 0\nj: 1\nj: 2\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n1 : 11\nj: 1\nj: 2\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n2 : 12\nj: 2\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n3 : 13\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n4 : 14\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n" $seq "for2.xie"
+testByText $rs "0 : 10\nj: 0\nj: 1\nj: 2\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n1 : 11\nj: 1\nj: 2\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n2 : 12\nj: 2\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n3 : 13\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n4 : 14\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n" $seq "for2.xie"
 
 systemCmd $rs "xie" "-gopath" "for3.xie"
 
-test $rs "i=0\ni=1\ni=2\ni=3\ni=4\nj=0\nj=0.5\nj=1\nj=1.5\nj=2\nj=2.5\nfor end\n" $seq "for3.xie"
+testByText $rs "i=0\ni=1\ni=2\ni=3\ni=4\nj=0\nj=0.5\nj=1\nj=1.5\nj=2\nj=2.5\nfor end\n" $seq "for3.xie"
 
 systemCmd $rs "xie" "-gopath" "for4.xie"
 
-test $rs "0 : 10\nj: 0\nj: 1\nj: 2\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n1 : 11\nj: 1\nj: 2\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n2 : 12\nj: 2\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n3 : 13\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n4 : 14\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\nend\n" $seq "for4.xie"
+testByText $rs "0 : 10\nj: 0\nj: 1\nj: 2\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n1 : 11\nj: 1\nj: 2\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n2 : 12\nj: 2\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n3 : 13\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n4 : 14\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\nend\n" $seq "for4.xie"
 
 systemCmd $rs "xie" "-gopath" "for5.xie"
 
-test $rs "0 : 10\nj: 0\nj: 1\nj: 2\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n1 : 11\nj: 1\nj: 2\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n2 : 12\nj: 2\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n3 : 13\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\n4 : 14\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nend\n" $seq "for5.xie"
+testByText $rs "0 : 10\nj: 0\nj: 1\nj: 2\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n1 : 11\nj: 1\nj: 2\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n2 : 12\nj: 2\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nj: 9\n3 : 13\nj: 3\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\n4 : 14\nj: 4\nj: 5\nj: 6\nj: 7\nj: 8\nend\n" $seq "for5.xie"
 
 systemCmd $rs "xie" "-gopath" "switch.xie"
 
-test $rs "label2\n" $seq "switch.xie"
+testByText $rs "label2\n" $seq "switch.xie"
 
 systemCmd $rs "xie" "-gopath" "switchCond.xie"
 
-test $rs "label2\n" $seq "switchCond.xie"
+testByText $rs "label2\n" $seq "switchCond.xie"
 
 systemCmd $rs "xie" "-gopath" "stack.xie"
 
-test $rs "(int)2\n(float64)2.8\n(float64)2.8\n" $seq "stack.xie"
+testByText $rs "(int)2\n(float64)2.8\n(float64)2.8\n" $seq "stack.xie"
 
 systemCmd $rs "xie" "-gopath" "stackVar.xie"
 
-test $rs "(string)\"我们高兴！\"\n(int)18\n(float64)3.14\n(int)3\n" $seq "stackVar.xie"
+testByText $rs "(string)\"我们高兴！\"\n(int)18\n(float64)3.14\n(int)3\n" $seq "stackVar.xie"
 
 systemCmd $rs "xie" "-gopath" "fastCall.xie"
 
-test $rs "124\n" $seq "fastCall.xie"
+testByText $rs "124\n" $seq "fastCall.xie"
 
 systemCmd $rs "xie" "-gopath" "func.xie"
 
-test $rs "\" ab c123 天然\\n森林 \"\n\"ab c123 天然\\n森林\"\n" $seq "func.xie"
+testByText $rs "\" ab c123 天然\\n森林 \"\n\"ab c123 天然\\n森林\"\n" $seq "func.xie"
 
 systemCmd $rs "xie" "-gopath" "func1.xie"
 
-test $rs "\" ab c123 天然\\n森林 \"\n\"ab c123 天然\\n森林\"\n\"ab c123 天然\\n森林\"\n" $seq "func1.xie"
+testByText $rs "\" ab c123 天然\\n森林 \"\n\"ab c123 天然\\n森林\"\n\"ab c123 天然\\n森林\"\n" $seq "func1.xie"
 
 systemCmd $rs "xie" "-gopath" "local.xie"
 
-test $rs "1.6 2.8 undefined undefined\n2.5 10 abc true\nfunction result: done\n2.5 2.8 undefined true\n" $seq "local.xie"
+testByText $rs "1.6 2.8 undefined undefined\n2.5 10 abc true\nfunction result: done\n2.5 2.8 undefined true\n" $seq "local.xie"
 
 systemCmd $rs "xie" "-gopath" "convert.xie"
 
-test $rs "a(int)=15\na(float64)=15\nresult=(float64)18.6\n" $seq "convert.xie"
+testByText $rs "a(int)=15\na(float64)=15\nresult=(float64)18.6\n" $seq "convert.xie"
 
 systemCmd $rs "xie" "-gopath" "eval.xie"
 
-test $rs "30\n48\n条件满足\n" $seq "eval.xie"
+testByText $rs "30\n48\n条件满足\n" $seq "eval.xie"
 
 systemCmd $rs "xie" "-gopath" "fib.xie"
 
-test $rs "2584\n" $seq "fib.xie"
+testByText $rs "2584\n" $seq "fib.xie"
 
 systemCmd $rs "xie" "-gopath" "fibFlat.xie" "18"
 
@@ -144,63 +152,63 @@ testByReg $rs "(?sm).*? secs\n2584\n" $seq "fibFlat.xie"
 
 systemCmd $rs "xie" "-gopath" "call.xie"
 
-test $rs "2584\n" $seq "call.xie"
+testByText $rs "2584\n" $seq "call.xie"
 
 systemCmd $rs "xie" "-gopath" "runCall.xie"
 
-test $rs "arg1= 1.6\narg2= 2.3\nrunCall result: 3.9\n" $seq "runCall.xie"
+testByText $rs "arg1= 1.6\narg2= 2.3\nrunCall result: 3.9\n" $seq "runCall.xie"
 
 systemCmd $rs "xie" "-gopath" "runCall2.xie"
 
-test $rs "arg1= 1.6\narg2= 2.3\nrunCall result: 3.9\n" $seq "runCall2.xie"
+testByText $rs "arg1= 1.6\narg2= 2.3\nrunCall result: 3.9\n" $seq "runCall2.xie"
 
 systemCmd $rs "xie" "-gopath" "runCall3.xie"
 
-test $rs "arg1= 1.6\narg2= 2.3\n3.9\nresult: 3.9\nresult: 3.9\n" $seq "runCall3.xie"
+testByText $rs "arg1= 1.6\narg2= 2.3\n3.9\nresult: 3.9\nresult: 3.9\n" $seq "runCall3.xie"
 
 systemCmd $rs "xie" "-gopath" "sealCall.xie"
 
-test $rs "num1= 1.62\nnum2= 2.8\n4.536\nseal-function result: 4.536\n" $seq "sealCall.xie"
+testByText $rs "num1= 1.62\nnum2= 2.8\n4.536\nseal-function result: 4.536\n" $seq "sealCall.xie"
 
 systemCmd $rs "xie" "-gopath" "goRunCall.xie"
 
-test $rs "a=3.6, *p=99\nmainLoop 0 3.6 abc123 99\narg1= 3.6\narg2= abc123\n*arg3= 99\nsub 3.6 abc123 99 3.6 undefined\nmainLoop 1 4 abc123 101\nsub 4 abc123 101 4 1\nmainLoop 2 5 abc123 103\nmainLoop 3 5 abc123 103\nsub 5 abc123 103 5 2\nmainLoop 4 6 abc123 105\nsub 6 abc123 105 6 3\nmainLoop 5 7 abc123 107\n" $seq "goRunCall.xie"
+testByText $rs "a=3.6, *p=99\nmainLoop 0 3.6 abc123 99\narg1= 3.6\narg2= abc123\n*arg3= 99\nsub 3.6 abc123 99 3.6 undefined\nmainLoop 1 4 abc123 101\nsub 4 abc123 101 4 1\nmainLoop 2 5 abc123 103\nmainLoop 3 5 abc123 103\nsub 5 abc123 103 5 2\nmainLoop 4 6 abc123 105\nsub 6 abc123 105 6 3\nmainLoop 5 7 abc123 107\n" $seq "goRunCall.xie"
 
 systemCmd $rs "xie" "-gopath" "extractRun.xie"
 
-test $rs "v1G= abc123\narg1= 0.75\narg2= 0.21\n0.96\nrunCall1 result: 0.96\nv1G= abc123\narg1= 1.6\narg2= 2.3\n3.9\nrunCall2 result: 3.9\nv1G= undefined\narg1= 2.1\narg2= 99.86\n101.96\nsealCall result: 101.96\n" $seq "extractRun.xie"
+testByText $rs "v1G= abc123\narg1= 0.75\narg2= 0.21\n0.96\nrunCall1 result: 0.96\nv1G= abc123\narg1= 1.6\narg2= 2.3\n3.9\nrunCall2 result: 3.9\nv1G= undefined\narg1= 2.1\narg2= 99.86\n101.96\nsealCall result: 101.96\n" $seq "extractRun.xie"
 
 systemCmd $rs "xie" "-gopath" "loadModule.xie"
 
 strReplace $rs $rs "\r" ""
 
-test $rs "code loaded:  \n :add1\n    pop $v2L\n    pop $v1L\n\n    add $push $v1L $v2L\n\n    fastRet\n\n:sub1\n    pop $v2L\n    pop $v1L\n\n    sub $push $v1L $v2L\n    \n    fastRet \n\n(int)23\n(int)18\n(int)1782\n" $seq "loadModule.xie"
+testByText $rs "code loaded:  \n :add1\n    pop $v2L\n    pop $v1L\n\n    add $push $v1L $v2L\n\n    fastRet\n\n:sub1\n    pop $v2L\n    pop $v1L\n\n    sub $push $v1L $v2L\n    \n    fastRet \n\n(int)23\n(int)18\n(int)1782\n" $seq "loadModule.xie"
 
 systemCmd $rs "xie" "-gopath" "onError.xie"
 
-test $rs "error occurred while running to line 10: runtime error, detail: (Line 10: getArrayItem $item $array1 1) index out of range: 1/0\ncalculation completed(and the error handler)\n" $seq "onError.xie"
+testByText $rs "error occurred while running to line 10: runtime error, detail: (Line 10: getArrayItem $item $array1 1) index out of range: 1/0\ncalculation completed(and the error handler)\n" $seq "onError.xie"
 
 systemCmd $rs "xie" "-gopath" "defer.xie"
 
 regReplace $rs $rs `\[\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d\]` ""
 
-test $rs "1\nsub1\nsub defer: test1\nmain defer 4 in compiled code piece\n___\nmain defer 3 in compiled code piece\n...\nmain defer: test2\nmain defer: test1\n(Line 55:     checkErrX $r1) (xie) runtime error: (Line 55:     checkErrX $r1) failed to cal the expression: failed: runtime error: integer divide by zero(10, 0)\n" $seq "defer.xie"
+testByText $rs "1\nsub1\nsub defer: test1\nmain defer 4 in compiled code piece\n___\nmain defer 3 in compiled code piece\n...\nmain defer: test2\nmain defer: test1\n(Line 55:     checkErrX $r1) (xie) runtime error: (Line 55:     checkErrX $r1) failed to cal the expression: failed: runtime error: integer divide by zero(10, 0)\n" $seq "defer.xie"
 
 systemCmd $rs "xie" "-gopath" "range.xie"
 
-test $rs "i: 0, v: 0\ni: 1, v: 1\ni: 2, v: 2\ni: 3, v: 3\ni: 4, v: 4\nend range1\ni: 0, v: 97\ni: 1, v: 98\ni: 2, v: 99\ni: 3, v: 49\ni: 4, v: 50\ni: 5, v: 51\nend range2\n" $seq "range.xie"
+testByText $rs "i: 0, v: 0\ni: 1, v: 1\ni: 2, v: 2\ni: 3, v: 3\ni: 4, v: 4\nend range1\ni: 0, v: 97\ni: 1, v: 98\ni: 2, v: 99\ni: 3, v: 49\ni: 4, v: 50\ni: 5, v: 51\nend range2\n" $seq "range.xie"
 
 systemCmd $rs "xie" "-gopath" "rangeNumber.xie"
 
-test $rs "0 -> 0\n1 -> 1\n2 -> 2\n3 -> 3\n4 -> 4\n\n0 -> 2\n1 -> 3\n2 -> 4\n\n0 -> 20\n1 -> 25\n2 -> 30\n3 -> 35\n4 -> 40\n5 -> 45\n\n0 -> 0.2\n1 -> 0.7\n2 -> 1.2\n\n0 -> 60 / 12 = 5\n1 -> 60 / 9 = 6\n2 -> 60 / 6 = 10\n3 -> 60 / 3 = 20\nfailed to cal (60 / 0): failed: runtime error: integer divide by zero(60, 0)\n5 -> 60 / -3 = -20\n6 -> 60 / -6 = -10\n" $seq "rangeNumber.xie"
+testByText $rs "0 -> 0\n1 -> 1\n2 -> 2\n3 -> 3\n4 -> 4\n\n0 -> 2\n1 -> 3\n2 -> 4\n\n0 -> 20\n1 -> 25\n2 -> 30\n3 -> 35\n4 -> 40\n5 -> 45\n\n0 -> 0.2\n1 -> 0.7\n2 -> 1.2\n\n0 -> 60 / 12 = 5\n1 -> 60 / 9 = 6\n2 -> 60 / 6 = 10\n3 -> 60 / 3 = 20\nfailed to cal (60 / 0): failed: runtime error: integer divide by zero(60, 0)\n5 -> 60 / -3 = -20\n6 -> 60 / -6 = -10\n" $seq "rangeNumber.xie"
 
 systemCmd $rs "xie" "-gopath" "rangeInRange.xie"
 
-test $rs "[1] 0: 0\n[2] 0: 97\n[3] 0: 0\n[2] 1: 98\n[3] 0: 1\n[3] 1: 4\n[2] 2: 99\n[3] 0: 4\n[3] 1: 9\n[3] 2: 16\n[1] 1: 1\n[2] 0: 97\n[3] 0: 0\n[2] 1: 98\n[3] 0: 1\n[3] 1: 4\n[2] 2: 99\n[3] 0: 4\n[3] 1: 9\n[3] 2: 16\n[1] 2: 2\n[2] 0: 97\n[3] 0: 0\n[2] 1: 98\n[3] 0: 1\n[3] 1: 4\n[2] 2: 99\n[3] 0: 4\n[3] 1: 9\n[3] 2: 16\n[1] 3: 3\n[2] 0: 97\n[3] 0: 0\n[2] 1: 98\n[3] 0: 1\n[3] 1: 4\n[2] 2: 99\n[3] 0: 4\n[3] 1: 9\n[3] 2: 16\n[1] 4: 4\n[2] 0: 97\n[3] 0: 0\n[2] 1: 98\n[3] 0: 1\n[3] 1: 4\n[2] 2: 99\n[3] 0: 4\n[3] 1: 9\n[3] 2: 16\nend\n" $seq "rangeInRange.xie"
+testByText $rs "[1] 0: 0\n[2] 0: 97\n[3] 0: 0\n[2] 1: 98\n[3] 0: 1\n[3] 1: 4\n[2] 2: 99\n[3] 0: 4\n[3] 1: 9\n[3] 2: 16\n[1] 1: 1\n[2] 0: 97\n[3] 0: 0\n[2] 1: 98\n[3] 0: 1\n[3] 1: 4\n[2] 2: 99\n[3] 0: 4\n[3] 1: 9\n[3] 2: 16\n[1] 2: 2\n[2] 0: 97\n[3] 0: 0\n[2] 1: 98\n[3] 0: 1\n[3] 1: 4\n[2] 2: 99\n[3] 0: 4\n[3] 1: 9\n[3] 2: 16\n[1] 3: 3\n[2] 0: 97\n[3] 0: 0\n[2] 1: 98\n[3] 0: 1\n[3] 1: 4\n[2] 2: 99\n[3] 0: 4\n[3] 1: 9\n[3] 2: 16\n[1] 4: 4\n[2] 0: 97\n[3] 0: 0\n[2] 1: 98\n[3] 0: 1\n[3] 1: 4\n[2] 2: 99\n[3] 0: 4\n[3] 1: 9\n[3] 2: 16\nend\n" $seq "rangeInRange.xie"
 
 systemCmd $rs "xie" "-gopath" "list.xie"
 
-test $rs "([]interface {})[]interface {}{}\n([]interface {})[]interface {}{8, 12.7}\n([]interface {})[]interface {}{\"abc\", 2, 1.3, true}\nlength= 4\n(int)2\n(int)10\n([]interface {})[]interface {}{8, 12.7, \"abc\", 2, 1.3, true}\n([]interface {})[]interface {}{12.7, \"abc\", 2, 1.3}\n第0项是12.7\n第1项是abc\n第2项是2\n([]interface {})[]interface {}{\"烙红尘\"}\n" $seq "list.xie"
+testByText $rs "([]interface {})[]interface {}{}\n([]interface {})[]interface {}{8, 12.7}\n([]interface {})[]interface {}{\"abc\", 2, 1.3, true}\nlength= 4\n(int)2\n(int)10\n([]interface {})[]interface {}{8, 12.7, \"abc\", 2, 1.3, true}\n([]interface {})[]interface {}{12.7, \"abc\", 2, 1.3}\n第0项是12.7\n第1项是abc\n第2项是2\n([]interface {})[]interface {}{\"烙红尘\"}\n" $seq "list.xie"
 
 systemCmd $rs "xie" "-gopath" "map.xie"
 
@@ -220,9 +228,9 @@ testByReg $rs `\(int\)9\n\(int\)9\n\(\*int\)\(\*int\)\([^\)]+\)\n\(int\)9\n\(\*i
 
 systemCmd $rs "xie" "-gopath" "stringBuffer.xie"
 
-test $rs "(string)\"abc\\n123\\\\n\"\nabc\n123\\n\n" $seq "stringBuffer.xie"
+testByText $rs "(string)\"abc\\n123\\\\n\"\nabc\n123\\n\n" $seq "stringBuffer.xie"
 
 systemCmd $rs "xie" "-gopath" "operator3.xie"
 
-test $rs "(string)\"abc\"\nThe second result is:  correct result\n" $seq "operator3.xie"
+testByText $rs "(string)\"abc\"\nThe second result is:  correct result\n" $seq "operator3.xie"
 
