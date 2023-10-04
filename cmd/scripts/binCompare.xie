@@ -1,0 +1,57 @@
+// xie -gopath binCompare.xie d:\tmpx\demo1.html d:\tmpx\demo2.html -limit=10
+
+getParams $argsT $argsG
+
+// pln @`{len $argsT}`
+
+if @`{len $argsT} < #i4` :+1 :+2
+	fatalf "not enough parameters"
+
+trim $file1 [$argsT,2]
+
+ifEmpty $file1 :+1 :+2
+	fatalf "file1 empty"
+
+trim $file2 [$argsT,3]
+
+ifEmpty $file2 :+1 :+2
+	fatalf "file2 empty"
+
+pl "compare %v -> %v" $file1 $file2
+
+loadBytes $buf1 $file1
+
+ifErrX $buf1 :+1 :+2
+	fatalf "failed to read file1: %v" $buf1
+
+plt $buf1
+
+loadBytes $buf2 $file2
+
+ifErrX $buf2 :+1 :+2
+	fatalf "failed to read file2: %v" $buf2
+
+
+getIntSwitch $limit $argsG "-limit=" 0
+
+plt $limit
+
+compareBytes $compareResult $buf1 $buf2 $limit
+plt $compareResult
+
+range $compareResult :+1 :end1
+	getIter $i $v
+
+	spr $cv1 "%c" [$v,1]
+	strQuote $cv1 $cv1
+
+	spr $cv2 "%c" [$v,2]
+	strQuote $cv2 $cv2
+
+	pl "[%v] pos: %v %v/%v(%v) - %v/%X(%v)" @`$i + #i1` [$v,0] [$v,1] @`{toHex [$v,1]}` $cv1 [$v,2], [$v,2] $cv2
+
+	continue
+
+:end1
+exit
+

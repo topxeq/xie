@@ -32,7 +32,7 @@ not $c $b
 // %08b表示输出二进制数值，如果不够8位则在前面补0
 // Output the numbers in c as values, hexadecimal values, and binary values respectively
 // %08b represents the output of binary values. If there are less than 8 bits, 0 will be added before it
-pl "%v -> %x -> %08b" $c $c $c
+pl "%v -> %X -> %08b" $c $c $c
 
 // 将c中的数据与16进制的0F（即十进制的15，二进制的00001111）进行按位与计算并输出
 // 这里用到了复杂表达式计算

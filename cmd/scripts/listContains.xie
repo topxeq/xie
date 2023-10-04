@@ -1,0 +1,38 @@
+= $ary1 #L`["abc", 123, 2.58]`
+
+plo [$ary1,1]
+
+// listContains指令用于判断数组/列表中是否包含某个元素
+// listContains is used for determine if item is in certain array/list
+listContains $pln $ary1 "abc"
+
+listContains $pln $ary1 "abcd"
+
+// arrayContains等同于listContains
+// arrayContains is the same as listContains
+arrayContains $pln $ary1 #i123
+
+// 注意JSON解码中会将123解码成浮点数
+// Note that in JSON decoding, 123 will be decoded as a floating point number
+arrayContains $pln $ary1 #f123
+
+// 可以用var指令赋值一个数组变量来确保变量的类型是整数
+// use the var instruction to assign an array variable to ensure that the type of the item in it is an integer
+var $ary2 array "abc" #i123 #f2.58
+
+plo [$ary2,1]
+
+arrayContains $pln $ary2 #i123
+
+arrayContains $pln $ary1 #i1234
+
+arrayContains $pln $ary1 #f2.58
+
+arrayContains $pln $ary1 #f2.589
+
+// 判断命令行参数中是否包含-verbose
+// Determine whether the command line parameters contain -verbose
+arrayContains $pln $argsG "-verbose"
+
+arrayContains $pln $argsG #i123
+

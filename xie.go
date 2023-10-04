@@ -238,6 +238,8 @@ var InstrNameSet map[string]int = map[string]int{
 	"<=": 705, // 判断两个数值是否是第一个数值小于等于第二个数值，无参数时，比较两个弹栈值（注意弹栈值先弹出的为第二个待比较数值），结果压栈；参数为1个时是结果参数，两个数值从堆栈获取；参数为2个时，表示两个数值，结果压栈；参数为3个时，第一个参数是结果参数，后两个为待比较数值
 	">=": 706, // 判断两个数值是否是第一个数值大于等于第二个数值，无参数时，比较两个弹栈值（注意弹栈值先弹出的为第二个待比较数值），结果压栈；参数为1个时是结果参数，两个数值从堆栈获取；参数为2个时，表示两个数值，结果压栈；参数为3个时，第一个参数是结果参数，后两个为待比较数值
 
+	"compareBytes": 781, // 比较两个字节数组，compare two bytes object to find differences, usage: compareBytes $rs $bytes1 $bytes2 [$limit], return an array/list, each item is an array/list with the difference index, byte in bytes1, byte in bytes2
+
 	"cmp": 790, // 比较两个数值，根据结果返回-1，0或1，分别表示小于、等于、大于，无参数时，比较两个弹栈值（注意弹栈值先弹出的为第二个待比较数值），结果压栈；参数为1个时是结果参数，两个数值从堆栈获取；参数为2个时，表示两个数值，结果压栈；参数为3个时，第一个参数是结果参数，后两个为待比较数值
 
 	// 运算符/操作符相关 operator related
@@ -359,6 +361,9 @@ var InstrNameSet map[string]int = map[string]int{
 	"sortByFunc":      1141, // 按函数排序，根据自定义函数（可为一个run对象或一段源代码字符串，跟函数中全局变量可直接饮用）排序，自定义函数需三个参数，分别是被排序对象，对比的索引号1（整数），对比的索引号2
 	"sortByFuncQuick": 1143, // 根据自定义函数排序，自定义函数需两个参数，分别是对比的索引号1（整数），对比的索引号2
 
+	"listContains":  1151, // 判断列表/数组中是否包含某个元素
+	"arrayContains": 1151,
+
 	// 代码逻辑控制相关 control related
 	"continue": 1210, // continue the loop or range, PS "continue 2" means continue the upper loop in nested loop, "continue 1" means continue the upper of upper loop, default is 1 but could be omitted
 
@@ -403,8 +408,10 @@ var InstrNameSet map[string]int = map[string]int{
 	// 字符串相关 string related
 	"backQuote": 1501, // 获取反引号字符串
 
-	"quote":   1503, // 将字符串进行转义（加上转义符，如“"”变成“\"”）
-	"unquote": 1504, // 将字符串进行解转义
+	"quote":      1503, // 将字符串进行转义（加上转义符，如“"”变成“\"”）
+	"strQuote":   1503,
+	"unquote":    1504, // 将字符串进行解转义
+	"strUnquote": 1504,
 
 	"isEmpty":     1510, // 判断字符串是否为空
 	"是否空串":        1510,
@@ -533,6 +540,10 @@ var InstrNameSet map[string]int = map[string]int{
 
 	"ifSwitchNotExists": 10005,
 	"switchNotExists":   10005,
+
+	"getParams": 10006, // 获取
+
+	"getIntSwitch": 10007, // 获取命令行参数中指定的整数类型的开关参数，结果参数外第一个参数为list或strList类型，第二个为类似“-code=”的字符串，第三个为默认值（整数类型），例：getIntSwitch $result $argsG "-code=" 18，将获取命令行中-code=32的“32”部分，并转换为整数（默认为0）。
 
 	"parseCommandLine": 10011, //-> 分析命令行字符串，类似os.Args的获取过程
 
@@ -3696,6 +3707,22 @@ func (p *XieVM) ParamsToStrs(runA *RunningContext, v *Instr, fromA int) []string
 
 	for i := fromA; i < lenT; i++ {
 		sl = append(sl, tk.ToStr(p.GetVarValue(runA, v.Params[i])))
+	}
+
+	return sl
+}
+
+func (p *XieVM) ParamsToInts(runA *RunningContext, v *Instr, fromA int) []int {
+	if runA == nil {
+		runA = p.Running
+	}
+
+	lenT := len(v.Params)
+
+	sl := make([]int, 0, lenT)
+
+	for i := fromA; i < lenT; i++ {
+		sl = append(sl, tk.ToInt(p.GetVarValue(runA, v.Params[i]), 0))
 	}
 
 	return sl
@@ -8374,6 +8401,28 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		p.SetVar(r, pr, v3)
 		return ""
+	case 781: // compareBytes
+		var pr interface{} = instrT.Params[0]
+		v1p := 1
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+		v2 := p.GetVarValue(r, instrT.Params[v1p+1])
+
+		nv1, ok := v1.([]byte)
+		if !ok {
+			return p.Errf(r, "invalid type of parameter 1: (%T)", v1)
+		}
+
+		nv2, ok := v2.([]byte)
+		if !ok {
+			return p.Errf(r, "invalid type of parameter 2: (%T)", v1)
+		}
+
+		vs := p.ParamsToInts(r, instrT, v1p+2)
+
+		p.SetVar(r, pr, tk.CompareBytes(nv1, nv2, vs...))
+		return ""
+
 	case 790: // cmp/比较
 		var pr interface{} = -5
 		var v1, v2 interface{}
@@ -10571,6 +10620,24 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		})
 
 		p.SetVar(r, pr, v1)
+		return ""
+	case 1151: // listContains/arrayContains
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 2 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+		v2 := p.GetVarValue(r, instrT.Params[v1p+1])
+
+		p.SetVar(r, pr, tk.ArrayContains(v1, v2))
 		return ""
 	case 1210: // continue
 		// tk.Plo("continue PointerStack", r.PointerStack)
@@ -13249,6 +13316,67 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		}
 
 		return p.Errf(r, "invalid parameter type: %T(%#v)", v1)
+	case 10006: // getParams
+		if instrT.ParamLen < 1 {
+			return p.Errf(r, "not enough paramters")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 1 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		nv1, ok := v1.([]string)
+
+		if !ok {
+			return p.Errf(r, "invalid type of parameter 1: (%T)", v1)
+		}
+
+		p.SetVar(r, pr, tk.GetAllParameters(nv1))
+		return ""
+
+		return p.Errf(r, "invalid parameter type: %T(%#v)", v1)
+
+	case 10007: // getIntSwitch
+		if instrT.ParamLen < 3 {
+			return p.Errf(r, "not enough paramters")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 3 {
+			v1p = 1
+			pr = instrT.Params[0]
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+
+		v2 := tk.ToStr(p.GetVarValue(r, instrT.Params[v1p+1]))
+
+		defaultT := tk.ToInt(p.GetVarValue(r, instrT.Params[v1p+2]))
+
+		v1n, ok := v1.([]string)
+
+		if ok {
+			p.SetVar(r, pr, tk.GetSwitchWithDefaultIntValue(v1n, v2, defaultT))
+			return ""
+		}
+
+		v2n, ok := v1.([]interface{})
+
+		if ok {
+			p.SetVar(r, pr, tk.GetSwitchWithDefaultIntValue(tk.ObjectsToS(v2n), v2, defaultT))
+			return ""
+		}
+
+		return p.Errf(r, "invalid parameter type: %T(%#v)", v1)
+
 	case 10011: // parseCommandLine
 		if instrT.ParamLen < 1 {
 			return p.Errf(r, "not enough paramters")
