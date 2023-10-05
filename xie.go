@@ -769,14 +769,15 @@ var InstrNameSet map[string]int = map[string]int{
 	"getAppDir":    21907, // get the application directory(where execute-file exists)
 	"getConfigDir": 21908, // get application config directory
 	"getHomeDir":   21909, // get the user home directory
+	"getTempDir":   21910, // get the system temp directory
 
-	"extractFileName": 21910, // 从文件路径中获取文件名部分
-	"getFileBase":     21910,
-	"extractFileExt":  21911, // 从文件路径中获取文件扩展名（后缀）部分
-	"extractFileDir":  21912, // 从文件路径中获取文件目录（路径）部分
-	"extractPathRel":  21915, // 从文件路径中获取文件相对路径（根据指定的根路径）
+	"extractFileName": 21920, // 从文件路径中获取文件名部分
+	"getFileBase":     21920,
+	"extractFileExt":  21921, // 从文件路径中获取文件扩展名（后缀）部分
+	"extractFileDir":  21922, // 从文件路径中获取文件目录（路径）部分
+	"extractPathRel":  21925, // 从文件路径中获取文件相对路径（根据指定的根路径）
 
-	"ensureMakeDirs": 21921,
+	"ensureMakeDirs": 21931,
 
 	// 终端操作相关 console related
 	"getInput":    22001, // 从命令行获取输入，第一个参数开始是提示字符串，可以类似printf加多个参数，用法：getInput $text1 "请输入%v个数字：" #i2
@@ -16571,7 +16572,24 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		return ""
 
-	case 21910: // extractFileName
+	case 21910: // getTempDir
+
+		var pr any = -5
+
+		// v1p := 0
+
+		if instrT.ParamLen > 0 {
+			pr = instrT.Params[0]
+			// v1p = 1
+		}
+
+		rsT := os.TempDir()
+
+		p.SetVar(r, pr, rsT)
+
+		return ""
+
+	case 21920: // extractFileName
 		if instrT.ParamLen < 1 {
 			return p.Errf(r, "not enough parameters(参数不够)")
 		}
@@ -16592,7 +16610,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		return ""
 
-	case 21911: // extractFileExt
+	case 21921: // extractFileExt
 		if instrT.ParamLen < 1 {
 			return p.Errf(r, "not enough parameters(参数不够)")
 		}
@@ -16613,7 +16631,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		return ""
 
-	case 21912: // extractFileDir
+	case 21922: // extractFileDir
 		if instrT.ParamLen < 1 {
 			return p.Errf(r, "not enough parameters(参数不够)")
 		}
@@ -16634,7 +16652,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		return ""
 
-	case 21915: // extractPathRel
+	case 21925: // extractPathRel
 		if instrT.ParamLen < 2 {
 			return p.Errf(r, "not enough parameters(参数不够)")
 		}
@@ -16660,7 +16678,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		p.SetVar(r, pr, rsT)
 		return ""
 
-	case 21921: // ensureMakeDirs
+	case 21931: // ensureMakeDirs
 		if instrT.ParamLen < 1 {
 			return p.Errf(r, "not enough parameters(参数不够)")
 		}
