@@ -15,7 +15,7 @@ fileExists $b `c:\tmpx\test.db`
 // If not, skip to the next step to continue execution
 // If present, delete the file
 // The result of the removeFile instruction will be discarded (due to the use of the built-in global variable drop)
-ifNot $b :next
+ifNot $b :next1
 	removeFile $drop `c:\tmpx\test.db`
 
 :next1
