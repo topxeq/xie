@@ -467,8 +467,12 @@ var InstrNameSet map[string]int = map[string]int{
 	// 二进制数据相关 binary related
 	"bytesToData": 1601,
 	"dataToBytes": 1603,
+	"toBytes":     1603,
 	"bytesToHex":  1605, // 以16进制形式输出字节数组
 	"bytesToHexX": 1606, // 以16进制形式输出字节数组，字节中间以空格分割
+
+	"bytesStartsWith": 1611, // 判断字节数组是否以某个子串或子字节数组开头
+	"bytesEndsWith":   1613, // 判断字节数组是否以某个子串或子字节数组结束
 
 	// 并发/线程相关 thread related
 	"lock":   1701, // lock an object which is lockable
@@ -845,8 +849,8 @@ var InstrNameSet map[string]int = map[string]int{
 	"encryptText": 25101, // 用TXDEF方法加密字符串
 	"decryptText": 25103, // 用TXDEF方法解密字符串
 
-	"encryptData": 25201, // 用TXDEF方法加密数据（字节列表）
-	"decryptData": 25203, // 用TXDEF方法解密数据（字节列表）
+	"encryptData": 25201, // 用TXDEF方法加密数据（字节列表），第二个参数（可选）是密钥字串，后面可加-addHead参数表示加上加密头字（节）串"//TXDEF#"
+	"decryptData": 25203, // 用TXDEF方法解密数据（字节列表），第二个参数（可选）是密钥字串
 
 	// 压缩/解压缩相关 compress/uncompress related
 	"compress":   26001, // compress string or byte array to byte array
@@ -12603,6 +12607,58 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 
 		return ""
 
+	case 1611: // bytesStartsWith
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 2 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+		v2 := p.GetVarValue(r, instrT.Params[v1p+1])
+
+		nv1, ok := v1.([]byte)
+
+		if !ok {
+			return p.Errf(r, "不支持的类型(type not supported)：%T(%v)", v1, v1)
+		}
+
+		p.SetVar(r, pr, tk.BytesStartsWith(nv1, v2))
+
+		return ""
+
+	case 1613: // bytesEndsWith
+		if instrT.ParamLen < 2 {
+			return p.Errf(r, "not enough parameters(参数不够)")
+		}
+
+		var pr interface{} = -5
+		v1p := 0
+
+		if instrT.ParamLen > 2 {
+			pr = instrT.Params[0]
+			v1p = 1
+		}
+
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
+		v2 := p.GetVarValue(r, instrT.Params[v1p+1])
+
+		nv1, ok := v1.([]byte)
+
+		if !ok {
+			return p.Errf(r, "不支持的类型(type not supported)：%T(%v)", v1, v1)
+		}
+
+		p.SetVar(r, pr, tk.BytesEndsWith(nv1, v2))
+
+		return ""
+
 	case 1701: // lock
 		if instrT.ParamLen < 1 {
 			return p.Errf(r, "not enough parameters(参数不够)")
@@ -17245,14 +17301,20 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 			v1p = 1
 		}
 
-		v1 := p.GetVarValue(r, instrT.Params[v1p]).([]byte)
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
 
-		v2 := ""
-		if instrT.ParamLen > 2 {
-			v2 = tk.ToStr(p.GetVarValue(r, instrT.Params[2]))
+		nv1, ok := v1.([]byte)
+
+		if !ok {
+			return p.Errf(r, "不支持的类型(type not supported)：%T(%v)", v1, v1)
 		}
 
-		rsT := tk.EncryptDataByTXDEF(v1, v2)
+		vs := p.ParamsToStrs(r, instrT, v1p+1)
+		// if instrT.ParamLen > 2 {
+		// 	v2 = tk.ToStr(p.GetVarValue(r, instrT.Params[2]))
+		// }
+
+		rsT := tk.EncryptDataByTXDEF(nv1, vs...)
 
 		p.SetVar(r, pr, rsT)
 
@@ -17271,14 +17333,17 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 			v1p = 1
 		}
 
-		v1 := p.GetVarValue(r, instrT.Params[v1p]).([]byte)
+		v1 := p.GetVarValue(r, instrT.Params[v1p])
 
-		v2 := ""
-		if instrT.ParamLen > 2 {
-			v2 = tk.ToStr(p.GetVarValue(r, instrT.Params[2]))
+		nv1, ok := v1.([]byte)
+
+		if !ok {
+			return p.Errf(r, "不支持的类型(type not supported)：%T(%v)", v1, v1)
 		}
 
-		rsT := tk.DecryptDataByTXDEF(v1, v2)
+		vs := p.ParamsToStrs(r, instrT, v1p+1)
+
+		rsT := tk.DecryptDataByTXDEF(nv1, vs...)
 
 		p.SetVar(r, pr, rsT)
 

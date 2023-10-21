@@ -1,0 +1,22 @@
+= $s1 "abc123天气好！"
+
+toBytes $b1 $s1
+
+plo $b1
+
+encryptData $e1 $b1 "abc123" "-addHead"
+
+plo $e1
+
+encryptData $e2 $b1 "abc123"
+
+plo $e2
+
+decryptData $ue1 $e1 "abc123"
+
+plo $ue1 @`{toStr $tmp $ue1}`
+
+decryptData $ue2 $e2 "abc123"
+
+plo $ue2 @`{toStr $tmp $ue2}`
+
