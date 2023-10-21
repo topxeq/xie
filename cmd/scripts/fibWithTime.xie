@@ -1,41 +1,42 @@
-push int 35
+push #i35
 
 now $t1
 
-call :fib
+call $rs :fib
 
 now $t2
 timeSub $t2 $t1
-floatDiv $pop 1000
-pl `%v 秒` $pop
+/ $tmp #i1000
+pl `%v 秒` $tmp
 
 pln $pop
 
 exit
 
+// 递归运算的斐波那契计算函数
 :fib
     var $n1
- 
     pop $n1
 
-    <i $n1 2
+    < $push $n1 #i2
 
     if $pop :label1
 
     :else
         dec $n1
         push int $n1
-        call :fib
+        call $drop :fib
 
         dec $n1
         push int $n1
-        call :fib
+        call $drop :fib
 
-        intAdd$
+        add $push $pop $pop
 
         ret
 
     :label1
         push $n1
         ret
+
 
