@@ -39,14 +39,6 @@ import (
 	"github.com/topxeq/tk"
 
 	excelize "github.com/xuri/excelize/v2"
-
-	_ "github.com/denisenkom/go-mssqldb"
-
-	// _ "github.com/godror/godror"
-	_ "github.com/sijms/go-ora/v2"
-
-	_ "github.com/go-sql-driver/mysql"
-	_ "github.com/mattn/go-sqlite3"
 )
 
 var VersionG string = "1.5.8"
