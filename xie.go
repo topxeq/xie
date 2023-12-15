@@ -11935,7 +11935,7 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		rs, errT := strconv.Unquote(`"` + v1 + `"`)
 
 		if errT != nil {
-			p.Errf(r, "unquote失败：%v", errT)
+			return p.Errf(r, "unquote失败：%v", errT)
 		}
 
 		p.SetVar(r, pr, rs)
