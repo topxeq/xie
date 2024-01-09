@@ -5,11 +5,15 @@ go 1.19
 replace github.com/topxeq/xie v0.0.0 => ../
 
 require (
+	github.com/denisenkom/go-mssqldb v0.12.3
+	github.com/go-sql-driver/mysql v1.7.0
 	github.com/jchv/go-webview2 v0.0.0-20221223143126-dc24628cff85
 	github.com/json-iterator/go v1.1.12
 	github.com/kardianos/service v1.2.2
 	github.com/kbinani/screenshot v0.0.0-20210720154843-7d3a670d8329
+	github.com/mattn/go-sqlite3 v1.14.16
 	github.com/ncruces/zenity v0.10.5
+	github.com/sijms/go-ora/v2 v2.5.25
 	github.com/topxeq/dlgs v0.0.0-20220223083937-4d3036aff547
 	github.com/topxeq/tk v1.0.6
 	github.com/topxeq/xie v0.0.0
@@ -28,13 +32,11 @@ require (
 	github.com/cention-sany/utf7 v0.0.0-20170124080048-26cad61bd60a // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dchest/jsmin v0.0.0-20220218165748-59f39799265f // indirect
-	github.com/denisenkom/go-mssqldb v0.12.3 // indirect
 	github.com/dlclark/regexp2 v1.4.0 // indirect
 	github.com/domodwyer/mailyak v3.1.1+incompatible // indirect
 	github.com/dsnet/compress v0.0.2-0.20210315054119-f66993602bf5 // indirect
 	github.com/eiannone/keyboard v0.0.0-20200508000154-caf4b762e807 // indirect
 	github.com/gen2brain/shm v0.0.0-20200228170931-49f9650110c5 // indirect
-	github.com/go-sql-driver/mysql v1.7.0 // indirect
 	github.com/gogs/chardet v0.0.0-20211120154057-b7413eaefb8f // indirect
 	github.com/golang-sql/civil v0.0.0-20190719163853-cb61b32ac6fe // indirect
 	github.com/golang-sql/sqlexp v0.1.0 // indirect
@@ -51,7 +53,6 @@ require (
 	github.com/lxn/win v0.0.0-20210218163916-a377121e959e // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-runewidth v0.0.13 // indirect
-	github.com/mattn/go-sqlite3 v1.14.16 // indirect
 	github.com/mholt/archiver/v3 v3.5.1 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
@@ -66,7 +67,6 @@ require (
 	github.com/richardlehane/mscfb v1.0.4 // indirect
 	github.com/richardlehane/msoleps v1.0.3 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
-	github.com/sijms/go-ora/v2 v2.5.25 // indirect
 	github.com/ssor/bom v0.0.0-20170718123548-6386211fdfcf // indirect
 	github.com/topxeq/awsapi v0.0.0-20191115074250-1192cb0fdb97 // indirect
 	github.com/topxeq/countingwriter v0.0.0-20230115115152-84660be6de09 // indirect
@@ -86,12 +86,12 @@ require (
 	github.com/yeka/zip v0.0.0-20180914125537-d046722c6feb // indirect
 	github.com/yuin/goldmark v1.5.4 // indirect
 	github.com/yuin/goldmark-highlighting v0.0.0-20220208100518-594be1970594 // indirect
-	golang.org/x/crypto v0.14.0 // indirect
+	golang.org/x/crypto v0.18.0 // indirect
 	golang.org/x/image v0.13.0 // indirect
 	golang.org/x/net v0.17.0 // indirect
-	golang.org/x/sys v0.13.0 // indirect
-	golang.org/x/term v0.13.0 // indirect
-	golang.org/x/text v0.13.0 // indirect
+	golang.org/x/sys v0.16.0 // indirect
+	golang.org/x/term v0.16.0 // indirect
+	golang.org/x/text v0.14.0 // indirect
 )
 
 replace github.com/topxeq/tk v1.0.6 => ../../tk
