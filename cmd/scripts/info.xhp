@@ -1,0 +1,15 @@
+<?xhp
+var $mapT map
+
+getEnv $tmp1 "PATH"
+getEnv $tmp2 "GOPATH"
+
+setMapItem $mapT "PATH" $tmp1
+setMapItem $mapT "GOPATH" $tmp2
+
+toJson $tmp3 $mapT "-sort" "-indent"
+
+spr $outG "%v" $tmp3
+
+exit
+?>
