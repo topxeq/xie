@@ -41,7 +41,7 @@ import (
 	excelize "github.com/xuri/excelize/v2"
 )
 
-var VersionG string = "1.5.8"
+var VersionG string = "1.5.9"
 
 func Test() {
 	tk.Pl("test")
@@ -421,7 +421,7 @@ var InstrNameSet map[string]int = map[string]int{
 	"strReplace":   1540, // 字符串替换，用法示例：strReplace $result $str1 $find $replacement
 	"strReplaceIn": 1543, // 字符串替换，可同时替换多个子串，用法示例：strReplace $result $str1 $find1 $replacement1 $find2 $replacement2
 
-	"limitStr": 1545, // 超长字符串截短，用法 limitStr $s2 "abcdefg" 3 "-suffix=..."，将得到abc...，suffix为后缀，默认为..., -end参数用于指定保留后面开始
+	"limitStr": 1545, // 超长字符串截短，用法 limitStr $s2 "abcdefg" 3 "-suffix=..."，将得到abc...，suffix为后缀，默认为..., -end参数用于指定保留后面开始，-rune参数表示按整Unicode字符截断
 
 	"trim":    1550, // 字符串首尾去空白，非字符串将自动转换为字符串
 	"strTrim": 1550,
