@@ -1,0 +1,174 @@
+= $mailBodyTmpl `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+</head>
+<body style="font-family: Helvetica">
+    <div>&nbsp;
+        <br />
+        <br /><br />
+            <span>This is a test email.</span>
+
+        <br />
+        <br />
+        <br />
+
+    </div>
+</body>
+</html>`
+
+assign $htmlT `
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title></title>
+<script>
+	window.onload = function() {
+		console.log('start');
+
+		var rs = quickDelegateDo("getMsgBody");
+
+		rs.then(res => {
+            document.getElementById("mainTextArea").value = res;
+		});
+
+	}
+
+	function send() {
+		var rs = quickDelegateDo("send", document.getElementById("toID").value, document.getElementById("subjectID").value, document.getElementById("fromID").value, document.getElementById("fromNameID").value, document.getElementById("mainTextArea").value);
+
+		// 返回的结果是一个Promise，因此要用相应的方式获取
+		rs.then(res => {
+			alert("send result: "+res);
+		});
+	}
+
+
+</script>
+</head>
+<body style="width: 100%; height: 100%; margin: 0px; padding: 0px; font-size: 18px;">
+<div id="div1" style="height: 30px; vertical-align: middle; padding-top: 3px; padding-left: 5px;">
+	<button onclick="javascript:send();">send</button>
+</div>
+<div style="height: 30px; padding-top: 3px; padding-left: 5px;">
+    <label for="toID">To</label>&nbsp;<input id="toID" type="text" value="me@changethis.com" style="width: 560px;">
+</div>
+<div style="height: 30px; padding-top: 3px; padding-left: 5px;">
+    <label for="subjectID">Subject</label>&nbsp;<input id="subjectID" type="text" value="revision" style="width: 560px;">
+</div>
+<div style="height: 30px; padding-top: 3px; padding-left: 5px;">
+    <label for="fromID">From</label>&nbsp;<input id="fromID" type="text" value="adviser@example.com" style="width: 560px;">
+</div>
+<div style="height: 30px; padding-top: 3px; padding-left: 5px;">
+    <label for="fromNameID">FromName</label>&nbsp;<input id="fromNameID" type="text" value="adviser" style="width: 560px;">
+</div>
+<div style="margin-top: 10px; width: 100%; height: calc(100vh - 170px); margin: 0px; padding: 0px;">
+    <textarea id="mainTextArea" style="margin-left: 5%; width: 90%; height: calc(100vh - 180px); font-size: 20px;"></textarea>
+</div>
+</body>
+</html>
+`
+
+strReplace $htmlT $htmlT ~~~ $backQuoteG
+
+mt $w $guiG newWindow "-title=edit mail" -width=1024 -height=768 -center -debug
+
+plo $w
+
+extractCompiled $comp1 :dele1 :dele1end
+
+new $deleT quickDelegate $comp1
+
+checkErrX $deleT
+
+mt $rs $w setQuickDelegate $deleT
+
+plo $rs
+
+mt $rs $w setHtml $htmlT
+
+plo $rs
+
+mt $rs $w show
+
+plo $rs
+
+mt $rs $w close
+
+plo $rs
+
+exit
+
+
+:dele1
+	// 弹栈出参数数组
+    = $argsT $inputL
+
+    pl "%#v" $argsT
+    
+	// 本例中，第一个参数被约定为传递一个命令
+	// 后面的参数为该命令所需的参数，参数个数视该命令的需要而定
+	// 因此这里从参数数组中取出第一个参数放入变量cmdT中
+    getArrayItem $cmdT $argsT 0
+    plo $cmdT
+
+	// 如果命令为showNav，则取后两个参数并输出其内容
+    ifEqual $cmdT "getMsgBody" :+1 :inext1
+        plo $mailBodyTmpl
+        exitL $mailBodyTmpl
+
+    :inext1
+	// 如果命令为pl，则类似pl指令（其他语言中的或printf）
+	// 取出后面第一个参数为格式化字串
+	// 再后面都是格式化字串中所需的填充值
+	// 然后输出输出
+    ifEqual $cmdT "pl" :+1 :inext2
+        getArrayItem $formatT $argsT 1
+
+        slice $list1 $argsT 2 -
+
+        pl $formatT $list1...
+
+        exitL ""
+
+    :inext2
+    ifEqual $cmdT "send" :+1 :inextLast
+        getArrayItem $toT $argsT 1
+        getArrayItem $subjectT $argsT 2
+        getArrayItem $fromT $argsT 3
+        getArrayItem $fromNameT $argsT 4
+        getArrayItem $bodyHtmlT $argsT 5
+
+        new $mail mailSender -host=mail.changethis.com -port=25 -user=user1@changethis.com -pass=abc123
+
+        plo $mail
+
+        mt $drop $mail to $toT
+
+        mt $drop $mail from $fromT
+
+        mt $drop $mail fromName $fromNameT
+
+        mt $drop $mail subject $subjectT
+
+        = $mailBody $bodyHtmlT
+
+        mt $drop $mail body $mailBody
+
+        mt $rs $mail send
+
+        spr $rs "%v" $rs
+
+        exitL $rs
+
+    :inextLast
+    pl "unknown command: %v" $cmdT
+
+    // push ""
+
+:dele1end
+    exitL ""

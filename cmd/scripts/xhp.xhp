@@ -1,0 +1,13 @@
+<html>
+<body>
+
+    <div>
+        <span>现在的时间是：<?xhp
+            now $tmp
+
+            formatTime $outG $tmp "2006-01-02 15:04:05"
+            ?></span>
+    </div>
+
+</body>
+</html>

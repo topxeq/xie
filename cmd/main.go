@@ -1290,7 +1290,7 @@ func main() {
 		// 	filePathT += ".xie"
 		// }
 
-		pathT := "http://xie.topget.org/xc/t/c/xielang/example/" + tk.UrlEncode2(filePathT)
+		pathT := "http://topget.org/dc/t/xielang/example/" + tk.UrlEncode2(filePathT)
 		scriptT = tk.DownloadWebPageX(pathT)
 		scriptPathG = pathT
 
@@ -1303,7 +1303,7 @@ func main() {
 		// 	filePathT += ".xie"
 		// }
 
-		pathT := "http://xie.topget.org/xc/t/c/xielang/example/" + tk.UrlEncode2(filePathT)
+		pathT := "http://topget.org/dc/t/xielang/example/" + tk.UrlEncode2(filePathT)
 		scriptT = tk.DownloadWebPageX(pathT)
 		scriptPathG = pathT
 

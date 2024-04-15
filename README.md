@@ -101,7 +101,7 @@ Xielang is a free, open-source, cross-platform, cross-language, ASM/SHELL-like, 
 - [嵌入式使用谢语言（以虚拟机的方式在其他语言中调用）（Embedded Xielang in other languages）](#嵌入式使用谢语言以虚拟机的方式在其他语言中调用embedded-xielang-in-other-languages)
 - [扩展谢语言（Extended Xielang）](#扩展谢语言extended-xielang)
 - [编译谢语言（Compile Xielang）](#编译谢语言compile-xielang)
-- [代码示例（Code examples）](#代码示例code-examples)
+- [更多代码示例（Code examples）](#更多代码示例code-examples)
 - [参与贡献者（Contributors）](#参与贡献者contributors)
 
 
@@ -5801,6 +5801,8 @@ Actually, the server read the basic.xie file in the scripts subdirectory of the 
 
 If you want to implement a dynamic web server, such as PHP, JSP, ASP, etc., you can refer to previous examples of microservices/application servers and manually writing API servers, which are easy to implement.
 
+同时，谢语言的服务器模式支持.xhp后缀的文件，起到类似PHP的动态网页效果，即该文件中包含在 "<?xhp" 与 "?>"标签之间的内容将被视作谢语言的源代码进行执行，
+
 &nbsp;
 
 ##### - **博客系统**（Implementing a tiny blog system）
@@ -7923,28 +7925,29 @@ Generally, there are two ways to extend Xielang:
 
 &nbsp;
 
-#### 代码示例（Code examples）
+#### 更多代码示例（Code examples）
 
 *注：更多示例请参考cmd/scripts目录*
 
 *Note: For more examples, please refer to the cmd/scripts directory of source repository*
 
-- [三元操作符 ?（ternary operator '?'）](http://xie.topget.org/xc/c/xielang/example/operator3.xie)
-- [MD5编码（MD5 encoding）](http://xie.topget.org/xc/c/xielang/example/md5.xie)
-- [命令行获取用户输入及密码输入（read text and password from command line）](http://xie.topget.org/xc/c/xielang/example/input.xie)
-- [文本加解密（text encryptiong/decryption）](http://xie.topget.org/xc/c/xielang/example/encryptText.xie)
-- [二进制数据或文件加解密（encryption/decryption of binary data or files）](http://xie.topget.org/xc/c/xielang/example/encryptFile.xie)
-- [复制目录结构（copy directory structure）](http://xie.topget.org/xc/c/xielang/example/genFakeDirs.xie)
-- [查找重复文件（find duplicate files）](http://xie.topget.org/xc/c/xielang/example/findDuplicateFiles.xie)
-- [字节列表/数组的操作与16进制编解码（byte list/array operations and hex encoding/decoding）](http://xie.topget.org/xc/c/xielang/example/hex.xie)
-- [按二进制位计算（bit based calculation）](http://xie.topget.org/xc/c/xielang/example/bitwise.xie)
-- [随机落点法计算圆周率π（Pi）（Calculation of Pi）](http://xie.topget.org/xc/c/xielang/example/calPi.xie)
-- [数据库操作（SQLite3为例）(Database manipulation(SQlite3 as example))](http://xie.topget.org/xc/c/xielang/example/sqlite.xie)
-- [获取屏幕分辨率（Retrieve screen resolution）](http://xie.topget.org/xc/c/xielang/example/getScreenInfo.xie)
-- [屏幕截图（Catch screen snapshot）](http://xie.topget.org/xc/c/xielang/example/captureScreen.xie)
-- [启动WEB服务分享文本文件供编辑（Start WEB server to share a text file for editing）](http://xie.topget.org/xc/c/xielang/example/editFileServer.xie)
-- [编辑文本文件（Edit text file）](http://xie.topget.org/xc/c/xielang/example/editFile.xie)
-- [通过SSH直接编辑远程服务器上的文件（Edit text file on remote server via SSH）](http://xie.topget.org/xc/c/xielang/example/sshEdit.xie)
+- [三元操作符 ?（ternary operator '?'）](http://topget.org/dc/c/xielang/example/operator3.xie)
+- [MD5编码（MD5 encoding）](http://topget.org/dc/c/xielang/example/md5.xie)
+- [命令行获取用户输入及密码输入（read text and password from command line）](http://topget.org/dc/c/xielang/example/input.xie)
+- [文本加解密（text encryptiong/decryption）](http://topget.org/dc/c/xielang/example/encryptText.xie)
+- [二进制数据或文件加解密（encryption/decryption of binary data or files）](http://topget.org/dc/c/xielang/example/encryptFile.xie)
+- [复制目录结构（copy directory structure）](http://topget.org/dc/c/xielang/example/genFakeDirs.xie)
+- [查找重复文件（find duplicate files）](http://topget.org/dc/c/xielang/example/findDuplicateFiles.xie)
+- [字节列表/数组的操作与16进制编解码（byte list/array operations and hex encoding/decoding）](http://topget.org/dc/c/xielang/example/hex.xie)
+- [按二进制位计算（bit based calculation）](http://topget.org/dc/c/xielang/example/bitwise.xie)
+- [随机落点法计算圆周率π（Pi）（Calculation of Pi）](http://topget.org/dc/c/xielang/example/calPi.xie)
+- [数据库操作（SQLite3为例）(Database manipulation(SQlite3 as example))](http://topget.org/dc/c/xielang/example/sqlite.xie)
+- [获取屏幕分辨率（Retrieve screen resolution）](http://topget.org/dc/c/xielang/example/getScreenInfo.xie)
+- [屏幕截图（Catch screen snapshot）](http://topget.org/dc/c/xielang/example/captureScreen.xie)
+- [启动WEB服务分享文本文件供编辑（Start WEB server to share a text file for editing）](http://topget.org/dc/c/xielang/example/editFileServer.xie)
+- [编辑文本文件（Edit text file）](http://topget.org/dc/c/xielang/example/editFile.xie)
+- [通过SSH直接编辑远程服务器上的文件（Edit text file on remote server via SSH）](http://topget.org/dc/c/xielang/example/sshEdit.xie)
+- [通过SMTP发送邮件（Send email via SMTP protocol）](http://topget.org/dc/c/xielang/example/smtp.xie)
 
 &nbsp;
 
