@@ -5801,7 +5801,23 @@ Actually, the server read the basic.xie file in the scripts subdirectory of the 
 
 If you want to implement a dynamic web server, such as PHP, JSP, ASP, etc., you can refer to previous examples of microservices/application servers and manually writing API servers, which are easy to implement.
 
-同时，谢语言的服务器模式支持.xhp后缀的文件，起到类似PHP的动态网页效果，即该文件中包含在 "<?xhp" 与 "?>"标签之间的内容将被视作谢语言的源代码进行执行，
+同时，谢语言的服务器模式支持.xhp后缀的文件，起到类似PHP的动态网页效果，即这种类型的文件中包含在 "<?xhp" 与 "?>"标签之间的内容将被视作谢语言的源代码进行执行，同时如果有返回值（通过全局变量outG）的话，将替换这段代码显示在网页中。例如，下面这个例子文件（xhp.xhp），将在网页中显示当前时间：
+
+```html
+<html>
+<body>
+
+    <div>
+        <span>现在的时间是：<?xhp
+            now $tmp
+
+            formatTime $outG $tmp "2006-01-02 15:04:05"
+            ?></span>
+    </div>
+
+</body>
+</html>
+```
 
 &nbsp;
 
