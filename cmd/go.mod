@@ -1,6 +1,6 @@
 module github.com/topxeq/xie/xie
 
-go 1.19
+go 1.22.4
 
 replace github.com/topxeq/xie v0.0.0 => ../
 
@@ -10,12 +10,12 @@ require (
 	github.com/jchv/go-webview2 v0.0.0-20221223143126-dc24628cff85
 	github.com/json-iterator/go v1.1.12
 	github.com/kardianos/service v1.2.2
-	github.com/kbinani/screenshot v0.0.0-20210720154843-7d3a670d8329
+	github.com/kbinani/screenshot v0.0.0-20230812210009-b87d31814237
 	github.com/mattn/go-sqlite3 v1.14.16
 	github.com/ncruces/zenity v0.10.5
 	github.com/sijms/go-ora/v2 v2.5.25
 	github.com/topxeq/dlgs v0.0.0-20220223083937-4d3036aff547
-	github.com/topxeq/tk v1.0.6
+	github.com/topxeq/tkc v0.0.0-20240618010942-dee68c50edd5
 	github.com/topxeq/xie v0.0.0
 )
 
@@ -24,9 +24,8 @@ require (
 	github.com/akavel/rsrc v0.10.2 // indirect
 	github.com/alecthomas/chroma v0.10.0 // indirect
 	github.com/andybalholm/brotli v1.0.4 // indirect
-	github.com/antonmedv/expr v1.12.5 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
-	github.com/beevik/etree v1.1.0 // indirect
+	github.com/beevik/etree v1.4.0 // indirect
 	github.com/boombuler/barcode v1.0.1 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/cention-sany/utf7 v0.0.0-20170124080048-26cad61bd60a // indirect
@@ -35,24 +34,25 @@ require (
 	github.com/dlclark/regexp2 v1.4.0 // indirect
 	github.com/domodwyer/mailyak v3.1.1+incompatible // indirect
 	github.com/dsnet/compress v0.0.2-0.20210315054119-f66993602bf5 // indirect
-	github.com/eiannone/keyboard v0.0.0-20200508000154-caf4b762e807 // indirect
-	github.com/gen2brain/shm v0.0.0-20200228170931-49f9650110c5 // indirect
+	github.com/eiannone/keyboard v0.0.0-20220611211555-0d226195f203 // indirect
+	github.com/expr-lang/expr v1.16.9 // indirect
+	github.com/gen2brain/shm v0.0.0-20230802011745-f2460f5984f7 // indirect
 	github.com/gogs/chardet v0.0.0-20211120154057-b7413eaefb8f // indirect
 	github.com/golang-sql/civil v0.0.0-20190719163853-cb61b32ac6fe // indirect
 	github.com/golang-sql/sqlexp v0.1.0 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/gopherjs/gopherjs v1.17.2 // indirect
-	github.com/jaytaylor/html2text v0.0.0-20211105163654-bc68cce691ba // indirect
+	github.com/jaytaylor/html2text v0.0.0-20230321000545-74c2419ad056 // indirect
 	github.com/jchv/go-winloader v0.0.0-20200815041850-dec1ee9a7fd5 // indirect
-	github.com/jezek/xgb v0.0.0-20210312150743-0e0f116e1240 // indirect
-	github.com/jhillyerd/enmime v0.9.3 // indirect
+	github.com/jezek/xgb v1.1.0 // indirect
+	github.com/jhillyerd/enmime v1.2.0 // indirect
 	github.com/josephspurrier/goversioninfo v1.4.0 // indirect
 	github.com/klauspost/compress v1.14.4 // indirect
 	github.com/klauspost/pgzip v1.2.5 // indirect
 	github.com/kr/fs v0.1.0 // indirect
 	github.com/lxn/win v0.0.0-20210218163916-a377121e959e // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
-	github.com/mattn/go-runewidth v0.0.13 // indirect
+	github.com/mattn/go-runewidth v0.0.15 // indirect
 	github.com/mholt/archiver/v3 v3.5.1 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
@@ -66,37 +66,37 @@ require (
 	github.com/randall77/makefat v0.0.0-20210315173500-7ddd0e42c844 // indirect
 	github.com/richardlehane/mscfb v1.0.4 // indirect
 	github.com/richardlehane/msoleps v1.0.3 // indirect
-	github.com/rivo/uniseg v0.2.0 // indirect
+	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/ssor/bom v0.0.0-20170718123548-6386211fdfcf // indirect
-	github.com/topxeq/awsapi v0.0.0-20191115074250-1192cb0fdb97 // indirect
+	github.com/topxeq/awsapi v0.0.0-20240618030908-cda3055d09ff // indirect
 	github.com/topxeq/countingwriter v0.0.0-20230115115152-84660be6de09 // indirect
 	github.com/topxeq/gods v0.0.0-20220125023913-b5718bb0c704 // indirect
 	github.com/topxeq/goph v0.0.0-20230116054750-120b087d86fb // indirect
 	github.com/topxeq/mahonia v0.0.0-20190828060648-12b0599ddd1a // indirect
 	github.com/topxeq/regexpx v0.0.0-20230721063247-f118dbe089d7 // indirect
 	github.com/topxeq/socks v0.0.0-20230721063359-4740c5e460e9 // indirect
-	github.com/topxeq/sqltk v0.0.0 // indirect
+	github.com/topxeq/sqltk v0.0.0-20240618014733-99f9a3c3eefb // indirect
 	github.com/topxeq/uuid v0.0.0-20210318003930-0d149e412ca1 // indirect
 	github.com/topxeq/xmlx v0.3.0 // indirect
 	github.com/ulikunitz/xz v0.5.10 // indirect
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
-	github.com/xuri/efp v0.0.0-20220603152613-6918739fd470 // indirect
-	github.com/xuri/excelize/v2 v2.7.0 // indirect
-	github.com/xuri/nfp v0.0.0-20220409054826-5e722a1d9e22 // indirect
-	github.com/yeka/zip v0.0.0-20180914125537-d046722c6feb // indirect
-	github.com/yuin/goldmark v1.5.4 // indirect
+	github.com/xuri/efp v0.0.0-20231025114914-d1ff6096ae53 // indirect
+	github.com/xuri/excelize/v2 v2.8.1 // indirect
+	github.com/xuri/nfp v0.0.0-20230919160717-d98342af3f05 // indirect
+	github.com/yeka/zip v0.0.0-20231116150916-03d6312748a9 // indirect
+	github.com/yuin/goldmark v1.7.2 // indirect
 	github.com/yuin/goldmark-highlighting v0.0.0-20220208100518-594be1970594 // indirect
-	golang.org/x/crypto v0.18.0 // indirect
-	golang.org/x/image v0.13.0 // indirect
-	golang.org/x/net v0.17.0 // indirect
-	golang.org/x/sys v0.16.0 // indirect
-	golang.org/x/term v0.16.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/crypto v0.24.0 // indirect
+	golang.org/x/image v0.17.0 // indirect
+	golang.org/x/net v0.26.0 // indirect
+	golang.org/x/sys v0.21.0 // indirect
+	golang.org/x/term v0.21.0 // indirect
+	golang.org/x/text v0.16.0 // indirect
 )
 
-replace github.com/topxeq/tk v1.0.6 => ../../tk
+// replace github.com/topxeq/tk v1.0.6 => ../../tk
 
-replace github.com/topxeq/sqltk v0.0.0 => ../../sqltk
+// replace github.com/topxeq/sqltk v0.0.0 => ../../sqltk
 
 // replace github.com/topxeq/expr v0.0.0 => ../../expr
 

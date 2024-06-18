@@ -15,7 +15,7 @@ import (
 	"strings"
 
 	"github.com/kardianos/service"
-	"github.com/topxeq/tk"
+	tk "github.com/topxeq/tkc"
 	"github.com/topxeq/xie"
 
 	//  "tinygo.org/x/bluetooth"

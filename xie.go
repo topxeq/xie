@@ -36,12 +36,12 @@ import (
 	"github.com/topxeq/goph"
 	"github.com/topxeq/regexpx"
 	"github.com/topxeq/sqltk"
-	"github.com/topxeq/tk"
+	tk "github.com/topxeq/tkc"
 
 	excelize "github.com/xuri/excelize/v2"
 )
 
-var VersionG string = "1.5.9"
+var VersionG string = "1.6.0"
 
 func Test() {
 	tk.Pl("test")
