@@ -2,8 +2,6 @@ module github.com/topxeq/xie/xie
 
 go 1.22.4
 
-replace github.com/topxeq/xie v0.0.0 => ../
-
 require (
 	github.com/denisenkom/go-mssqldb v0.12.3
 	github.com/go-sql-driver/mysql v1.7.0
@@ -15,7 +13,7 @@ require (
 	github.com/ncruces/zenity v0.10.5
 	github.com/sijms/go-ora/v2 v2.5.25
 	github.com/topxeq/dlgs v0.0.0-20220223083937-4d3036aff547
-	github.com/topxeq/tkc v0.0.0-20240618010942-dee68c50edd5
+	github.com/topxeq/tkc v0.0.0
 	github.com/topxeq/xie v0.0.0
 )
 
@@ -94,10 +92,12 @@ require (
 	golang.org/x/text v0.16.0 // indirect
 )
 
-// replace github.com/topxeq/tk v1.0.6 => ../../tk
+replace github.com/topxeq/tkc v0.0.0 => ../../tkc
 
 // replace github.com/topxeq/sqltk v0.0.0 => ../../sqltk
 
 // replace github.com/topxeq/expr v0.0.0 => ../../expr
 
 // replace github.com/antonmedv/expr v1.12.5 => ../../../antonmedv/expr
+
+replace github.com/topxeq/xie v0.0.0 => ../
