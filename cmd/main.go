@@ -734,6 +734,22 @@ func doXms(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	if tk.StartsWith(fcT, "//TXDEF#") {
+		sCodeT := "topxeq"
+
+		msSecretCodeT := tk.TrimEx(tk.GetVar("msSecretCodeG"))
+
+		if !tk.IsErrStr(msSecretCodeT) {
+			sCodeT = msSecretCodeT
+		}
+
+		tmps := tk.DecryptStringByTXDEF(fcT, sCodeT)
+
+		if !tk.IsErrStr(tmps) {
+			fcT = tmps
+		}
+	}
+
 	vmT := xie.NewVMQuick()
 
 	vmT.SetVar(vmT.Running, "paraMapG", paraMapT)
