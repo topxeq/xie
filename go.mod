@@ -1,6 +1,6 @@
 module github.com/topxeq/xie
 
-go 1.22.4
+go 1.22.3
 
 require (
 	github.com/domodwyer/mailyak v3.1.1+incompatible
@@ -9,7 +9,7 @@ require (
 	github.com/topxeq/awsapi v0.0.0-20240618030908-cda3055d09ff
 	github.com/topxeq/goph v0.0.0-20230116054750-120b087d86fb
 	github.com/topxeq/regexpx v0.0.0-20230721063247-f118dbe089d7
-	github.com/topxeq/sqltk v0.0.0-20240618014733-99f9a3c3eefb
+	github.com/topxeq/sqltk v0.0.0-20240629061205-d42826b0e386
 	github.com/topxeq/tkc v0.0.0
 	github.com/xuri/excelize/v2 v2.8.1
 )
@@ -68,7 +68,7 @@ require (
 	github.com/yuin/goldmark v1.7.2 // indirect
 	github.com/yuin/goldmark-highlighting v0.0.0-20220208100518-594be1970594 // indirect
 	golang.org/x/crypto v0.24.0 // indirect
-	golang.org/x/image v0.17.0 // indirect
+	golang.org/x/image v0.18.0 // indirect
 	golang.org/x/net v0.26.0 // indirect
 	golang.org/x/sys v0.21.0 // indirect
 	golang.org/x/term v0.21.0 // indirect

@@ -123,10 +123,8 @@ github.com/topxeq/regexpx v0.0.0-20230721063247-f118dbe089d7 h1:bcYgbhUq1iUMjfWb
 github.com/topxeq/regexpx v0.0.0-20230721063247-f118dbe089d7/go.mod h1:9hd2TDu1NgG4DruiRMa02efE4G0bm8GcT8lVG7u8J88=
 github.com/topxeq/socks v0.0.0-20230721063359-4740c5e460e9 h1:loWEalO4+4TPW4odgmhwpXWt1R0HclYfyw4DoE6xvzk=
 github.com/topxeq/socks v0.0.0-20230721063359-4740c5e460e9/go.mod h1:mf0FO/pQYsuIw59dJueuJMTfc9ESck/vtn6CEHeTAtA=
-github.com/topxeq/sqltk v0.0.0-20240618014733-99f9a3c3eefb h1:HELMQYsQM/7l9uZazL927rZkD/sZACVMzsbOYZZOZcc=
-github.com/topxeq/sqltk v0.0.0-20240618014733-99f9a3c3eefb/go.mod h1:DDKrF4PKrVV+60MB4eLXuiWD2850y2IfhA4XcphqDRM=
-github.com/topxeq/tkc v0.0.0-20240618010942-dee68c50edd5 h1:+DlZJkLbzkHghghu5WncbBsKyudQNFvrAvdWgir4Muo=
-github.com/topxeq/tkc v0.0.0-20240618010942-dee68c50edd5/go.mod h1:07T78DnA61TsaaCt/gKXT32c/Qjq+dRGlkYrCFZSR/Q=
+github.com/topxeq/sqltk v0.0.0-20240629061205-d42826b0e386 h1:7xg9BIzk0sYqAo0GImGetefQVJViXp+JLv5kaoddDLU=
+github.com/topxeq/sqltk v0.0.0-20240629061205-d42826b0e386/go.mod h1:zB0eZTSMxFAGBDLw9hC+hKMVeMjU11CtPiAaC6ne4sE=
 github.com/topxeq/uuid v0.0.0-20210318003930-0d149e412ca1 h1:IEl6WYCFNG6l+4JSvFVZ0zKXOuu6NockB/BgL6d6FcE=
 github.com/topxeq/uuid v0.0.0-20210318003930-0d149e412ca1/go.mod h1:M6+8XhQK8KhdO8FvAckQN9zCLgJU8TZTVhITlsQwkWM=
 github.com/topxeq/xmlx v0.3.0 h1:h3Si1uMvL4jxRYkoEx16kKkSF/3FyGz7FuWEAZNKKhY=
@@ -154,8 +152,8 @@ golang.org/x/crypto v0.0.0-20210421170649-83a5a9bb288b/go.mod h1:T9bdIzuCu7OtxOm
 golang.org/x/crypto v0.0.0-20210921155107-089bfa567519/go.mod h1:GvvjBRRGRdwPK5ydBHafDWAxML/pGHZbMvKqRZ5+Abc=
 golang.org/x/crypto v0.24.0 h1:mnl8DM0o513X8fdIkmyFE/5hTYxbwYOjDS/+rK6qpRI=
 golang.org/x/crypto v0.24.0/go.mod h1:Z1PMYSOR5nyMcyAVAIQSKCDwalqy85Aqn1x3Ws4L5DM=
-golang.org/x/image v0.17.0 h1:nTRVVdajgB8zCMZVsViyzhnMKPwYeroEERRC64JuLco=
-golang.org/x/image v0.17.0/go.mod h1:4yyo5vMFQjVjUcVk4jEQcU9MGy/rulF5WvUILseCM2E=
+golang.org/x/image v0.18.0 h1:jGzIakQa/ZXI1I0Fxvaa9W7yP25TqT6cHIHn+6CqvSQ=
+golang.org/x/image v0.18.0/go.mod h1:4yyo5vMFQjVjUcVk4jEQcU9MGy/rulF5WvUILseCM2E=
 golang.org/x/net v0.0.0-20210226172049-e18ecbb05110/go.mod h1:m0MpNAwzfU5UDzcl9v0D8zg8gWTRqZa9RBIspLL5mdg=
 golang.org/x/net v0.26.0 h1:soB7SVo0PWrY4vPW/+ay0jKDNScG2X9wFeYlXIvJsOQ=
 golang.org/x/net v0.26.0/go.mod h1:5YKkiSynbBIh3p6iOc/vibscux0x38BZDkn8sCUPxHE=
