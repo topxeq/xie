@@ -17552,6 +17552,8 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 				v1 = "oracle"
 				v2 = "oracle://" + matchesT[1] + ":" + matchesT[2] + "@" + matchesT[3]
 			}
+		} else if v1 == "sqlite3" {
+			v1 = "sqlite"
 		}
 
 		dbT := sqltk.ConnectDBX(v1, v2)
