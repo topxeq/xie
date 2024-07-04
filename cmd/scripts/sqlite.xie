@@ -1,5 +1,5 @@
 // 本例演示谢语言对SQLite 3库的创建与增删改查
-//This example demonstrates the creation, addition, deletion, and modification of SQLite 3 library by Xielang
+// This example demonstrates the creation, addition, deletion, and modification of SQLite 3 library by Xielang
 
 // 判断是否已存在该库（SQLite库是放在单一的文件中的）
 // 注意请确保c:\tmp文件夹已存在
@@ -21,13 +21,13 @@ ifNot $b :next1
 :next1
 // 创建新库
 // dbConnect用于连接数据库
-// 除结果参数外第一个参数是数据库驱动名称，支持sqlite3、mysql、godror（即Oracle）、mssql（即MS SQLServer）等
+// 除结果参数外第一个参数是数据库驱动名称，支持sqlite3、mysql、oracle、mssql（即MS SQLServer）等
 // 第二个参数是连接字符串，类似 server=129.0.3.99;port=1433;portNumber=1433;user id=sa;password=pass123;database=hr 或 user/pass@129.0.9.11:1521/testdb 等
 // SQLite3的驱动将基于文件创建或连接数据库
 // 所以第二个参数直接给出数据库文件路径即可
 // Create a new library
 // dbConnect is used to connect to a database
-// The first parameter besides the result parameter is the database driver name, which supports sqlite3, mysql, godror (i.e. Oracle), msql (i.e. MS SQLServer), etc
+// The first parameter besides the result parameter is the database driver name, which supports sqlite3, mysql, oracle, msql (i.e. MS SQLServer), etc
 // The second parameter is the connection string, similar to server=129.0.3.99; port=1433; portNumber=1433; user id=sa; password=pass123; Database=hr or user/ pass@129.0.9.11 : 1521/testdb et al
 // The driver of SQLite3 will create or connect databases based on files
 // So the second parameter directly provides the database file path
