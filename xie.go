@@ -41,7 +41,7 @@ import (
 	excelize "github.com/xuri/excelize/v2"
 )
 
-var VersionG string = "1.6.0"
+var VersionG string = "1.6.1"
 
 func Test() {
 	tk.Pl("test")

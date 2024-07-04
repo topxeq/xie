@@ -26,7 +26,8 @@ import (
 	_ "github.com/sijms/go-ora/v2"
 
 	_ "github.com/go-sql-driver/mysql"
-	_ "github.com/mattn/go-sqlite3"
+	// _ "github.com/mattn/go-sqlite3"
+	_ "github.com/glebarez/go-sqlite"
 )
 
 // func main() {
