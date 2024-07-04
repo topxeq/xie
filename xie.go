@@ -17543,8 +17543,6 @@ func RunInstr(p *XieVM, r *RunningContext, instrA *Instr) (resultR interface{}) 
 		v2 := tk.Trim(tk.ToStr(p.GetVarValue(r, instrT.Params[v1p+1])))
 
 		if v1 == "godror" {
-			// aws2/fltrpaws2404@129.0.1.10:1521/ORCL
-			// oracle,oracle://aws2:fltrpaws2404@129.0.1.10:1521/ORCL
 
 			matchesT := tk.RegFindFirstGroupsX(v2, `^(.*?)/(.*?)@(.*?)$`)
 
