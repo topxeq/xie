@@ -7,7 +7,7 @@ require (
 	github.com/kbinani/screenshot v0.0.0-20230812210009-b87d31814237
 	github.com/mholt/archiver/v3 v3.5.1
 	github.com/topxeq/awsapi v0.0.0-20240618030908-cda3055d09ff
-	github.com/topxeq/goph v0.0.0-20240807052241-2e088ab61555
+	github.com/topxeq/goph v0.0.0-20240813015542-ebac0794140b
 	github.com/topxeq/regexpx v0.0.0-20230721063247-f118dbe089d7
 	github.com/topxeq/sqltk v0.0.0-20240629061205-d42826b0e386
 	github.com/topxeq/tkc v0.0.0
