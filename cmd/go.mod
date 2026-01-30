@@ -151,7 +151,7 @@ require (
 	modernc.org/sqlite v1.28.0 // indirect
 )
 
-replace github.com/topxeq/tkc v0.0.0 => ../../tkc
+//replace github.com/topxeq/tkc v0.0.0 => ../../tkc
 
 // replace github.com/topxeq/sqltk v0.0.0 => ../../sqltk
 
