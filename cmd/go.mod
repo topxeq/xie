@@ -16,7 +16,7 @@ require (
 	github.com/ncruces/zenity v0.10.5
 	github.com/sijms/go-ora/v2 v2.5.25
 	github.com/topxeq/dlgs v0.0.0-20220223083937-4d3036aff547
-	github.com/topxeq/tkc v0.0.0
+	github.com/topxeq/tkc v0.0.0-20260115062048-7734b6d59f96
 	github.com/topxeq/xie v0.0.0
 )
 
