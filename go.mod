@@ -9,7 +9,7 @@ require (
 	github.com/topxeq/awsapi v0.0.0-20240618030908-cda3055d09ff
 	github.com/topxeq/goph v0.0.0-20240813015542-ebac0794140b
 	github.com/topxeq/regexpx v0.0.0-20230721063247-f118dbe089d7
-	github.com/topxeq/sqltk v0.0.0-20251230061659-bfabc630b3fa
+	github.com/topxeq/sqltk v0.0.0-20260124035901-98bf8683db30
 	github.com/topxeq/tkc v0.0.0-20260225062728-2458d92d9e05
 	github.com/xuri/excelize/v2 v2.8.1
 )
